@@ -1,0 +1,1053 @@
+/* ============================================================================
+   GENERADOR DE REPORTES ACADÉMICOS - Estilos v1.0.3
+   Desarrollado por: Jorge Pedrozo
+   ============================================================================ */
+
+/* ============================================================================
+   VARIABLES DE TEMA - PALETAS DE COLOR
+   ============================================================================ */
+
+/* Tema TSW - Tecnológico de Software */
+body[data-theme="tsw"] {
+    --primary: #2C2E5C;        /* Azul oscuro del logo */
+    --secondary: #00B8E6;      /* Cyan del logo */
+    --accent: #00D4FF;         /* Cyan más claro */
+    --dark: #1a1a1a;
+    --light: #f5f7fa;
+}
+
+/* Tema UPY - Universidad Politécnica de Yucatán */
+body[data-theme="upy"] {
+    --primary: #5B1F8C;        /* Morado del logo */
+    --secondary: #F5A623;      /* Oro/Naranja del BIS */
+    --accent: #e3bef7;         /* Lila claro */
+    --dark: #1a1a1a;
+    --light: #f5f7fa;
+}
+
+/* Tema UPP - Universidad Politécnica de Puebla */
+body[data-theme="upp"] {
+    --primary: #0047AB;        /* Azul fuerte */
+    --secondary: #E31E24;      /* Rojo */
+    --accent: #79a6d4;         /* Azul claro */
+    --dark: #1a1a1a;
+    --light: #f5f7fa;
+}
+
+/* ============================================================================
+   LAYOUT GENERAL
+   ============================================================================ */
+* {
+    box-sizing: border-box;
+}
+
+/* body { 
+    display: flex; 
+    height: 100vh; 
+    margin: 0; 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--light);
+    transition: background 0.3s ease;
+}
+
+.workspace { 
+    display: flex; 
+    flex: 1; 
+    overflow: hidden; 
+} */
+
+/* ============================================================================
+   TOOLBOX (BARRA LATERAL IZQUIERDA)
+   ============================================================================ */
+/* .toolbox { 
+    width: 220px; 
+    background: var(--primary);
+    color: white; 
+    padding: 20px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: background 0.3s ease;
+}
+
+.toolbox h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    font-weight: 600;
+    opacity: 0.95;
+} */
+
+/* .toolbox button { 
+    display: flex;         
+    align-items: center;    
+    gap: 1px;              
+    padding: 12px 10px;
+    cursor: pointer; 
+    border: none; 
+    border-radius: 6px; 
+    background: rgba(255,255,255,0.15);
+    color: white; 
+    transition: all 0.2s ease;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-align: left;
+} */
+/* 
+.toolbox button:hover { 
+    background: var(--secondary);
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.toolbox button:active {
+    transform: translateX(1px);
+} */
+
+/*  empiza */
+body { 
+    display: flex; 
+    height: 100vh; 
+    width: 100vw; 
+    margin: 0; 
+    overflow: hidden; 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    background: var(--light);
+    transition: background 0.3s ease;
+}
+
+.workspace { 
+    display: flex; 
+    flex: 1; 
+    overflow: hidden; 
+}
+
+
+.toolbox { 
+    width: 220px; 
+    min-width: 220px;
+    flex-shrink: 0; 
+    background: var(--primary);
+    color: white; 
+    padding: 20px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    transition: background 0.3s ease;
+    overflow-y: auto; /
+}
+
+.toolbox::-webkit-scrollbar {
+    width: 6px;
+}
+.toolbox::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.05);
+}
+.toolbox::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.toolbox h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1em;
+    font-weight: 600;
+    opacity: 0.95;
+}
+
+.toolbox button { 
+    display: flex;          
+    align-items: center;    
+    gap: 8px;             
+    padding: 12px 10px;
+    cursor: pointer; 
+    border: none; 
+    border-radius: 6px; 
+    background: rgba(255,255,255,0.15);
+    color: white; 
+    transition: all 0.2s ease;
+    font-size: 0.9em;
+    font-weight: 500;
+    text-align: left;
+}
+
+.toolbox button:hover { 
+    background: var(--secondary);
+    transform: translateX(3px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.toolbox button:active {
+    transform: translateX(1px);
+}
+
+
+/* temina modificadion */
+.btn-ai {
+    background: var(--accent) !important;
+	color: var(--background) !important;
+}
+
+.btn-ai:hover {
+    background: var(--background) !important;
+	color: var(--accent) !important;
+    transform: translateX(5px) !important;
+}
+
+.btn-json {
+    background: #27ae60 !important;
+    font-weight: 600;
+}
+
+.btn-json:hover {
+    background: #229954 !important;
+}
+
+.btn-save,
+.btn-print {
+    background: var(--secondary) !important;
+    font-weight: 600;
+}
+
+.btn-save:hover,
+.btn-print:hover {
+    background: var(--accent) !important;
+}
+
+/* Selector de tema */
+.theme-selector select {
+    font-family: inherit;
+}
+
+.theme-selector select option {
+    background: var(--primary);
+    color: white;
+}
+
+/* Créditos */
+.credits {
+    margin-top: auto;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255,255,255,0.2);
+}
+
+/* ============================================================================
+   EDITOR CONTAINER (PANEL IZQUIERDO)
+   ============================================================================ */
+#editor-container { 
+    flex: 1; 
+    padding: 25px; 
+    overflow-y: auto; 
+    border-right: 1px solid #e0e0e0;
+    background: #fafbfc;
+}
+
+/* Scroll suave */
+#editor-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+#editor-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#editor-container::-webkit-scrollbar-thumb {
+    background: var(--secondary);
+    border-radius: 4px;
+}
+
+#editor-container::-webkit-scrollbar-thumb:hover {
+    background: var(--primary);
+}
+
+/* Mensaje de bienvenida */
+.welcome-message {
+    text-align: center;
+    padding: 60px 20px;
+    color: #555;
+}
+
+.welcome-message h2 {
+    color: var(--primary);
+    margin-bottom: 10px;
+}
+
+/* ============================================================================
+   BLOQUES DEL EDITOR - TARJETAS
+   ============================================================================ */
+.block-card-container {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.block-card {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: white;
+    border-radius: 8px;
+    border-left: 4px solid var(--secondary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    transition: all 0.2s ease;
+}
+
+.block-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    transform: translateY(-2px);
+}
+
+/* Colores de identidad para los bloques */
+.header-card { 
+    border-left-color: var(--secondary);
+    background: linear-gradient(to right, rgba(var(--secondary-rgb), 0.05), white);
+}
+
+.title-card { 
+    border-left-color: var(--primary);
+}
+
+.subtitle-card { 
+    border-left-color: var(--accent);
+}
+
+.text-card { 
+    border-left-color: #95a5a6;
+}
+
+.code-card {
+    border-left-color: #f39c12;
+}
+
+.image-card {
+    border-left-color: #27ae60;
+}
+
+.ref-card { 
+    border-left-color: rgb(155, 89, 182);
+}
+
+.ai-card {
+    border-left-color: #e74c3c;
+    background: linear-gradient(to right, rgba(231, 76, 60, 0.05), white);
+}
+
+.table-card {
+    border-left-color: #16a085; /* Verde azulado */
+}
+
+/* ============================================================================
+   GRID DE TABLA EN EL EDITOR
+   ============================================================================ */
+.table-controls {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin: 10px 0 15px 0;
+    flex-wrap: wrap;
+}
+
+.table-controls label {
+    font-size: 0.9em;
+    /* font-weight: 600; */
+    color: #555;
+}
+
+.table-controls input[type="number"] {
+    width: 60px;
+    padding: 6px;
+    border: 2px solid #e0e0e0;
+    border-radius: 4px;
+    text-align: center;
+}
+
+.table-controls button {
+    padding: 6px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: all 0.2s ease;
+}
+
+.table-controls .btn-add-row {
+    background: #27ae60;
+    color: white;
+}
+
+.table-controls .btn-add-row:hover {
+    background: #229954;
+}
+
+.table-controls .btn-remove-row {
+    background: #e74c3c;
+    color: white;
+}
+
+.table-controls .btn-remove-row:hover {
+    background: #c0392b;
+}
+
+/* Grid de la tabla */
+.table-grid {
+    display: grid;
+    gap: 8px;
+    margin-top: 15px;
+    overflow-x: auto; /* Scroll horizontal si es necesario */
+    max-width: 100%;
+}
+
+.table-grid input {
+    padding: 8px;
+    border: 2px solid #e0e0e0;
+    border-radius: 4px;
+    font-size: 0.9em;
+    transition: border-color 0.2s ease;
+    min-width: 80px; /* Ancho mínimo para evitar celdas muy pequeñas */
+    max-width: 100%;
+}
+
+.table-grid input:focus {
+    outline: none;
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(var(--secondary-rgb), 0.1);
+}
+
+/* Cabecera de tabla (primera fila) */
+.table-grid input:nth-child(-n+6) {
+    background: #f8f9fa;
+}
+
+/* ============================================================================
+   INPUTS DEL EDITOR
+   ============================================================================ */
+.editor-input {
+    width: 100%;
+    padding: 10px;
+    margin-top: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95em;
+    transition: border-color 0.2s ease;
+}
+
+.editor-input:focus {
+    outline: none;
+    border-color: var(--secondary);
+    box-shadow: 0 0 0 3px rgba(var(--secondary-rgb), 0.1);
+}
+
+textarea.editor-input {
+    min-height: 100px;
+    resize: vertical;
+}
+
+.code-input {
+    width: 100%;
+    font-family: 'Courier New', Consolas, monospace;
+    background: #282c34;
+    color: #abb2bf;
+    padding: 12px;
+    border-radius: 6px;
+    min-height: 120px;
+    resize: vertical;
+    border: 2px solid #21252b;
+    line-height: 1.5;
+}
+
+.code-input:focus {
+    outline: none;
+    border-color: var(--secondary);
+}
+
+/* Grid de inputs */
+.grid-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 10px;
+}
+
+.grid-inputs input {
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    transition: border-color 0.2s ease;
+}
+
+.grid-inputs input:focus {
+    outline: none;
+    border-color: var(--secondary);
+}
+/* ============================================================================
+   SELECTS Y BOTONES DE ACCIÓN (Alineados con el diseño de grid-inputs)
+   ============================================================================ */
+
+/* Contenedor para alinear el select con sus botones (➕, ✏️, 🗑️) */
+.input-with-action {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+}
+
+/* Aplicando exactamente el mismo estilo de tus inputs a los selects */
+.input-with-action select {
+    flex: 1; /* Ocupa el espacio que sobra */
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95em; /* O 1rem, para que la letra coincida */
+    color: inherit;
+    background-color: #fff;
+    transition: border-color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.input-with-action select:focus {
+    outline: none;
+    border-color: var(--secondary);
+    /* Puedes descomentar la siguiente línea si quieres que también tengan el resplandor de tus .editor-input */
+    /* box-shadow: 0 0 0 3px rgba(var(--secondary-rgb), 0.1); */
+}
+
+/* Botones pequeños de iconos con borde sutil de 2px */
+.icon-btn {
+    background: transparent;
+    border: 2px solid rgba(0, 0, 0, 0.05); /* Borde de 2px pero con 5% de opacidad */
+    border-radius: 6px; /* Mismo redondeo que tus inputs */
+    cursor: pointer;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background-color: rgba(0, 0, 0, 0.03); /* Fondo gris súper claro */
+    border-color: rgba(0, 0, 0, 0.15); /* El borde se hace un poco más visible al pasar el mouse */
+}
+
+.icon-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    border-color: transparent; /* Pierden el borde al bloquearse */
+}
+
+/* ============================================================================
+   BOTONES PRINCIPALES (Guardar, Editar, Eliminar al final de la tarjeta)
+   ============================================================================ */
+
+.card-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 15px;
+    grid-column: 1 / -1; /* Por si el div padre es un grid, que ocupe todo el ancho */
+}
+
+.action-btn {
+    background: #fff;
+    border: 2px solid rgba(0, 0, 0, 0.08); /* Borde de 2px transparente */
+    border-radius: 6px; /* Mismo redondeo */
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+.action-btn:hover:not(:disabled) {
+    background-color: #f8f9fa;
+    border-color: rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================================================
+   BOTÓN DE ELIMINAR
+   ============================================================================ */
+.delete-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #e74c3c;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 6px rgba(231, 76, 60, 0.3);
+}
+
+.delete-btn:hover {
+    background: #c0392b;
+    transform: scale(1.15) rotate(90deg);
+}
+
+/* ============================================================================
+   PREVIEW CONTAINER (PANEL DERECHO - VISTA PREVIA)
+   ============================================================================ */
+#preview-container { 
+    flex: 1; 
+    background: #ffffff;
+    padding: 50px; 
+    overflow-y: auto; 
+    box-shadow: inset 0 0 20px rgba(0,0,0,0.05);
+}
+
+#preview-container::-webkit-scrollbar {
+    width: 10px;
+}
+
+#preview-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+#preview-container::-webkit-scrollbar-thumb {
+    background: var(--primary);
+    border-radius: 5px;
+}
+
+.preview-paper { 
+    font-family: 'Georgia', 'Times New Roman', serif; 
+    line-height: 1.7;
+    color: #2c3e50;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* ============================================================================
+   ELEMENTOS DE LA VISTA PREVIA - ENCABEZADO
+   ============================================================================ */
+.p-header {
+    margin-bottom: 40px;
+    line-height: 1.3;
+    font-size: 0.95em;
+    color: #34495e;
+}
+
+.p-header p { 
+    margin: 6px 0; 
+}
+
+.p-header hr {
+    margin-top: 20px;
+    border: none;
+    border-top: 2px solid var(--primary);
+    opacity: 0.3;
+}
+
+/* ============================================================================
+   ELEMENTOS DE LA VISTA PREVIA - TÍTULOS Y TEXTO
+   ============================================================================ */
+.p-title { 
+    text-align: center; 
+    font-size: 2.5em; 
+    margin-bottom: 35px;
+    color: var(--primary);
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.p-subtitle { 
+    font-size: 1.6em; 
+    border-bottom: 2px solid var(--secondary);
+    margin-top: 30px; 
+    color: var(--primary);
+    padding-bottom: 8px;
+    font-weight: 600;
+}
+
+.p-text { 
+    text-align: justify; 
+    margin-bottom: 16px;
+    line-height: 1.8;
+}
+
+/* ============================================================================
+   ELEMENTOS DE LA VISTA PREVIA - IMÁGENES
+   ============================================================================ */
+.preview-image-container {
+    text-align: center;
+    margin: 30px 0;
+}
+
+.preview-image-container img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.preview-image-container .placeholder {
+    padding: 50px;
+    background: #f8f9fa;
+    border: 2px dashed #dee2e6;
+    color: #adb5bd;
+    border-radius: 8px;
+    font-style: italic;
+}
+
+.figure-caption {
+    font-size: 0.9em;
+    margin-top: 10px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* ============================================================================
+   ELEMENTOS DE LA VISTA PREVIA - TABLAS
+   ============================================================================ */
+.preview-table-container {
+    margin: 30px 0;
+    text-align: left; /* Alineado a la izquierda como en la imagen */
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.preview-table-container table {
+    width: 100%;
+    max-width: 100%;
+    border-collapse: collapse;
+    margin: 15px 0;
+    table-layout: auto;
+    /* Eliminamos bordes exteriores generales */
+    border: none;
+}
+
+.preview-table-container table thead {
+    background: transparent; /* Sin fondo de color */
+    color: #000; /* Texto negro */
+}
+
+.preview-table-container table th {
+    padding: 2px;
+    text-align: center; /* Alineado a la izquierda */
+    font-weight: normal; /* En la imagen no parecen ultra bold */
+    font-size: 0.9em;
+    /* Líneas superior e inferior gruesas para el header */
+    border-top: 2px solid #000; 
+    border-bottom: 1.5px solid #000;
+    border-left: none;
+    border-right: none;
+}
+
+.preview-table-container table td {
+    padding: 8px 20px;
+    text-align: justify;
+    border: none; /* Sin bordes en las celdas internas */
+    font-size: 0.75em;
+    line-height: 1.5;
+    vertical-align: middle;
+    color: #000;
+}
+
+/* Fila de TOTAL o última fila */
+.preview-table-container table tbody tr:last-child td {
+    border-bottom: 2px solid #000; /* Línea final de cierre */
+    padding-top: 15px; /* Espaciado extra para el total */
+}
+
+/* ================================================================
+ * Si tienes una fila de "Total" específica puedes darle negrita
+.preview-table-container table tr:last-child {
+    font-weight: bold;
+} */
+
+
+/* Eliminamos el hover para mantener la estética de documento impreso */
+.preview-table-container table tbody tr:hover {
+    background: transparent;
+}
+
+.table-caption {
+    font-size: 0.9em;
+    margin-top: 10px;
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* ============================================================================
+   ELEMENTOS DE LA VISTA PREVIA - CÓDIGO
+   ============================================================================ */
+.code-preview {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-left: 4px solid var(--secondary);
+    color: #2c3e50;
+    font-family: 'Courier New', Consolas, monospace;
+    padding: 20px;
+    display: block;
+    white-space: pre-wrap;
+    overflow-x: auto;
+    margin: 20px 0;
+    border-radius: 6px;
+    line-height: 1.6;
+    page-break-inside: avoid;
+}
+
+/* ============================================================================
+   ELEMENTOS DE LA VISTA PREVIA - REFERENCIAS IEEE
+   ============================================================================ */
+.p-ref-ieee {
+    display: grid;
+    grid-template-columns: 45px 1fr;
+    margin-bottom: 15px;
+    font-size: 0.95em;
+    line-height: 1.6;
+}
+
+.ref-num {
+    font-weight: bold;
+    color: var(--primary);
+}
+
+.ref-content {
+    line-height: 1.6;
+}
+
+/* ============================================================================
+   ELEMENTOS DE LA VISTA PREVIA - DECLARACIÓN DE IA
+   ============================================================================ */
+.p-ai-declaration {
+    margin: 35px 0;
+    page-break-inside: auto;
+}
+
+.p-ai-declaration h3 {
+    color: var(--primary);
+    font-size: 1.6em;
+    border-bottom: 2px solid var(--secondary);
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+}
+
+/* ============================================================================
+   ESTILOS DE IMPRESIÓN
+   ============================================================================ */
+@media print {
+    @page {
+        size: letter;
+        margin: 2cm;
+    }
+
+    .toolbox, 
+    #editor-container, 
+    .delete-btn {
+        display: none !important;
+    }
+
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+    }
+    
+    .workspace, 
+    #preview-container {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: white !important;
+        box-shadow: none !important;
+    }
+
+    .preview-paper {
+        max-width: 100% !important;
+    }
+
+    .preview-image-container, 
+    .code-preview, 
+    .p-ref-ieee,
+    .preview-table-container {
+        page-break-inside: avoid;
+        break-inside: avoid;
+    }
+
+	/* ==============================
+	 * Ajustes de GEMINI
+	 * */
+	.preview-table-container table td, 
+    .preview-table-container table th {
+        padding: 6px 12px !important; 
+        word-break: break-word;
+    }
+
+	/* ============================== */
+
+    .p-title,
+    .p-subtitle {
+        page-break-after: avoid;
+        break-after: avoid;
+    }
+
+    .preview-image-container img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    .p-header {
+        margin-bottom: 30px !important;
+    }
+
+    .p-ai-declaration {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+    }
+
+    .p-ai-declaration h3 {
+        page-break-after: avoid !important;
+        break-after: avoid !important;
+    }
+
+    .p-ai-declaration pre {
+        page-break-inside: auto !important;
+        break-inside: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+    }
+
+    .p-ai-declaration p {
+        orphans: 3;
+        widows: 3;
+    }
+
+    /* Asegurar que los colores del tema se mantengan en impresión */
+    .p-title,
+    .p-subtitle,
+    .p-header hr {
+        color: inherit !important;
+        border-color: inherit !important;
+    }
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+@media (max-width: 1024px) {
+    .toolbox {
+        width: 200px;
+    }
+    
+    #preview-container {
+        padding: 30px;
+    }
+    
+    /* Ajustes para tablas en pantallas medianas */
+    .preview-table-container table th,
+    .preview-table-container table td {
+        padding: 5px 6px;
+        font-size: 0.7em; /* Más pequeño en tablets */
+    }
+    
+    .preview-table-container table th {
+        font-size: 0.85em; /* Headers un poco más grandes */
+    }
+}
+
+@media (max-width: 768px) {
+    body {
+        flex-direction: column;
+    }
+    
+    .toolbox {
+        width: 100%;
+        flex-direction: row;
+        flex-wrap: wrap;
+        padding: 15px;
+    }
+    
+    .workspace {
+        flex-direction: column;
+    }
+    
+    #editor-container,
+    #preview-container {
+        border: none;
+    }
+    
+    /* Tablas más compactas en móvil */
+    .preview-table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .preview-table-container table {
+        font-size: 0.75em;
+    }
+    
+    .preview-table-container table th {
+        padding: 4px 3px;
+        font-size: 0.8em; /* Headers más pequeños en móvil */
+    }
+    
+    .preview-table-container table td {
+        padding: 3px 2px;
+        font-size: 0.65em; /* Contenido muy pequeño en móvil */
+        min-width: 50px;
+    }
+}
+
+
+/* ============================================================================
+   DRAG & DROP - REORDENAR BLOQUES
+   ============================================================================ */
+
+.block-card-container {
+    cursor: move;
+    cursor: grab;
+    transition: all 0.2s ease;
+}
+
+.block-card-container:active {
+    cursor: grabbing;
+}
+
+.block-card-container.dragging {
+    opacity: 0.5;
+    transform: scale(0.98);
+    cursor: grabbing;
+}
+
+.block-card-container.drag-over {
+    border-top: 3px solid var(--secondary);
+    margin-top: 10px;
+    padding-top: 10px;
+}
+
+@keyframes dropAnimation {
+    0% {
+        transform: scale(0.95);
+        opacity: 0.8;
+    }
+    50% {
+        transform: scale(1.02);
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}

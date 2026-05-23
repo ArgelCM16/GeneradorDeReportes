@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Generador de documentos académicos con vista previa en tiempo real"
+    />
+    <meta name="author" content="Jorge J. Pedrozo Romero" />
+    <title>Generador de Documentos Académicos</title>
+    <link rel="stylesheet" href="CSS/style.css" />
+    <link rel="icon" href="ASSETS/favicon.png" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+  </head>
+  <body data-theme="upy">
+    <nav class="toolbox">
+      <!-- Selector de Tema -->
+      <div class="theme-selector">
+        <label
+          style="
+            font-size: 0.85em;
+            margin-bottom: 8px;
+            display: block;
+            opacity: 0.9;
+          "
+          >Tema:</label
+        >
+        <select
+          id="themeSelector"
+          onchange="changeTheme(this.value)"
+          style="
+            width: 100%;
+            padding: 8px;
+            border-radius: 5px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            cursor: pointer;
+            margin-bottom: 15px;
+          "
+        >
+          <option value="upy">UPY - Universidad Politécnica de Yucatán</option>
+          <option value="tsw">TSW - Tecnológico de Software</option>
+          <option value="upp">UPP - Universidad Privada de la Península</option>
+        </select>
+      </div>
+
+      <h3>Bloques</h3>
+      <button onclick="addBlock('header')">
+        <span class="material-symbols-outlined">vertical_align_top</span>
+        <span>&ensp;Encabezado</span>
+      </button>
+
+      <button onclick="addBlock('title')">
+        <span class="material-symbols-outlined">title</span>
+        <span>&ensp;Título</span>
+      </button>
+
+      <button onclick="addBlock('subtitle')">
+        <span class="material-symbols-outlined">format_size</span>
+        <span>&ensp;Subtítulo</span>
+      </button>
+
+      <button onclick="addBlock('text')">
+        <span class="material-symbols-outlined">notes</span>
+        <span>&ensp;Párrafo</span>
+      </button>
+
+      <button onclick="addBlock('code')">
+        <span class="material-symbols-outlined">code</span>
+        <span>&ensp;Código</span>
+      </button>
+
+      <button onclick="addBlock('image')">
+        <span class="material-symbols-outlined">image</span>
+        <span>&ensp;Imagen</span>
+      </button>
+
+      <button onclick="addBlock('table')">
+        <span class="material-symbols-outlined">table_chart</span>
+        <span>&ensp;Tabla</span>
+      </button>
+
+      <button onclick="addBlock('ref')">
+        <span class="material-symbols-outlined">link</span>
+        <span>&ensp;Referencia</span>
+      </button>
+
+      <button onclick="addBlock('ai')" class="btn-ai">
+        <span class="material-symbols-outlined">smart_toy</span>
+        <span>&ensp;Declaración IA</span>
+      </button>
+
+      <hr
+        style="
+          border: none;
+          border-top: 1px solid rgba(255, 255, 255, 0.2);
+          margin: 15px 0;
+        "
+      />
+
+      <button class="btn-json" onclick="saveJSON()">
+        <span class="material-symbols-outlined">cloud_download</span>
+        <span>&ensp;Guardar Proyecto</span>
+      </button>
+
+      <button
+        class="btn-json"
+        onclick="document.getElementById('loadJSONInput').click()"
+      >
+        <span class="material-symbols-outlined">cloud_upload</span>
+        <span>&ensp;Cargar Proyecto</span>
+      </button>
+      <input
+        type="file"
+        id="loadJSONInput"
+        accept=".json"
+        onchange="loadJSON(this)"
+        style="display: none"
+      />
+
+      <hr
+        style="
+          border: none;
+          border-top: 1px solid rgba(255, 255, 255, 0.2);
+          margin: 15px 0;
+        "
+      />
+
+      <button class="btn-save" onclick="exportTXT()">
+        <span class="material-symbols-outlined">save</span>
+        <span>&ensp;Guardar TXT</span>
+      </button>
+
+      <button class="btn-print" onclick="window.print()">
+        <span class="material-symbols-outlined">picture_as_pdf</span>
+        <span>&ensp;Imprimir PDF</span>
+      </button>
+
+      <!-- Créditos -->
+      <div class="credits">
+        <p
+          style="
+            font-size: 0.75em;
+            opacity: 0.7;
+            margin: 20px 0 5px 0;
+            text-align: center;
+          "
+        >
+          Desarrollado por
+        </p>
+        <p
+          style="
+            font-size: 0.8em;
+            font-weight: bold;
+            margin: 0;
+            text-align: center;
+          "
+        >
+          Jorge Javier Pedrozo Romero
+        </p>
+
+        <p
+          style="
+            font-size: 0.75em;
+            opacity: 0.7;
+            margin: 10px 0 5px 0;
+            text-align: center;
+          "
+        >
+          Modificado por
+        </p>
+        <p
+          style="
+            font-size: 0.8em;
+            font-weight: bold;
+            margin: 0;
+            text-align: center;
+          "
+        >
+          Argel Alberto Cano Morales
+        </p>
+
+        <p
+          style="
+            font-size: 0.7em;
+            opacity: 0.6;
+            margin: 10px 0 0 0;
+            text-align: center;
+          "
+        >
+          v1.0.4 • Mayo 2026
+        </p>
+      </div>
+    </nav>
+
+    <main class="workspace">
+      <section id="editor-container">
+        <!-- Mensaje de bienvenida -->
+        <div class="welcome-message">
+          <h2>¡Bienvenido!</h2>
+          <p>
+            Selecciona tu institución arriba y comienza agregando bloques desde
+            el menú lateral.
+          </p>
+        </div>
+      </section>
+
+      <section id="preview-container" class="preview-paper"></section>
+    </main>
+
+    <script src="JS/script.js"></script>
+  </body>
+</html>

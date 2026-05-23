@@ -1,0 +1,173 @@
+============================================================
+REPORTE ACADÉMICO - EXPORTACIÓN TXT
+============================================================
+
+DATOS DEL ESTUDIANTE
+----------------------------------------
+Institución: Tecnológico del Planeta Veyita
+Materia: Datacenters (1° Cuatrimestre)
+Profesor: Goku Sayayin
+Alumno: Tanyira Danae Sánchez Uc | Grupo: 1A
+Fecha: 2026-01-24
+
+
+============================================================
+REPORTE DE PRÁCTICA DE CÓDIGO
+============================================================
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec eget rutrum metus. Vivamus et nisi nec dui blandit interdum quis auctor turpis. Proin ut cursus sem. Nam egestas, dolor at semper accumsan, nunc est ornare turpis, id varius erat magna in orci. Mauris pharetra, velit quis hendrerit viverra, metus velit lacinia urna, sit amet auctor ipsum magna a nisi.
+
+
+----------------------------------------
+Introducción
+----------------------------------------
+
+Vestibulum ultricies arcu quis ex dapibus sodales. Mauris arcu metus, volutpat et lacus in, hendrerit faucibus ante. Nam laoreet hendrerit egestas. Donec lacus velit, malesuada at velit quis, sollicitudin efficitur lacus. Phasellus eget orci at nisl semper laoreet at ut enim. Duis blandit, urna a hendrerit gravida, nulla elit euismod nulla, sed viverra lorem purus a augue. Praesent eleifend, lacus sed efficitur mattis, purus ligula pulvinar urna, vitae efficitur purus ligula scelerisque mauris. Duis et tortor in ipsum commodo tempor eu sit amet elit.
+
+
+----------------------------------------
+Código Python
+----------------------------------------
+
+
+[INICIO DE CÓDIGO]
+----------------------------------------
+def is_even(n):
+    if n % 2 == 0:
+        return True
+    else:
+        return False
+
+----------------------------------------
+[FIN DE CÓDIGO]
+
+Phasellus vel orci faucibus, rhoncus enim vitae, tempor leo. Praesent vitae sapien ac libero tincidunt vestibulum at a metus. Nullam nibh massa, posuere ut condimentum et, sodales id dui. Etiam lectus nunc, ullamcorper non vulputate et, ultrices sit amet mauris.
+
+
+----------------------------------------
+Captura de Pantalla
+----------------------------------------
+
+
+[FIGURA 1]
+Descripción: Aliquam sapien ipsum, gravida quis lectus eu, dignissim pretium sapien. Integer sit amet quam eget urna ornare ultricies a eget magna.
+(La imagen no puede ser exportada a formato TXT)
+
+
+----------------------------------------
+Tabla
+----------------------------------------
+
+
+[TABLA 1]
+------------------------------------------------------------
+| Columa 1                       | Columna 2                      | Columna 3                      | 
++--------------------------------+--------------------------------+--------------------------------+-
+| Donec sagittis felis ut ullamc | Etiam mattis blandit lacus, ve | Fusce at turpis viverra erat a | 
+| orper pharetra. Integer metus  | l fermentum odio fringilla vul | ccumsan mattis sed eget massa. | 
+| purus, luctus accumsan maximus | putate. Nunc hendrerit, ligula |  Morbi posuere ultrices nunc,  | 
+|  ac, hendrerit in mauris. Aliq |  a maximus accumsan, velit sem | eu sagittis lorem finibus ac.  | 
+| uam erat volutpat.             |  iaculis neque, vitae fringill | Pellentesque scelerisque neque | 
+|                                | a mi tellus at ante. Morbi por |  et sodales accumsan. Sed eros | 
+|                                | ttitor nisl nec sem lacinia, a |  justo, lobortis quis feugiat  | 
+|                                | t pulvinar ipsum dictum. Praes | quis, suscipit eu risus. Aenea | 
+|                                | ent elementum vitae sem ac fau | n eget purus elementum ligula  | 
+|                                | cibus.                         | eleifend faucibus at in orci.  | 
+|                                |                                | Nulla in augue at lectus conva | 
+|                                |                                | llis suscipit. Vestibulum elei | 
+|                                |                                | fend purus eget lacus consecte | 
+|                                |                                | tur, nec tempor dolor faucibus | 
+|                                |                                | .                              | 
++--------------------------------+--------------------------------+--------------------------------+-
+| Suspendisse dignissim fringill | Morbi convallis elementum nisi | Nullam dapibus scelerisque ult | 
+| a neque ac ultricies. Nam quis | , eget venenatis nulla. Aliqua | ricies. Class aptent taciti so | 
+|  purus nulla. Ut sed aliquam t | m nec ligula sollicitudin, con | ciosqu ad litora torquent per  | 
+| urpis. Donec mauris ipsum, pla | sectetur nulla id, molestie ne | conubia nostra, per inceptos h | 
+| cerat id purus in, luctus temp | que. Integer posuere felis qui | imenaeos.                      | 
+| us orci. Cras interdum dapibus | s augue ultricies eleifend.    |                                | 
+|  nulla, at luctus massa portti |                                |                                | 
+| tor id. Sed tortor eros, laore |                                |                                | 
+| et sed nulla id, ultricies sce |                                |                                | 
+| lerisque quam. Nunc facilisis  |                                |                                | 
+| dolor at nisl pulvinar fringil |                                |                                | 
+| la.                            |                                |                                | 
++--------------------------------+--------------------------------+--------------------------------+-
+------------------------------------------------------------
+Descripción: Fusce sed dolor nunc. Nulla facilisi. Nulla interdum erat ut sem aliquet, ut eleifend nisi hendrerit. Morbi dictum enim non felis mollis feugiat. Pellentesque felis sem, fringilla ut placerat cursus, venenatis ac velit. 
+
+
+----------------------------------------
+Conclusiones
+----------------------------------------
+
+Fusce sed dolor nunc. Nulla facilisi. Nulla interdum erat ut sem aliquet, ut eleifend nisi hendrerit. Morbi dictum enim non felis mollis feugiat. Pellentesque felis sem, fringilla ut placerat cursus, venenatis ac velit. Vestibulum tempor, quam sit amet congue aliquam, ligula nunc ultrices metus, vel eleifend augue est eu est. Etiam sollicitudin cursus porttitor. In eget ultricies lectus. Aliquam convallis scelerisque nulla id eleifend.
+
+
+[1] James Bridle, "Lorem Ipsum", Lipsum.com, 2026. [En línea]. Disponible: https://www.lipsum.com/feed/html
+
+[2] Jon Duckett, "HTML and CSS: Design and Build Websites". John Wiley & Sons, 2011.
+
+----------------------------------------
+Clásula de Uso de IA
+----------------------------------------
+
+
+============================================================
+DECLARACIÓN DE USO DE INTELIGENCIA ARTIFICIAL
+============================================================
+
+Yo, Tanyira Danae Sánchez Uc, declaro que NO he utilizado herramientas de
+Inteligencia Artificial para la elaboración de este trabajo académico.
+
+Afirmo que cuento con evidencias físicas y/o digitales que demuestran
+mi autoría, incluyendo: documentos manuscritos, materiales impresos con
+anotaciones o subrayado, historial de versiones de documentos electrónicos,
+o commits en repositorios de código.
+
+Reconozco que el profesor se reserva el derecho de solicitar dichas
+evidencias cuando existan sospechas o se detecten conductas que atenten
+contra la integridad académica.
+
+
+============================================================
+DECLARACIÓN DE USO DE INTELIGENCIA ARTIFICIAL
+============================================================
+
+Estudiante: José Ichigo López Cruz
+IA utilizada: Gemini 3
+Fecha: 2026-01-17
+Propósito: Información bibliográfica
+
+Prompt utilizado:
+----------------------------------------
+dame el autor(es), título, editorial y año de un libro que sea BASICO y FAMOSO de HTML/JS/CSS
+----------------------------------------
+
+Archivos suministrados: N/A
+
+Respuesta en crudo:
+----------------------------------------
+Para alguien con tu perfil docente y enfocado en desarrollo de software, el libro que cumple con ser el estándar de oro por su claridad, fama y enfoque visual es, sin duda, el de **Jon Duckett**.
+
+Aquí tienes los datos para tu referencia:
+
+* **Autor(es):** Jon Duckett
+* **Título:** *HTML and CSS: Design and Build Websites*
+* **Editorial:** John Wiley & Sons
+* **Año:** 2011 (Aunque tiene reimpresiones constantes, es el año de la primera edición que se volvió un fenómeno global).
+
+---
+
+### ¿Por qué este libro?
+
+A diferencia de los manuales técnicos densos, este libro se utiliza mucho en academia porque:
+
+* **Enfoque Visual:** Utiliza infografías y diagramas para explicar la estructura del DOM y el flujo de CSS, lo cual es ideal para tus alumnos de **Desarrollo de Software y Negocios Digitales**.
+* **Referencia obligada:** Es casi un objeto de colección por su diseño editorial.
+* **Nivel:** Es el punto de entrada más amigable antes de pasar a temas más complejos como el *framework* que usas para el proyecto SmartHome (Flutter) o lógica avanzada.
+
+> **Nota:** Existe un segundo volumen del mismo autor específicamente para **JavaScript & JQuery**, publicado en 2014, que mantiene la misma estética y fama.
+
+¿Te gustaría que redactara la referencia completa de este libro en formato **IEEE** para que la agregues a tu bibliografía?
+----------------------------------------
+
