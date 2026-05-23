@@ -417,71 +417,6 @@ function generateSelectOptions(storageKey, selectedValue) {
     return options;
 }
 
-// function renderHeaderEditor(block, deleteBtn) {
-//     const savedData = JSON.parse(localStorage.getItem('global_header_data'));
-    
-//     // Leer el tema de forma segura (por si se guardó con o sin comillas)
-//     let savedTheme = localStorage.getItem('selectedTheme');
-//     if (savedTheme) {
-//         savedTheme = savedTheme.replace(/['"]+/g, ''); // Limpia comillas si las hay
-//     }
-
-//     // Diccionario de instituciones basado en los values del select
-//     const schoolNames = {
-//         'upy': 'UPY - Universidad Politécnica de Yucatán',
-//         'tsw': 'TSW - Tecnológico de Software',
-//         'upp': 'UPP - Universidad Privada de la Península'
-//     };
-
-//     const d = savedData || { name: '', group: '', subject: '', prof: '', inst: '', term: '', date: '' };
-    
-//     // Si ya había una institución guardada, la usa. Si no, busca la del tema actual.
-//     const currentInst = d.inst || schoolNames[savedTheme] || '';
-    
-//     const isLocked = savedData ? 'disabled' : '';
-
-//     return `
-//         <div class="block-card header-card" id="header-card-main">
-//             ${deleteBtn}
-//             <label>Datos del Alumno / Encabezado:</label>
-//             <div class="grid-inputs">
-//                 <input type="text" placeholder="Nombre del Alumno" value="${escapeAttr(d.name || '')}" ${isLocked} oninput="updateContent(${block.id}, this.value)">
-//                 <input type="text" placeholder="Grupo" value="${escapeAttr(d.group || '')}" ${isLocked} oninput="updateContent(${block.id}, this.value)">
-                
-//                 <!-- Materia -->
-//                 <div class="input-with-action">
-//                     <select id="select-subject-main" ${isLocked} oninput="updateContent(${block.id}, this.value)">
-//                         ${generateSelectOptions('list_subjects', d.subject)}
-//                     </select>
-//                     <button type="button" class="icon-btn action-icon" onclick="addSubjectToList()" title="Añadir materia" ${isLocked}>➕</button>
-//                     <button type="button" class="icon-btn action-icon" onclick="editSubjectInList()" title="Editar materia seleccionada" ${isLocked}>✏️</button>
-//                     <button type="button" class="icon-btn action-icon" onclick="deleteSubjectFromList()" title="Eliminar materia seleccionada" ${isLocked}>🗑️</button>
-//                 </div>
-
-//                 <!-- Profesor -->
-//                 <div class="input-with-action">
-//                     <select id="select-prof-main" ${isLocked} oninput="updateContent(${block.id}, this.value)">
-//                         ${generateSelectOptions('list_profs', d.prof)}
-//                     </select>
-//                     <button type="button" class="icon-btn action-icon" onclick="addProfToList()" title="Añadir profesor" ${isLocked}>➕</button>
-//                     <button type="button" class="icon-btn action-icon" onclick="editProfInList()" title="Editar profesor seleccionado" ${isLocked}>✏️</button>
-//                     <button type="button" class="icon-btn action-icon" onclick="deleteProfFromList()" title="Eliminar profesor seleccionado" ${isLocked}>🗑️</button>
-//                 </div>
-
-//                 <!-- Institución ahora toma el valor calculado (currentInst) -->
-//                 <input type="text" placeholder="Institución" value="${escapeAttr(currentInst)}" ${isLocked} oninput="updateContent(${block.id}, this.value)">
-                
-//                 <input type="text" placeholder="Cuatrimestre" value="${escapeAttr(d.term || '')}" ${isLocked} oninput="updateContent(${block.id}, this.value)">
-//                 <input type="date" value="${escapeAttr(d.date || '')}" ${isLocked} oninput="updateContent(${block.id}, this.value)">
-                
-//             </div>
-//             <div class="card-actions">
-//                 <button type="button" class="action-btn save-btn" onclick="saveHeaderData()" title="Guardar datos">💾</button>
-//                 <button type="button" class="action-btn edit-btn" onclick="editHeaderData()" title="Editar datos">🔄</button>
-//                 <button type="button" class="action-btn " onclick="deleteHeaderData()" otitle="Eliminar datos">🗑️</button>
-//             </div>
-//         </div>`;
-// }
 
 function renderHeaderEditor(block, deleteBtn) {
     const savedData = JSON.parse(localStorage.getItem('global_header_data'));
@@ -536,6 +471,10 @@ function renderHeaderEditor(block, deleteBtn) {
                 
             </div>
             <div class="card-actions">
+                <div class="checkbox-container" style="margin-top: 15px; display: flex; align-items: center; gap: 8px;">
+                  <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()">
+                  <label for="check-include-logo">Incluir logos</label>
+                </div>
                 <button type="button" class="action-btn save-btn" onclick="saveHeaderData()" title="Guardar datos">💾</button>
                 <button type="button" class="action-btn edit-btn" onclick="editHeaderData()" title="Editar datos">🔄</button>
                 <button type="button" class="action-btn" onclick="deleteHeaderData()" title="Eliminar datos">🗑️</button>
@@ -1036,27 +975,17 @@ function renderPreview() {
             case 'code':
                 return `<pre class="code-preview"><code>${escapeHtml(block.content)}</code></pre>`;
             
-            // case 'header':
-            //     // Ahora lee de savedHeader en lugar de block.hData
-            //     return `
-            //         <div class="p-header">
-            //             <p><strong>Institución:</strong> ${escapeHtml(savedHeader.inst || '')}</p>
-            //             <p><strong>Materia:</strong> ${escapeHtml(savedHeader.subject || '')} ${savedHeader.term ? `(${escapeHtml(savedHeader.term)}° Cuatrimestre)` : ''}</p>
-            //             <p><strong>Profesor:</strong> ${escapeHtml(savedHeader.prof || '')}</p>
-            //             <p><strong>Alumno:</strong> ${escapeHtml(savedHeader.name || '')} ${savedHeader.group ? `| <strong>Grupo:</strong> ${escapeHtml(savedHeader.group)}` : ''}</p>
-            //             <p><strong>Fecha:</strong> ${escapeHtml(savedHeader.date || '')}</p>
-            //             <hr>
-            //         </div>`;
             
-            case 'header':
+           case 'header':
                 // Por defecto, leemos de los datos guardados
                 let liveData = JSON.parse(localStorage.getItem('global_header_data')) || {};
                 
                 // MAGIA EN VIVO: Si el editor está en pantalla, leemos directamente los inputs
                 const headerCard = document.getElementById('header-card-main');
                 if (headerCard) {
-                    const inputs = headerCard.querySelectorAll('input');
+                    const inputs = headerCard.querySelectorAll('input[type="text"], input[type="date"], input:not([type="checkbox"])');
                     const selects = headerCard.querySelectorAll('select');
+                    const logoCheckbox = headerCard.querySelector('#check-include-logo');
                     
                     if (inputs.length >= 5 && selects.length >= 2) {
                         liveData = {
@@ -1066,13 +995,57 @@ function renderPreview() {
                             prof: selects[1].value,
                             inst: inputs[2].value,
                             term: inputs[3].value,
-                            date: inputs[4].value
+                            date: inputs[4].value,
+                            includeLogo: logoCheckbox ? logoCheckbox.checked : false
                         };
                     }
                 }
 
+                // LÓGICA DE TEMAS PARA LOS LOGOS
+                // Leemos la clave exacta de tu LocalStorage ('selectedTheme')
+                const currentTheme = localStorage.getItem('selectedTheme') || 'default';
+                let logoIzquierdo = '';
+                let logoDerecho = '';
+
+                // Asignar imágenes dependiendo de los 3 temas (Ajusta los nombres de los case 2 y 3)
+        //               <option value="upy">UPY - Universidad Politécnica de Yucatán</option>
+        //   <option value="tsw">TSW - Tecnológico de Software</option>
+        //   <option value="upp">UPP - Universidad Privada de la Península</option>
+                switch (currentTheme) {
+                    case 'upy':
+                        // Pon aquí las URLs de los logos para la UPY
+                        logoIzquierdo = '../assets/img/upy.png'; 
+                        logoDerecho = '../assets/img/upy.png';
+                        break;
+                    case 'tsw': // Reemplaza 'tema2' por el valor exacto de tu segundo tema
+                        logoIzquierdo = '../assets/img/tsw.png';
+                        logoDerecho = '../assets/img/tsw.png';
+                        break;
+                    case 'upp': // Reemplaza 'tema3' por el valor exacto de tu tercer tema
+                        logoIzquierdo = '../assets/img/upp.png';
+                        logoDerecho = '../assets/img/upp.png';
+                        break;
+                    default:
+                        // Logos genéricos por defecto
+                        logoIzquierdo = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
+                        logoDerecho = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
+                        break;
+                }
+
+                // Generar el HTML de los logos si el checkbox está marcado
+                let logosHTML = '';
+                if (liveData.includeLogo) {
+                    logosHTML = `
+                        <div class="header-logos" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                            <img src="${logoIzquierdo}" alt="Logo Institución" style="height: 80px; max-width: 100px; object-fit: contain;">
+                            <img src="${logoDerecho}" alt="Logo Carrera" style="height: 80px; max-width: 100px; object-fit: contain;">
+                        </div>
+                    `;
+                }
+
                 return `
                     <div class="p-header">
+                        ${logosHTML}
                         <p><strong>Institución:</strong> ${escapeHtml(liveData.inst || '')}</p>
                         <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(liveData.term)}° Cuatrimestre)` : ''}</p>
                         <p><strong>Profesor:</strong> ${escapeHtml(liveData.prof || '')}</p>
@@ -1080,7 +1053,6 @@ function renderPreview() {
                         <p><strong>Fecha:</strong> ${escapeHtml(liveData.date || '')}</p>
                         <hr>
                     </div>`;
-
 
             case 'ref':
                 if (!block.refData) return '';
