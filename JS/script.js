@@ -432,22 +432,54 @@ function renderHeaderEditor(block, deleteBtn) {
         'upp': 'UPP - Universidad Privada de la Península'
     };
 
-    const d = savedData || { name: '', group: '', subject: '', prof: '', inst: '', term: '', date: '' };
+    // Actualizamos el modelo de datos por defecto
+    const d = savedData || { names: [], name: '', group: '', subject: '', prof: '', inst: '', term: '', date: '', isTeam: false };
     const currentInst = d.inst || schoolNames[savedTheme] || '';
     const isLocked = savedData ? 'disabled' : '';
+    
+    // Si está bloqueado, mejor ocultamos el botón de añadir por completo para que se vea más limpio
+    const displayAddBtn = (d.isTeam && !savedData) ? 'inline-block' : 'none';
+
+    // Lógica para renderizar los inputs de nombres guardados
+    let membersHtml = '';
+    const namesArray = (d.names && d.names.length > 0) ? d.names : [d.name || ''];
+
+    namesArray.forEach((name, i) => {
+        let placeholderText = d.isTeam ? `Nombre del integrante ${i + 1}` : 'Nombre del Alumno';
+        
+        let deleteBtnElement = (d.isTeam && i > 0) ? 
+            `<button type="button" class="icon-btn action-icon btn-remove-member" onclick="removeTeamMember(this)" title="Eliminar integrante" ${isLocked}>🗑️</button>` : '';
+
+        // FORZAMOS EL TAMAÑO: display: flex y flex: 1 en el input
+        membersHtml += `
+            <div class="input-with-action member-row" style="display: flex; width: 100%;">
+                <input type="text" class="student-name-input" placeholder="${placeholderText}" value="${escapeAttr(name)}" ${isLocked} oninput="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
+                ${deleteBtnElement}
+            </div>
+        `;
+    });
 
     return `
         <div class="block-card header-card" id="header-card-main">
             ${deleteBtn}
-            <label>Datos del Alumno / Encabezado:</label>
-            <div class="grid-inputs">
-                <!-- Cambiamos updateContent por renderPreview() -->
-                <input type="text" placeholder="Nombre del Alumno" value="${escapeAttr(d.name || '')}" ${isLocked} oninput="renderPreview()">
-                <input type="text" placeholder="Grupo" value="${escapeAttr(d.group || '')}" ${isLocked} oninput="renderPreview()">
+            
+            <div style="margin-bottom: 15px;">
+                <label style="font-weight: bold; display: block; margin-bottom: 10px;">Datos del Alumno / Equipo:</label>
                 
-                <!-- Materia -->
-                <div class="input-with-action">
-                    <select id="select-subject-main" ${isLocked} onchange="renderPreview()">
+                <div id="team-members-container" class="grid-inputs" style="margin-bottom: 10px;">
+                    ${membersHtml}
+                </div>
+                
+                <button type="button" id="btn-add-member" class="action-btn" onclick="addTeamMember()" style="display: ${displayAddBtn};" ${isLocked}>
+                    ➕ Añadir integrante
+                </button>
+            </div>
+
+            <div class="grid-inputs">
+                <input type="text" placeholder="Grupo" value="${escapeAttr(d.group || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                
+                <div class="input-with-action" style="display: flex; width: 100%;">
+                    <select id="select-subject-main" ${isLocked} onchange="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
                         ${generateSelectOptions('list_subjects', d.subject)}
                     </select>
                     <button type="button" class="icon-btn action-icon" onclick="addSubjectToList()" title="Añadir materia" ${isLocked}>➕</button>
@@ -455,9 +487,8 @@ function renderHeaderEditor(block, deleteBtn) {
                     <button type="button" class="icon-btn action-icon" onclick="deleteSubjectFromList()" title="Eliminar materia seleccionada" ${isLocked}>🗑️</button>
                 </div>
 
-                <!-- Profesor -->
-                <div class="input-with-action">
-                    <select id="select-prof-main" ${isLocked} onchange="renderPreview()">
+                <div class="input-with-action" style="display: flex; width: 100%;">
+                    <select id="select-prof-main" ${isLocked} onchange="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
                         ${generateSelectOptions('list_profs', d.prof)}
                     </select>
                     <button type="button" class="icon-btn action-icon" onclick="addProfToList()" title="Añadir profesor" ${isLocked}>➕</button>
@@ -465,24 +496,131 @@ function renderHeaderEditor(block, deleteBtn) {
                     <button type="button" class="icon-btn action-icon" onclick="deleteProfFromList()" title="Eliminar profesor seleccionado" ${isLocked}>🗑️</button>
                 </div>
 
-                <input type="text" placeholder="Institución" value="${escapeAttr(currentInst)}" ${isLocked} oninput="renderPreview()">
-                <input type="text" placeholder="Cuatrimestre" value="${escapeAttr(d.term || '')}" ${isLocked} oninput="renderPreview()">
-                <input type="date" value="${escapeAttr(d.date || '')}" ${isLocked} oninput="renderPreview()">
-                
-            </div>
-            <div class="card-actions">
-                <div class="checkbox-container" style="margin-top: 15px; display: flex; align-items: center; gap: 8px;">
-                  <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()">
-                  <label for="check-include-logo">Incluir logos</label>
+                <div class="input-with-action" style="display: flex; width: 100%;">
+                    <select id="select-inst-main" ${isLocked} onchange="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
+                        ${generateSelectOptions('list_insts', currentInst)}
+                    </select>
+                    <button type="button" class="icon-btn action-icon" onclick="addInstToList()" title="Añadir institución" ${isLocked}>➕</button>
+                    <button type="button" class="icon-btn action-icon" onclick="editInstInList()" title="Editar institución seleccionada" ${isLocked}>✏️</button>
+                    <button type="button" class="icon-btn action-icon" onclick="deleteInstFromList()" title="Eliminar institución seleccionada" ${isLocked}>🗑️</button>
                 </div>
-                <button type="button" class="action-btn save-btn" onclick="saveHeaderData()" title="Guardar datos">💾</button>
-                <button type="button" class="action-btn edit-btn" onclick="editHeaderData()" title="Editar datos">🔄</button>
-                <button type="button" class="action-btn" onclick="deleteHeaderData()" title="Eliminar datos">🗑️</button>
+                <input type="text" placeholder="Cuatrimestre" value="${escapeAttr(d.term || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                <input type="date" value="${escapeAttr(d.date || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0 15px 0;">
+
+            <div class="card-actions" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                
+                <div class="options-group" style="display: flex; gap: 20px; align-items: center;">
+                    <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()" ${isLocked} style="margin: 0; width: 15px; height: 15px;">
+                        <label for="check-include-logo" style="margin: 0; cursor: pointer; line-height: 1; font-size: 14px; padding-top: 1px;">Incluir logos</label>
+                    </div>
+                    <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
+                        <input type="checkbox" id="check-is-team" onchange="toggleTeamMode(this)" ${d.isTeam ? 'checked' : ''} ${isLocked} style="margin: 0; width: 15px; height: 15px;">
+                        <label for="check-is-team" style="margin: 0; cursor: pointer; line-height: 1; font-size: 14px; padding-top: 1px;">Es tarea en equipo</label>
+                    </div>
+                </div>
+
+                <div class="action-buttons-group" style="display: flex; gap: 10px;">
+                    <button type="button" class="action-btn save-btn" onclick="saveHeaderData()" title="Guardar datos">💾</button>
+                    <button type="button" class="action-btn edit-btn" onclick="editHeaderData()" title="Editar datos">✏️</button>
+                    <button type="button" class="action-btn" onclick="deleteHeaderData()" title="Eliminar datos">🗑️</button>
+                </div>
+                
             </div>
         </div>`;
 }
 
+function removeTeamMember(buttonElement) {
+    // 1. Encontrar el contenedor del input específico y eliminarlo
+    const rowToRemove = buttonElement.closest('.member-row');
+    if (rowToRemove) {
+        rowToRemove.remove();
+        
+        // 2. Re-enumerar los placeholders para que tengan sentido
+        updateMemberPlaceholders();
+        
+        // 3. Actualizar la vista previa si tienes esta función
+        if (typeof renderPreview === 'function') {
+            renderPreview();
+        }
+    }
+}
 
+function updateMemberPlaceholders() {
+    const inputs = document.querySelectorAll('#team-members-container .student-name-input');
+    inputs.forEach((input, index) => {
+        // Cambia el placeholder respetando el nuevo orden
+        input.placeholder = `Nombre del integrante ${index + 1}`;
+    });
+}
+
+// Activa o desactiva el modo equipo
+function toggleTeamMode(checkbox) {
+    const isTeam = checkbox.checked;
+    const addMemberBtn = document.getElementById('btn-add-member');
+    const container = document.getElementById('team-members-container');
+    const memberRows = container.querySelectorAll('.member-row');
+
+    if (isTeam) {
+        // MODO EQUIPO: Mostrar botón de añadir
+        addMemberBtn.style.display = 'inline-block';
+        
+        // Cambiar el placeholder del primer input
+        if (memberRows.length > 0) {
+            const firstInput = memberRows[0].querySelector('.student-name-input');
+            if (firstInput) firstInput.placeholder = 'Nombre del integrante 1';
+        }
+    } else {
+        // MODO INDIVIDUAL: Ocultar botón de añadir
+        addMemberBtn.style.display = 'none';
+        
+        // Eliminar todos los integrantes excepto el primero
+        for (let i = 1; i < memberRows.length; i++) {
+            memberRows[i].remove();
+        }
+        
+        // Formatear el primer input para que vuelva a ser individual
+        if (memberRows.length > 0) {
+            const firstInput = memberRows[0].querySelector('.student-name-input');
+            if (firstInput) firstInput.placeholder = 'Nombre del Alumno';
+            
+            // Por seguridad, asegurarnos de que el primer input NO tenga botón de basura
+            const firstDeleteBtn = memberRows[0].querySelector('.btn-remove-member');
+            if (firstDeleteBtn) firstDeleteBtn.remove();
+        }
+    }
+    
+    // Actualizar la vista previa del documento
+    if (typeof renderPreview === 'function') {
+        renderPreview();
+    }
+}   
+
+// Añade un nuevo input al contenedor
+function addTeamMember() {
+    const container = document.getElementById('team-members-container');
+    const count = container.querySelectorAll('.student-name-input').length;
+    
+    // Crear el nuevo contenedor con formato
+    const newMemberRow = document.createElement('div');
+    newMemberRow.className = 'input-with-action member-row';
+    newMemberRow.style.width = '100%';
+    
+    // Inyectar el input y su botón de eliminar
+    newMemberRow.innerHTML = `
+        <input type="text" class="student-name-input" placeholder="Nombre del integrante ${count + 1}" oninput="renderPreview()">
+        <button type="button" class="icon-btn action-icon btn-remove-member" onclick="removeTeamMember(this)" title="Eliminar integrante">🗑️</button>
+    `;
+    
+    container.appendChild(newMemberRow);
+    
+    if (typeof renderPreview === 'function') {
+        renderPreview();
+    }
+}
 function editSubjectInList() {
     const selectEl = document.getElementById('select-subject-main');
     const currentValue = selectEl.value;
@@ -642,28 +780,41 @@ function addProfToList() {
 function saveHeaderData() {
     const card = document.getElementById('header-card-main');
     
-    
     if (card) {
-        const inputs = card.querySelectorAll('input');
+        // 1. Extraemos los nombres dinámicos de los integrantes
+        const nameInputs = card.querySelectorAll('.student-name-input');
+        const namesArray = Array.from(nameInputs).map(input => input.value);
+
+        // 2. Extraemos el estado de la casilla de equipo
+        const isTeamCheckbox = card.querySelector('#check-is-team');
+        const isTeam = isTeamCheckbox ? isTeamCheckbox.checked : false;
+
+        // 3. Extraemos el resto de campos usando selectores específicos para no confundir los índices
+        const gridTextInputs = card.querySelectorAll('.grid-inputs input[type="text"]');
+        const dateInput = card.querySelector('.grid-inputs input[type="date"]');
         const selects = card.querySelectorAll('select');
 
+        // Construimos el objeto con la nueva estructura
         const hDataToSave = {
-            name: inputs[0].value,       
-            group: inputs[1].value,      
-            subject: selects[0].value,   
-            prof: selects[1].value,      
-            inst: inputs[2].value,       
-            term: inputs[3].value,       
-            date: inputs[4].value        
+            names: namesArray,         // Guardamos el arreglo de nombres
+            isTeam: isTeam,            // Guardamos si es equipo o no
+            group: gridTextInputs[0] ? gridTextInputs[0].value : '',
+            subject: selects[0] ? selects[0].value : '',
+            prof: selects[1] ? selects[1].value : '',
+            inst: gridTextInputs[1] ? gridTextInputs[1].value : '',
+            term: gridTextInputs[2] ? gridTextInputs[2].value : '',
+            date: dateInput ? dateInput.value : ''
         };
 
-        // Guardar con clave fija
+        // Guardar con clave fija en LocalStorage
         localStorage.setItem('global_header_data', JSON.stringify(hDataToSave));
 
-        const allFields = card.querySelectorAll('input, select, .action-icon');
+        // Seleccionamos todo lo que queremos bloquear (añadimos el botón de "Añadir integrante")
+        const allFields = card.querySelectorAll('input, select, .action-icon, #btn-add-member');
         allFields.forEach(field => field.disabled = true);
 
-        updateContent()
+        // Refrescar el contenido
+        updateContent();
         
         alert("Datos guardados y bloqueados correctamente.");
     }
@@ -675,7 +826,8 @@ function editHeaderData() {
     if (confirmEdit) {
         const card = document.getElementById('header-card-main');
         if (card) {
-            const allFields = card.querySelectorAll('input, select, .action-icon');
+            // Desbloqueamos inputs, selects, iconos de acción y el botón de añadir miembro
+            const allFields = card.querySelectorAll('input, select, .action-icon, #btn-add-member');
             allFields.forEach(field => field.disabled = false);
         }
     }
@@ -976,83 +1128,116 @@ function renderPreview() {
                 return `<pre class="code-preview"><code>${escapeHtml(block.content)}</code></pre>`;
             
             
-           case 'header':
-                // Por defecto, leemos de los datos guardados
-                let liveData = JSON.parse(localStorage.getItem('global_header_data')) || {};
+case 'header':
+            // Por defecto, leemos de los datos guardados
+            let liveData = JSON.parse(localStorage.getItem('global_header_data')) || {};
+            
+            // Aseguramos compatibilidad inicial si el objeto en localStorage usa el formato antiguo
+            if (liveData.name && !liveData.names) {
+                liveData.names = [liveData.name];
+                liveData.isTeam = false;
+            }
+
+            // MAGIA EN VIVO: Si el editor está en pantalla, leemos directamente de los elementos del DOM
+            const headerCard = document.getElementById('header-card-main');
+            if (headerCard) {
+                // 1. Extraemos TODOS los inputs de nombres usando la clase específica que creamos
+                const nameInputs = headerCard.querySelectorAll('.student-name-input');
+                const namesArray = Array.from(nameInputs).map(input => input.value);
+
+                // 2. Extraemos el checkbox de equipo
+                const isTeamCheckbox = headerCard.querySelector('#check-is-team');
+                const isTeam = isTeamCheckbox ? isTeamCheckbox.checked : false;
+
+                // 3. Extraemos el resto de inputs de texto (excluyendo los nombres)
+                const inputsText = Array.from(headerCard.querySelectorAll('.grid-inputs input[type="text"]'))
+                                        .filter(input => !input.classList.contains('student-name-input'));
                 
-                // MAGIA EN VIVO: Si el editor está en pantalla, leemos directamente los inputs
-                const headerCard = document.getElementById('header-card-main');
-                if (headerCard) {
-                    const inputs = headerCard.querySelectorAll('input[type="text"], input[type="date"], input:not([type="checkbox"])');
-                    const selects = headerCard.querySelectorAll('select');
-                    const logoCheckbox = headerCard.querySelector('#check-include-logo');
-                    
-                    if (inputs.length >= 5 && selects.length >= 2) {
-                        liveData = {
-                            name: inputs[0].value,
-                            group: inputs[1].value,
-                            subject: selects[0].value,
-                            prof: selects[1].value,
-                            inst: inputs[2].value,
-                            term: inputs[3].value,
-                            date: inputs[4].value,
-                            includeLogo: logoCheckbox ? logoCheckbox.checked : false
-                        };
-                    }
+                const dateInput = headerCard.querySelector('.grid-inputs input[type="date"]');
+                const logoCheckbox = headerCard.querySelector('#check-include-logo');
+
+                // 4. Extraemos los selects por sus IDs específicos (¡Más seguro!)
+                const subjectSelect = headerCard.querySelector('#select-subject-main');
+                const profSelect = headerCard.querySelector('#select-prof-main');
+                const instSelect = headerCard.querySelector('#select-inst-main');
+
+                // Validamos que existan suficientes campos (ahora son 2 text inputs y 3 selects)
+                if (inputsText.length >= 2 && subjectSelect && profSelect && instSelect) {
+                    liveData = {
+                        names: namesArray,
+                        isTeam: isTeam,
+                        // Ahora inputsText solo tiene 2 elementos: 0: Grupo, 1: Cuatrimestre
+                        group: inputsText[0].value,
+                        term: inputsText[1].value,
+                        
+                        // Leemos directamente del valor de cada select
+                        subject: subjectSelect.value,
+                        prof: profSelect.value,
+                        inst: instSelect.value,
+                        
+                        date: dateInput ? dateInput.value : '',
+                        includeLogo: logoCheckbox ? logoCheckbox.checked : false
+                    };
                 }
+            }
 
-                // LÓGICA DE TEMAS PARA LOS LOGOS
-                // Leemos la clave exacta de tu LocalStorage ('selectedTheme')
-                const currentTheme = localStorage.getItem('selectedTheme') || 'default';
-                let logoIzquierdo = '';
-                let logoDerecho = '';
+            // LÓGICA DE TEMAS PARA LOS LOGOS
+            const currentTheme = localStorage.getItem('selectedTheme') || 'default';
+            let logoIzquierdo = '';
+            let logoDerecho = '';
 
-                // Asignar imágenes dependiendo de los 3 temas (Ajusta los nombres de los case 2 y 3)
-        //               <option value="upy">UPY - Universidad Politécnica de Yucatán</option>
-        //   <option value="tsw">TSW - Tecnológico de Software</option>
-        //   <option value="upp">UPP - Universidad Privada de la Península</option>
-                switch (currentTheme) {
-                    case 'upy':
-                        // Pon aquí las URLs de los logos para la UPY
-                        logoIzquierdo = '../assets/img/upy.png'; 
-                        logoDerecho = '../assets/img/upy.png';
-                        break;
-                    case 'tsw': // Reemplaza 'tema2' por el valor exacto de tu segundo tema
-                        logoIzquierdo = '../assets/img/tsw.png';
-                        logoDerecho = '../assets/img/tsw.png';
-                        break;
-                    case 'upp': // Reemplaza 'tema3' por el valor exacto de tu tercer tema
-                        logoIzquierdo = '../assets/img/upp.png';
-                        logoDerecho = '../assets/img/upp.png';
-                        break;
-                    default:
-                        // Logos genéricos por defecto
-                        logoIzquierdo = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
-                        logoDerecho = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
-                        break;
-                }
+            switch (currentTheme.replace(/['"]+/g, '')) { // Limpiamos posibles comillas del localStorage
+                case 'upy':
+                    logoIzquierdo = 'https://yucnen.sep.gob.mx/assets/img/up-logo.webp'; 
+                    logoDerecho = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
+                    break;
+                case 'tsw': 
+                    logoIzquierdo = 'https://drive.google.com/file/d/1Su_cB4O5QSu12Bp5m-0SKViT41VoY7Pu/view?usp=drive_link';
+                    logoDerecho = 'https://drive.google.com/file/d/1Su_cB4O5QSu12Bp5m-0SKViT41VoY7Pu/view?usp=drive_link';
+                    break;
+                case 'upp': 
+                    logoIzquierdo = 'https://drive.google.com/file/d/1OyEB5QuKwpD-7G7munNqHUYow5Q8wMQK/view?usp=drive_link';
+                    logoDerecho = 'https://drive.google.com/file/d/1OyEB5QuKwpD-7G7munNqHUYow5Q8wMQK/view?usp=drive_link';
+                    break;
+                default:
+                    logoIzquierdo = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
+                    logoDerecho = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
+                    break;
+            }
 
-                // Generar el HTML de los logos si el checkbox está marcado
-                let logosHTML = '';
-                if (liveData.includeLogo) {
-                    logosHTML = `
-                        <div class="header-logos" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                            <img src="${logoIzquierdo}" alt="Logo Institución" style="height: 80px; max-width: 100px; object-fit: contain;">
-                            <img src="${logoDerecho}" alt="Logo Carrera" style="height: 80px; max-width: 100px; object-fit: contain;">
-                        </div>
-                    `;
-                }
+            // Generar el HTML de los logos si el checkbox está marcado
+            let logosHTML = '';
+            if (liveData.includeLogo) {
+                logosHTML = `
+                    <div class="header-logos" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <img src="${logoIzquierdo}" alt="Logo Institución" style="height: 80px; max-width: 100px; object-fit: contain;">
+                        <img src="${logoDerecho}" alt="Logo Carrera" style="height: 80px; max-width: 100px; object-fit: contain;">
+                    </div>
+                `;
+            }
 
-                return `
-                    <div class="p-header">
-                        ${logosHTML}
-                        <p><strong>Institución:</strong> ${escapeHtml(liveData.inst || '')}</p>
-                        <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(liveData.term)}° Cuatrimestre)` : ''}</p>
-                        <p><strong>Profesor:</strong> ${escapeHtml(liveData.prof || '')}</p>
-                        <p><strong>Alumno:</strong> ${escapeHtml(liveData.name || '')} ${liveData.group ? `| <strong>Grupo:</strong> ${escapeHtml(liveData.group)}` : ''}</p>
-                        <p><strong>Fecha:</strong> ${escapeHtml(liveData.date || '')}</p>
-                        <hr>
-                    </div>`;
+            // NUEVA LÓGICA: Procesamos los nombres para mostrarlos correctamente en el documento final
+            let nombresHtmlFinal = '';
+            const listaNombres = liveData.names || [liveData.name || ''];
+
+            if (liveData.isTeam) {
+                // Filtramos entradas vacías y las unimos con comas.
+                const nombresLimpios = listaNombres.filter(n => n.trim() !== '').map(n => escapeHtml(n)).join(', ');
+                nombresHtmlFinal = `<strong>Integrantes:</strong> ${nombresLimpios || '<em>(Sin integrantes)</em>'}`;
+            } else {
+                nombresHtmlFinal = `<strong>Alumno:</strong> ${escapeHtml(listaNombres[0] || '')}`;
+            }
+
+            return `
+                <div class="p-header">
+                    ${logosHTML}
+                    <p><strong>Institución:</strong> ${escapeHtml(liveData.inst || '')}</p>
+                    <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(liveData.term)}° Cuatrimestre)` : ''}</p>
+                    <p><strong>Profesor:</strong> ${escapeHtml(liveData.prof || '')}</p>
+                    <p>${nombresHtmlFinal} ${liveData.group ? `| <strong>Grupo:</strong> ${escapeHtml(liveData.group)}` : ''}</p>
+                    <p><strong>Fecha:</strong> ${escapeHtml(liveData.date || '')}</p>
+                    <hr>
+                </div>`;
 
             case 'ref':
                 if (!block.refData) return '';
