@@ -533,6 +533,77 @@ function renderHeaderEditor(block, deleteBtn) {
         </div>`;
 }
 
+
+// ==========================================
+// FUNCIONES PARA INSTITUCIONES
+// ==========================================
+
+function addInstToList() {
+    const newInst = prompt("Introduce el nombre de la nueva institución:");
+    if (!newInst || newInst.trim() === "") return;
+
+    const trimmedInst = newInst.trim();
+    let insts = JSON.parse(localStorage.getItem('list_insts')) || [];
+    
+    if (!insts.includes(trimmedInst)) {
+        insts.push(trimmedInst);
+        localStorage.setItem('list_insts', JSON.stringify(insts));
+        
+        // Actualizar el select y dejarlo seleccionado
+        const selectEl = document.getElementById('select-inst-main');
+        selectEl.innerHTML = generateSelectOptions('list_insts', trimmedInst);
+        renderPreview();
+    } else {
+        alert("Esta institución ya existe en la lista.");
+    }
+}
+
+function editInstInList() {
+    const selectEl = document.getElementById('select-inst-main');
+    const currentValue = selectEl.value;
+    
+    if (!currentValue) {
+        return alert("Por favor, selecciona una institución de la lista para editarla.");
+    }
+
+    const newValue = prompt("Editar nombre de la institución:", currentValue);
+    if (!newValue || newValue.trim() === "" || newValue.trim() === currentValue) return;
+
+    const trimmedNew = newValue.trim();
+    let insts = JSON.parse(localStorage.getItem('list_insts')) || [];
+    
+    const index = insts.indexOf(currentValue);
+    if (index > -1) {
+        insts[index] = trimmedNew;
+        localStorage.setItem('list_insts', JSON.stringify(insts));
+    }
+
+    selectEl.innerHTML = generateSelectOptions('list_insts', trimmedNew);
+    syncGlobalHeaderData('inst', currentValue, trimmedNew);
+    renderPreview();
+}
+
+function deleteInstFromList() {
+    const selectEl = document.getElementById('select-inst-main');
+    const currentValue = selectEl.value;
+    
+    if (!currentValue) {
+        return alert("Por favor, selecciona una institución de la lista para eliminarla.");
+    }
+
+    if (confirm(`¿Estás seguro de que deseas eliminar la institución "${currentValue}" de tu lista?`)) {
+        let insts = JSON.parse(localStorage.getItem('list_insts')) || [];
+        insts = insts.filter(i => i !== currentValue);
+        localStorage.setItem('list_insts', JSON.stringify(insts));
+
+        // Volver a renderizar dejando la selección vacía
+        selectEl.innerHTML = generateSelectOptions('list_insts', '');
+        syncGlobalHeaderData('inst', currentValue, '');
+        renderPreview();
+    }
+}
+
+
 function removeTeamMember(buttonElement) {
     // 1. Encontrar el contenedor del input específico y eliminarlo
     const rowToRemove = buttonElement.closest('.member-row');
