@@ -15,6 +15,7 @@
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
       rel="stylesheet"
     />
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <nav class="toolbox">
@@ -149,6 +150,57 @@
         onchange="loadJSON(this)"
         style="display: none"
       />
+
+      <hr
+        style="
+          border: none;
+          border-top: 1px solid rgba(255, 255, 255, 0.2);
+          margin: 15px 0;
+        "
+      />
+
+      <!-- Google Drive -->
+      <div class="drive-section">
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+          <h3 style="margin: 0;">Google Drive</h3>
+          <button
+            type="button"
+            class="drive-help-btn"
+            onclick="showGoogleDriveSetupHelp()"
+            title="¿Cómo configuro Google Drive?"
+          >
+            ?
+          </button>
+        </div>
+        <p id="drive-status" style="font-size: 0.75em; opacity: 0.8; margin: 0 0 8px;">
+          No conectado
+        </p>
+
+        <button class="btn-json" id="btn-drive-connect" onclick="connectGoogleDrive()">
+          <span class="material-symbols-outlined">login</span>
+          <span>&ensp;Conectar Google Drive</span>
+        </button>
+
+        <button class="btn-json" id="btn-drive-save" onclick="saveProjectToDrive()" style="display: none;">
+          <span class="material-symbols-outlined">cloud_upload</span>
+          <span>&ensp;Guardar en Drive</span>
+        </button>
+
+        <button class="btn-json" id="btn-drive-open" onclick="openDriveFilePicker()" style="display: none;">
+          <span class="material-symbols-outlined">folder_open</span>
+          <span>&ensp;Abrir desde Drive</span>
+        </button>
+
+        <button
+          class="btn-json"
+          id="btn-drive-disconnect"
+          onclick="disconnectGoogleDrive()"
+          style="display: none; background: #c0392b !important;"
+        >
+          <span class="material-symbols-outlined">logout</span>
+          <span>&ensp;Desconectar</span>
+        </button>
+      </div>
 
       <hr
         style="

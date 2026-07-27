@@ -336,6 +336,63 @@ body {
     margin-top: 20px;
 }
 
+/* Sección de Google Drive en el nav */
+.drive-help-btn {
+    background: rgba(255, 255, 255, 0.12);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    line-height: 1;
+    cursor: pointer;
+    font-size: 0.75em;
+    font-weight: bold;
+}
+
+.drive-help-btn:hover {
+    background: rgba(255, 255, 255, 0.25);
+}
+
+/* Lista de archivos dentro del modal "Abrir desde Drive" */
+.drive-file-list {
+    max-height: 320px;
+    overflow-y: auto;
+    margin-top: 10px;
+}
+
+.drive-file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 6px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.drive-file-item:hover {
+    border-color: var(--secondary);
+    background: #f8f9fa;
+}
+
+.drive-file-name {
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.drive-file-date {
+    font-size: 0.75em;
+    color: #888;
+    flex-shrink: 0;
+}
+
 /* Créditos */
 .credits {
     margin-top: auto;
