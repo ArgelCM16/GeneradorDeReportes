@@ -51,6 +51,17 @@ body[data-theme="upp"] {
     box-sizing: border-box;
 }
 
+/* Reset de apariencia nativa de <button>: sin esto, algunos navegadores en
+   Windows dibujan un bisel/sombra propia del sistema operativo detrás del
+   fondo de color personalizado, dando un efecto de "doble borde" no deseado. */
+button {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    box-shadow: none;
+    font-family: inherit;
+}
+
 /* body { 
     display: flex; 
     height: 100vh; 

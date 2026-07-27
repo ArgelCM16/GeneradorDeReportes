@@ -2042,6 +2042,7 @@ const GOOGLE_DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 let googleAccessToken = null;
 let googleTokenClient = null;
 let driveCurrentFileId = null; // id del archivo activo en Drive (si ya se cargó/guardó uno)
+let driveCurrentFileName = null; // nombre del archivo activo, para sugerirlo en el siguiente guardado
 
 function isGoogleDriveConfigured() {
     return !!GOOGLE_DRIVE_CLIENT_ID;
@@ -2109,6 +2110,7 @@ function disconnectGoogleDrive() {
     }
     googleAccessToken = null;
     driveCurrentFileId = null;
+    driveCurrentFileName = null;
     updateDriveUI(false);
 }
 
@@ -2149,12 +2151,24 @@ async function saveProjectToDrive() {
         return;
     }
 
-    const jsonString = buildProjectJSON();
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toTimeString().slice(0, 5).replace(':', '-');
-    const filename = `REPORTE-FECHA-${dateStr}-HORA-${timeStr}.json`;
+    const suggestedName = driveCurrentFileName || `REPORTE-FECHA-${dateStr}-HORA-${timeStr}.json`;
 
+    let filename = prompt('¿Con qué nombre quieres guardar el archivo en Google Drive?', suggestedName);
+    if (filename === null) return; // el usuario canceló
+
+    filename = filename.trim();
+    if (!filename) {
+        alert('El nombre no puede estar vacío.');
+        return;
+    }
+    if (!filename.toLowerCase().endsWith('.json')) {
+        filename += '.json';
+    }
+
+    const jsonString = buildProjectJSON();
     const metadata = { name: filename, mimeType: 'application/json' };
     const boundary = 'reportes_academicos_boundary';
     const body =
@@ -2184,6 +2198,7 @@ async function saveProjectToDrive() {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         driveCurrentFileId = data.id;
+        driveCurrentFileName = filename;
         alert(`Proyecto guardado en Google Drive como "${filename}".`);
     } catch (err) {
         console.error('Error al guardar en Drive:', err);
@@ -2284,6 +2299,7 @@ async function loadProjectFromDrive(fileId, fileName) {
 
         reportData = projectData.reportData;
         driveCurrentFileId = fileId;
+        driveCurrentFileName = fileName;
 
         if (projectData.theme) {
             changeTheme(projectData.theme);
