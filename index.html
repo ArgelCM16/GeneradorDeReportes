@@ -16,7 +16,7 @@
       rel="stylesheet"
     />
   </head>
-  <body data-theme="upy">
+  <body>
     <nav class="toolbox">
       <!-- Selector de Tema -->
       <div class="theme-selector">
@@ -27,7 +27,7 @@
             display: block;
             opacity: 0.9;
           "
-          >Tema:</label
+          >Tema / Universidad:</label
         >
         <select
           id="themeSelector"
@@ -40,13 +40,40 @@
             background: rgba(255, 255, 255, 0.1);
             color: white;
             cursor: pointer;
-            margin-bottom: 15px;
+            margin-bottom: 8px;
           "
         >
-          <option value="upy">UPY - Universidad Politécnica de Yucatán</option>
-          <option value="tsw">TSW - Tecnológico de Software</option>
-          <option value="upp">UPP - Universidad Privada de la Península</option>
+          <!-- Las opciones se generan dinámicamente en JS/script.js -->
         </select>
+        <div style="display: flex; gap: 6px; margin-bottom: 15px">
+          <button
+            type="button"
+            class="theme-mgmt-btn"
+            onclick="openUniversityModal(false)"
+            title="Añadir universidad"
+            style="flex: 1"
+          >
+            ➕
+          </button>
+          <button
+            type="button"
+            class="theme-mgmt-btn"
+            onclick="openUniversityModal(true)"
+            title="Editar universidad seleccionada"
+            style="flex: 1"
+          >
+            ✏️
+          </button>
+          <button
+            type="button"
+            class="theme-mgmt-btn"
+            onclick="deleteUniversityFromList()"
+            title="Eliminar universidad seleccionada"
+            style="flex: 1"
+          >
+            🗑️
+          </button>
+        </div>
       </div>
 
       <h3>Bloques</h3>

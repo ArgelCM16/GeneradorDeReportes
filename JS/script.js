@@ -423,18 +423,17 @@ function renderHeaderEditor(block, deleteBtn) {
     
     let savedTheme = localStorage.getItem('selectedTheme');
     if (savedTheme) {
-        savedTheme = savedTheme.replace(/['"]+/g, ''); 
+        savedTheme = savedTheme.replace(/['"]+/g, '');
     }
 
-    const schoolNames = {
-        'upy': 'UPY - Universidad Politécnica de Yucatán',
-        'tsw': 'TSW - Tecnológico de Software',
-        'upp': 'UPP - Universidad Privada de la Península'
-    };
+    // La institución ya NO se elige manualmente aquí: siempre sigue a la
+    // universidad seleccionada en "Tema" del menú lateral. Ahí (y solo ahí)
+    // se puede añadir, editar o eliminar universidades.
+    const currentUni = getUniversityById(savedTheme || 'generic') || getUniversityById('generic');
+    const currentInstName = currentUni ? currentUni.name : '';
 
     // Actualizamos el modelo de datos por defecto
-    const d = savedData || { names: [], name: '', group: '', subject: '', prof: '', inst: '', term: '', date: '', isTeam: false };
-    const currentInst = d.inst || schoolNames[savedTheme] || '';
+    const d = savedData || { names: [], name: '', group: '', subject: '', prof: '', term: '', date: '', isTeam: false };
     const isLocked = savedData ? 'disabled' : '';
     
     // Si está bloqueado, mejor ocultamos el botón de añadir por completo para que se vea más limpio
@@ -496,14 +495,7 @@ function renderHeaderEditor(block, deleteBtn) {
                     <button type="button" class="icon-btn action-icon" onclick="deleteProfFromList()" title="Eliminar profesor seleccionado" ${isLocked}>🗑️</button>
                 </div>
 
-                <div class="input-with-action" style="display: flex; width: 100%;">
-                    <select id="select-inst-main" ${isLocked} onchange="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
-                        ${generateSelectOptions('list_insts', currentInst)}
-                    </select>
-                    <button type="button" class="icon-btn action-icon" onclick="addInstToList()" title="Añadir institución" ${isLocked}>➕</button>
-                    <button type="button" class="icon-btn action-icon" onclick="editInstInList()" title="Editar institución seleccionada" ${isLocked}>✏️</button>
-                    <button type="button" class="icon-btn action-icon" onclick="deleteInstFromList()" title="Eliminar institución seleccionada" ${isLocked}>🗑️</button>
-                </div>
+                <input type="text" id="header-inst-display" value="${escapeAttr(currentInstName)}" disabled readonly title="La institución se define según el tema seleccionado en el menú lateral. Usa los botones junto a 'Tema' para añadir, editar o eliminar universidades." style="width: 100%; box-sizing: border-box; background: #f0f0f0; cursor: not-allowed;">
                 <input type="text" placeholder="Cuatrimestre" value="${escapeAttr(d.term || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
                 <input type="date" value="${escapeAttr(d.date || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
             </div>
@@ -514,7 +506,7 @@ function renderHeaderEditor(block, deleteBtn) {
                 
                 <div class="options-group" style="display: flex; gap: 20px; align-items: center;">
                     <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
-                        <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()" ${isLocked} style="margin: 0; width: 15px; height: 15px;">
+                        <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()" ${d.includeLogo ? 'checked' : ''} ${isLocked} style="margin: 0; width: 15px; height: 15px;">
                         <label for="check-include-logo" style="margin: 0; cursor: pointer; line-height: 1; font-size: 14px; padding-top: 1px;">Incluir logos</label>
                     </div>
                     <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
@@ -535,74 +527,11 @@ function renderHeaderEditor(block, deleteBtn) {
 
 
 // ==========================================
-// FUNCIONES PARA INSTITUCIONES
+// NOTA: La institución ya no se gestiona con una lista propia (list_insts).
+// Ahora siempre se deriva de la universidad seleccionada en "Tema" del menú
+// lateral; para añadir, editar o eliminar instituciones usa los botones
+// junto al selector de tema (ver openUniversityModal / deleteUniversityFromList).
 // ==========================================
-
-function addInstToList() {
-    const newInst = prompt("Introduce el nombre de la nueva institución:");
-    if (!newInst || newInst.trim() === "") return;
-
-    const trimmedInst = newInst.trim();
-    let insts = JSON.parse(localStorage.getItem('list_insts')) || [];
-    
-    if (!insts.includes(trimmedInst)) {
-        insts.push(trimmedInst);
-        localStorage.setItem('list_insts', JSON.stringify(insts));
-        
-        // Actualizar el select y dejarlo seleccionado
-        const selectEl = document.getElementById('select-inst-main');
-        selectEl.innerHTML = generateSelectOptions('list_insts', trimmedInst);
-        renderPreview();
-    } else {
-        alert("Esta institución ya existe en la lista.");
-    }
-}
-
-function editInstInList() {
-    const selectEl = document.getElementById('select-inst-main');
-    const currentValue = selectEl.value;
-    
-    if (!currentValue) {
-        return alert("Por favor, selecciona una institución de la lista para editarla.");
-    }
-
-    const newValue = prompt("Editar nombre de la institución:", currentValue);
-    if (!newValue || newValue.trim() === "" || newValue.trim() === currentValue) return;
-
-    const trimmedNew = newValue.trim();
-    let insts = JSON.parse(localStorage.getItem('list_insts')) || [];
-    
-    const index = insts.indexOf(currentValue);
-    if (index > -1) {
-        insts[index] = trimmedNew;
-        localStorage.setItem('list_insts', JSON.stringify(insts));
-    }
-
-    selectEl.innerHTML = generateSelectOptions('list_insts', trimmedNew);
-    syncGlobalHeaderData('inst', currentValue, trimmedNew);
-    renderPreview();
-}
-
-function deleteInstFromList() {
-    const selectEl = document.getElementById('select-inst-main');
-    const currentValue = selectEl.value;
-    
-    if (!currentValue) {
-        return alert("Por favor, selecciona una institución de la lista para eliminarla.");
-    }
-
-    if (confirm(`¿Estás seguro de que deseas eliminar la institución "${currentValue}" de tu lista?`)) {
-        let insts = JSON.parse(localStorage.getItem('list_insts')) || [];
-        insts = insts.filter(i => i !== currentValue);
-        localStorage.setItem('list_insts', JSON.stringify(insts));
-
-        // Volver a renderizar dejando la selección vacía
-        selectEl.innerHTML = generateSelectOptions('list_insts', '');
-        syncGlobalHeaderData('inst', currentValue, '');
-        renderPreview();
-    }
-}
-
 
 function removeTeamMember(buttonElement) {
     // 1. Encontrar el contenedor del input específico y eliminarlo
@@ -850,7 +779,7 @@ function addProfToList() {
 
 function saveHeaderData() {
     const card = document.getElementById('header-card-main');
-    
+
     if (card) {
         // 1. Extraemos los nombres dinámicos de los integrantes
         const nameInputs = card.querySelectorAll('.student-name-input');
@@ -860,21 +789,31 @@ function saveHeaderData() {
         const isTeamCheckbox = card.querySelector('#check-is-team');
         const isTeam = isTeamCheckbox ? isTeamCheckbox.checked : false;
 
-        // 3. Extraemos el resto de campos usando selectores específicos para no confundir los índices
-        const gridTextInputs = card.querySelectorAll('.grid-inputs input[type="text"]');
+        // 3. Extraemos el resto de campos. IMPORTANTE: el contenedor de integrantes
+        // también tiene la clase .grid-inputs, así que hay que excluir explícitamente
+        // los inputs de nombre (y el de institución, que es de solo lectura) para no
+        // desalinear los índices de Grupo/Cuatrimestre.
+        const gridTextInputs = Array.from(card.querySelectorAll('.grid-inputs input[type="text"]'))
+            .filter(input => !input.classList.contains('student-name-input') && input.id !== 'header-inst-display');
         const dateInput = card.querySelector('.grid-inputs input[type="date"]');
-        const selects = card.querySelectorAll('select');
+        const logoCheckbox = card.querySelector('#check-include-logo');
+
+        // Los selects se leen por su ID específico (materia y profesor).
+        // La institución NO se guarda aquí: siempre se deriva del tema/universidad
+        // seleccionado en el menú lateral (ver getUniversityById en renderPreview).
+        const subjectSelect = card.querySelector('#select-subject-main');
+        const profSelect = card.querySelector('#select-prof-main');
 
         // Construimos el objeto con la nueva estructura
         const hDataToSave = {
             names: namesArray,         // Guardamos el arreglo de nombres
             isTeam: isTeam,            // Guardamos si es equipo o no
             group: gridTextInputs[0] ? gridTextInputs[0].value : '',
-            subject: selects[0] ? selects[0].value : '',
-            prof: selects[1] ? selects[1].value : '',
-            inst: gridTextInputs[1] ? gridTextInputs[1].value : '',
-            term: gridTextInputs[2] ? gridTextInputs[2].value : '',
-            date: dateInput ? dateInput.value : ''
+            subject: subjectSelect ? subjectSelect.value : '',
+            prof: profSelect ? profSelect.value : '',
+            term: gridTextInputs[1] ? gridTextInputs[1].value : '',
+            date: dateInput ? dateInput.value : '',
+            includeLogo: logoCheckbox ? logoCheckbox.checked : false
         };
 
         // Guardar con clave fija en LocalStorage
@@ -884,9 +823,9 @@ function saveHeaderData() {
         const allFields = card.querySelectorAll('input, select, .action-icon, #btn-add-member');
         allFields.forEach(field => field.disabled = true);
 
-        // Refrescar el contenido
-        updateContent();
-        
+        // Refrescar la vista previa con los datos recién guardados
+        renderPreview();
+
         alert("Datos guardados y bloqueados correctamente.");
     }
 }
@@ -900,28 +839,26 @@ function editHeaderData() {
             // Desbloqueamos inputs, selects, iconos de acción y el botón de añadir miembro
             const allFields = card.querySelectorAll('input, select, .action-icon, #btn-add-member');
             allFields.forEach(field => field.disabled = false);
+
+            // La institución nunca se edita aquí: siempre permanece bloqueada
+            // porque se deriva del tema/universidad seleccionado en el menú lateral.
+            const instDisplay = card.querySelector('#header-inst-display');
+            if (instDisplay) instDisplay.disabled = true;
         }
     }
 }
 
 function deleteHeaderData() {
     const confirmDelete = confirm("⚠️ ¿Estás seguro de que deseas eliminar permanentemente estos datos?");
-    
+
     if (confirmDelete) {
         // Eliminar usando la clave fija
         localStorage.removeItem('global_header_data');
-        
-        const card = document.getElementById('header-card-main');
-        if (card) {
-            const inputsAndSelects = card.querySelectorAll('input, select');
-            inputsAndSelects.forEach(field => {
-                field.value = ''; 
-                field.disabled = false;
-            });
-            
-            const actionIcons = card.querySelectorAll('.action-icon');
-            actionIcons.forEach(icon => icon.disabled = false);
-        }
+
+        // Re-renderizamos el bloque completo para que vuelva a un estado
+        // limpio y desbloqueado (en vez de limpiar campo por campo, lo cual
+        // no restablecía correctamente los checkboxes ni la vista previa).
+        render();
     }
 }
 
@@ -1220,69 +1157,60 @@ case 'header':
                 const isTeamCheckbox = headerCard.querySelector('#check-is-team');
                 const isTeam = isTeamCheckbox ? isTeamCheckbox.checked : false;
 
-                // 3. Extraemos el resto de inputs de texto (excluyendo los nombres)
+                // 3. Extraemos el resto de inputs de texto (excluyendo los nombres y el
+                //    de institución, que es de solo lectura y se deriva del tema)
                 const inputsText = Array.from(headerCard.querySelectorAll('.grid-inputs input[type="text"]'))
-                                        .filter(input => !input.classList.contains('student-name-input'));
-                
+                                        .filter(input => !input.classList.contains('student-name-input') && input.id !== 'header-inst-display');
+
                 const dateInput = headerCard.querySelector('.grid-inputs input[type="date"]');
                 const logoCheckbox = headerCard.querySelector('#check-include-logo');
 
                 // 4. Extraemos los selects por sus IDs específicos (¡Más seguro!)
                 const subjectSelect = headerCard.querySelector('#select-subject-main');
                 const profSelect = headerCard.querySelector('#select-prof-main');
-                const instSelect = headerCard.querySelector('#select-inst-main');
 
-                // Validamos que existan suficientes campos (ahora son 2 text inputs y 3 selects)
-                if (inputsText.length >= 2 && subjectSelect && profSelect && instSelect) {
+                // Validamos que existan suficientes campos (ahora son 2 text inputs y 2 selects;
+                // la institución ya no es un campo del formulario, se deriva del tema)
+                if (inputsText.length >= 2 && subjectSelect && profSelect) {
                     liveData = {
                         names: namesArray,
                         isTeam: isTeam,
                         // Ahora inputsText solo tiene 2 elementos: 0: Grupo, 1: Cuatrimestre
                         group: inputsText[0].value,
                         term: inputsText[1].value,
-                        
+
                         // Leemos directamente del valor de cada select
                         subject: subjectSelect.value,
                         prof: profSelect.value,
-                        inst: instSelect.value,
-                        
+
                         date: dateInput ? dateInput.value : '',
                         includeLogo: logoCheckbox ? logoCheckbox.checked : false
                     };
                 }
             }
 
-            // LÓGICA DE TEMAS PARA LOS LOGOS
-            const currentTheme = localStorage.getItem('selectedTheme') || 'default';
-            let logoIzquierdo = '';
-            let logoDerecho = '';
-
-            switch (currentTheme.replace(/['"]+/g, '')) { // Limpiamos posibles comillas del localStorage
-                case 'upy':
-                    logoIzquierdo = 'https://yucnen.sep.gob.mx/assets/img/up-logo.webp'; 
-                    logoDerecho = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
-                    break;
-                case 'tsw': 
-                    logoIzquierdo = 'https://drive.google.com/file/d/1Su_cB4O5QSu12Bp5m-0SKViT41VoY7Pu/view?usp=drive_link';
-                    logoDerecho = 'https://drive.google.com/file/d/1Su_cB4O5QSu12Bp5m-0SKViT41VoY7Pu/view?usp=drive_link';
-                    break;
-                case 'upp': 
-                    logoIzquierdo = 'https://drive.google.com/file/d/1OyEB5QuKwpD-7G7munNqHUYow5Q8wMQK/view?usp=drive_link';
-                    logoDerecho = 'https://drive.google.com/file/d/1OyEB5QuKwpD-7G7munNqHUYow5Q8wMQK/view?usp=drive_link';
-                    break;
-                default:
-                    logoIzquierdo = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
-                    logoDerecho = 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png';
-                    break;
-            }
+            // LÓGICA DE TEMAS PARA LOGOS E INSTITUCIÓN: ambos se resuelven según la
+            // universidad seleccionada en el selector de temas del nav (no son
+            // editables desde el propio bloque de encabezado)
+            const currentThemeId = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+            const currentUni = getUniversityById(currentThemeId) || getUniversityById('generic') || {};
+            const logoIzquierdo = currentUni.logoLeft || '';
+            const logoDerecho = currentUni.logoRight || '';
 
             // Generar el HTML de los logos si el checkbox está marcado
             let logosHTML = '';
             if (liveData.includeLogo) {
+                const leftLogoHTML = logoIzquierdo
+                    ? `<img src="${escapeAttr(logoIzquierdo)}" alt="Logo Institución" style="height: 80px; max-width: 100px; object-fit: contain;">`
+                    : `<div style="height: 80px; width: 100px;"></div>`;
+                const rightLogoHTML = logoDerecho
+                    ? `<img src="${escapeAttr(logoDerecho)}" alt="Logo Carrera" style="height: 80px; max-width: 100px; object-fit: contain;">`
+                    : `<div style="height: 80px; width: 100px;"></div>`;
+
                 logosHTML = `
                     <div class="header-logos" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                        <img src="${logoIzquierdo}" alt="Logo Institución" style="height: 80px; max-width: 100px; object-fit: contain;">
-                        <img src="${logoDerecho}" alt="Logo Carrera" style="height: 80px; max-width: 100px; object-fit: contain;">
+                        ${leftLogoHTML}
+                        ${rightLogoHTML}
                     </div>
                 `;
             }
@@ -1302,7 +1230,7 @@ case 'header':
             return `
                 <div class="p-header">
                     ${logosHTML}
-                    <p><strong>Institución:</strong> ${escapeHtml(liveData.inst || '')}</p>
+                    <p><strong>Institución:</strong> ${escapeHtml(currentUni.name || '')}</p>
                     <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(liveData.term)}° Cuatrimestre)` : ''}</p>
                     <p><strong>Profesor:</strong> ${escapeHtml(liveData.prof || '')}</p>
                     <p>${nombresHtmlFinal} ${liveData.group ? `| <strong>Grupo:</strong> ${escapeHtml(liveData.group)}` : ''}</p>
@@ -1367,6 +1295,8 @@ case 'header':
                 return "";
         }
     }).join('');
+
+    scheduleAutosave();
 }
 
 // ============================================================================
@@ -1391,17 +1321,25 @@ function exportTXT() {
 
     reportData.forEach(block => {
         switch(block.type) {
-            case 'header':
-                // Ahora lee de savedHeader en lugar de block.hData
+            case 'header': {
+                // La institución se deriva del tema/universidad seleccionado, no de savedHeader
+                const exportThemeId = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+                const exportUni = getUniversityById(exportThemeId) || getUniversityById('generic') || {};
+                const namesForExport = (savedHeader.names && savedHeader.names.length > 0) ? savedHeader.names : [savedHeader.name || ''];
+                const alumnoLabel = savedHeader.isTeam
+                    ? namesForExport.filter(n => n.trim() !== '').join(', ')
+                    : (namesForExport[0] || '');
+
                 textContent += `DATOS DEL ESTUDIANTE\n`;
                 textContent += `-`.repeat(40) + "\n";
-                textContent += `Institución: ${savedHeader.inst || 'N/A'}\n`;
+                textContent += `Institución: ${exportUni.name || 'N/A'}\n`;
                 textContent += `Materia: ${savedHeader.subject || 'N/A'} (${savedHeader.term || 'N/A'}° Cuatrimestre)\n`;
                 textContent += `Profesor: ${savedHeader.prof || 'N/A'}\n`;
-                textContent += `Alumno: ${savedHeader.name || 'N/A'} | Grupo: ${savedHeader.group || 'N/A'}\n`;
+                textContent += `Alumno: ${alumnoLabel || 'N/A'} | Grupo: ${savedHeader.group || 'N/A'}\n`;
                 textContent += `Fecha: ${savedHeader.date || 'N/A'}\n`;
                 textContent += `\n`;
                 break;
+            }
             
             case 'title':
                 textContent += `\n${"=".repeat(60)}\n`;
@@ -1587,19 +1525,32 @@ function formatIEEEReference(type, author, title, source, year, url) {
 }
 
 /**
- * Guarda el estado actual en localStorage (opcional)
+ * Guarda el estado actual (bloques del reporte) en LocalStorage.
+ * Si el guardado falla (por ejemplo, por cuota excedida debido a imágenes
+ * incrustadas), se avisa al usuario una sola vez por sesión en vez de
+ * fallar en silencio.
  */
+let autosaveQuotaWarningShown = false;
+
 function saveToLocalStorage() {
     try {
         localStorage.setItem('reportData', JSON.stringify(reportData));
-        console.log('Reporte guardado automáticamente');
+        autosaveQuotaWarningShown = false;
     } catch (e) {
         console.error('Error al guardar en localStorage:', e);
+        if (!autosaveQuotaWarningShown) {
+            autosaveQuotaWarningShown = true;
+            alert(
+                'No se pudo guardar automáticamente el progreso (posiblemente por espacio ' +
+                'insuficiente debido a imágenes incrustadas).\n\n' +
+                'Usa "Guardar Proyecto" para exportar tu trabajo a un archivo JSON y evitar perderlo.'
+            );
+        }
     }
 }
 
 /**
- * Carga el estado desde localStorage (opcional)
+ * Carga el estado guardado desde LocalStorage al iniciar la aplicación.
  */
 function loadFromLocalStorage() {
     try {
@@ -1607,55 +1558,309 @@ function loadFromLocalStorage() {
         if (saved) {
             reportData = JSON.parse(saved);
             render();
-            console.log('Reporte recuperado');
         }
     } catch (e) {
         console.error('Error al cargar desde localStorage:', e);
     }
 }
 
+// Autoguardado con "debounce": se dispara con cada edición real (a través de
+// renderPreview) pero espera una pausa breve antes de escribir, para no
+// serializar todo el reportData en cada pulsación de tecla.
+let autosaveTimer = null;
+
+function scheduleAutosave() {
+    clearTimeout(autosaveTimer);
+    autosaveTimer = setTimeout(saveToLocalStorage, 500);
+}
+
 // ============================================================================
 // INICIALIZACIÓN
 // ============================================================================
 
-// Cargar datos guardados al iniciar (opcional - comentado por ahora)
-// document.addEventListener('DOMContentLoaded', function() {
-//     loadFromLocalStorage();
-// });
-
-// Autoguardado cada 30 segundos (opcional - comentado por ahora)
-// setInterval(saveToLocalStorage, 30000);
+// Restaurar el progreso guardado al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    loadFromLocalStorage();
+});
 
 // ============================================================================
-// GESTIÓN DE TEMAS
+// GESTIÓN DE UNIVERSIDADES / TEMAS
 // ============================================================================
+
+// Universidades incluidas por defecto. 'generic' siempre existe como
+// respaldo (no se puede eliminar) para cuando no se quiere usar el logo
+// ni los colores de ninguna institución en particular.
+const DEFAULT_UNIVERSITIES = [
+    {
+        id: 'generic', name: 'Genérica (sin institución)', builtin: true,
+        color: { primary: '#374151', secondary: '#6b7280', accent: '#9ca3af' },
+        logoLeft: '', logoRight: ''
+    },
+    {
+        id: 'upy', name: 'UPY - Universidad Politécnica de Yucatán', builtin: true,
+        color: { primary: '#5B1F8C', secondary: '#F5A623', accent: '#e3bef7' },
+        logoLeft: 'https://yucnen.sep.gob.mx/assets/img/up-logo.webp',
+        logoRight: 'https://static.wixstatic.com/media/e16f80_9c4ca79ed84340e0984c64712e35448c~mv2_d_3000_2100_s_2.png'
+    },
+    {
+        id: 'tsw', name: 'TSW - Tecnológico de Software', builtin: true,
+        color: { primary: '#2C2E5C', secondary: '#00B8E6', accent: '#00D4FF' },
+        logoLeft: '', logoRight: ''
+    },
+    {
+        id: 'upp', name: 'UPP - Universidad Privada de la Península', builtin: true,
+        color: { primary: '#0047AB', secondary: '#E31E24', accent: '#79a6d4' },
+        logoLeft: '', logoRight: ''
+    }
+];
 
 /**
- * Cambia el tema visual de la aplicación
- * @param {string} theme - 'tsw', 'upy', o 'upp'
+ * Obtiene la lista de universidades guardadas en LocalStorage.
+ * La primera vez la inicializa con las universidades por defecto.
  */
-function changeTheme(theme) {
-    document.body.setAttribute('data-theme', theme);
-    localStorage.setItem('selectedTheme', theme);
-    console.log(`Tema cambiado a: ${theme}`);
+function getUniversities() {
+    let list = JSON.parse(localStorage.getItem('list_universities'));
+    if (!list || !Array.isArray(list) || list.length === 0) {
+        list = DEFAULT_UNIVERSITIES.map(u => ({ ...u, color: { ...u.color } }));
+        saveUniversities(list);
+    }
+    return list;
+}
+
+function saveUniversities(list) {
+    localStorage.setItem('list_universities', JSON.stringify(list));
+}
+
+function getUniversityById(id) {
+    return getUniversities().find(u => u.id === id);
+}
+
+/**
+ * Repuebla el <select> de temas a partir de la lista de universidades.
+ */
+function renderThemeSelector() {
+    const selector = document.getElementById('themeSelector');
+    if (!selector) return;
+
+    const universities = getUniversities();
+    const current = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+
+    selector.innerHTML = universities.map(u =>
+        `<option value="${escapeAttr(u.id)}" ${u.id === current ? 'selected' : ''}>${escapeHtml(u.name)}</option>`
+    ).join('');
+}
+
+/**
+ * Cambia el tema visual de la aplicación: aplica el color y deja que el
+ * logo correspondiente se resuelva en renderPreview() según la universidad.
+ * @param {string} themeId - id de la universidad (ej. 'upy', 'generic', o un id personalizado)
+ */
+function changeTheme(themeId) {
+    const uni = getUniversityById(themeId) || getUniversityById('generic');
+
+    document.body.setAttribute('data-theme', uni.id);
+    localStorage.setItem('selectedTheme', uni.id);
+
+    const c = uni.color || {};
+    document.body.style.setProperty('--primary', c.primary || '#374151');
+    document.body.style.setProperty('--secondary', c.secondary || '#6b7280');
+    document.body.style.setProperty('--accent', c.accent || '#9ca3af');
+
+    const selector = document.getElementById('themeSelector');
+    if (selector) selector.value = uni.id;
+
+    // Si el bloque de encabezado ya está en pantalla, actualizamos su campo de
+    // institución en el sitio (sin reconstruir todo el editor, para no perder
+    // datos sin guardar que el usuario esté escribiendo en ese momento).
+    const instDisplay = document.getElementById('header-inst-display');
+    if (instDisplay) instDisplay.value = uni.name;
+
+    renderPreview();
+    console.log(`Tema cambiado a: ${uni.id}`);
 }
 
 /**
  * Carga el tema guardado al iniciar
  */
 function loadSavedTheme() {
-    const savedTheme = localStorage.getItem('selectedTheme') || 'upy';
-    document.body.setAttribute('data-theme', savedTheme);
-    const selector = document.getElementById('themeSelector');
-    if (selector) {
-        selector.value = savedTheme;
-    }
+    renderThemeSelector();
+    const savedTheme = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+    changeTheme(savedTheme);
 }
 
 // Cargar tema al iniciar
 document.addEventListener('DOMContentLoaded', function() {
     loadSavedTheme();
 });
+
+// ==========================================
+// MODAL PARA AÑADIR / EDITAR UNIVERSIDADES
+// ==========================================
+
+function previewLogoFile(input, previewId) {
+    if (!input.files[0]) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const img = document.getElementById(previewId);
+        img.src = e.target.result;
+        img.style.display = 'inline-block';
+    };
+    reader.readAsDataURL(input.files[0]);
+}
+
+function closeUniversityModal() {
+    const overlay = document.getElementById('university-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+/**
+ * Abre el modal para añadir una nueva universidad o editar la seleccionada.
+ * @param {boolean} isEdit - true para editar la universidad actualmente seleccionada
+ */
+function openUniversityModal(isEdit) {
+    const selector = document.getElementById('themeSelector');
+    let editing = null;
+
+    if (isEdit) {
+        const currentId = selector ? selector.value : '';
+        editing = getUniversityById(currentId);
+        if (!editing) {
+            alert('Selecciona una universidad válida para editar.');
+            return;
+        }
+    }
+
+    const c = (editing && editing.color) || { primary: '#374151', secondary: '#6b7280', accent: '#9ca3af' };
+    const hasLeftLogo = !!(editing && editing.logoLeft);
+    const hasRightLogo = !!(editing && editing.logoRight);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'university-modal-overlay';
+    overlay.id = 'university-modal-overlay';
+
+    overlay.innerHTML = `
+        <div class="university-modal">
+            <h3>${editing ? 'Editar universidad' : 'Añadir universidad'}</h3>
+
+            <label>Nombre</label>
+            <input type="text" id="uni-name-input" value="${escapeAttr(editing ? editing.name : '')}" placeholder="Ej. Universidad Autónoma de Yucatán">
+
+            <label>Colores del tema</label>
+            <div class="university-color-row">
+                <div>
+                    <input type="color" id="uni-color-primary" value="${c.primary}">
+                    <div style="font-size:0.75em; margin-top:2px;">Primario</div>
+                </div>
+                <div>
+                    <input type="color" id="uni-color-secondary" value="${c.secondary}">
+                    <div style="font-size:0.75em; margin-top:2px;">Secundario</div>
+                </div>
+                <div>
+                    <input type="color" id="uni-color-accent" value="${c.accent}">
+                    <div style="font-size:0.75em; margin-top:2px;">Acento</div>
+                </div>
+            </div>
+
+            <label>Logo izquierdo</label>
+            <input type="file" id="uni-logo-left" accept="image/*">
+            <img id="uni-logo-left-preview" class="university-logo-preview" src="${hasLeftLogo ? escapeAttr(editing.logoLeft) : ''}" style="${hasLeftLogo ? '' : 'display:none;'}">
+
+            <label>Logo derecho</label>
+            <input type="file" id="uni-logo-right" accept="image/*">
+            <img id="uni-logo-right-preview" class="university-logo-preview" src="${hasRightLogo ? escapeAttr(editing.logoRight) : ''}" style="${hasRightLogo ? '' : 'display:none;'}">
+
+            <div class="university-modal-actions">
+                <button type="button" class="action-btn" onclick="closeUniversityModal()">Cancelar</button>
+                <button type="button" class="action-btn save-btn" id="uni-save-btn">💾 Guardar</button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(overlay);
+
+    document.getElementById('uni-logo-left').addEventListener('change', function() {
+        previewLogoFile(this, 'uni-logo-left-preview');
+    });
+    document.getElementById('uni-logo-right').addEventListener('change', function() {
+        previewLogoFile(this, 'uni-logo-right-preview');
+    });
+    document.getElementById('uni-save-btn').addEventListener('click', function() {
+        saveUniversityFromModal(editing ? editing.id : null);
+    });
+}
+
+function saveUniversityFromModal(editingId) {
+    const nameInput = document.getElementById('uni-name-input');
+    const name = nameInput.value.trim();
+    if (!name) {
+        alert('Ingresa el nombre de la universidad.');
+        return;
+    }
+
+    const color = {
+        primary: document.getElementById('uni-color-primary').value,
+        secondary: document.getElementById('uni-color-secondary').value,
+        accent: document.getElementById('uni-color-accent').value
+    };
+
+    const leftPreview = document.getElementById('uni-logo-left-preview');
+    const rightPreview = document.getElementById('uni-logo-right-preview');
+    const hasLeftLogo = leftPreview.style.display !== 'none';
+    const hasRightLogo = rightPreview.style.display !== 'none';
+
+    let universities = getUniversities();
+    let themeToApply;
+
+    if (editingId) {
+        const uni = universities.find(u => u.id === editingId);
+        if (uni) {
+            uni.name = name;
+            uni.color = color;
+            if (hasLeftLogo) uni.logoLeft = leftPreview.src;
+            if (hasRightLogo) uni.logoRight = rightPreview.src;
+        }
+        themeToApply = editingId;
+    } else {
+        const id = 'uni_' + Date.now();
+        universities.push({
+            id,
+            name,
+            builtin: false,
+            color,
+            logoLeft: hasLeftLogo ? leftPreview.src : '',
+            logoRight: hasRightLogo ? rightPreview.src : ''
+        });
+        themeToApply = id;
+    }
+
+    saveUniversities(universities);
+    closeUniversityModal();
+    renderThemeSelector();
+    changeTheme(themeToApply);
+}
+
+/**
+ * Elimina la universidad actualmente seleccionada en el selector de temas.
+ * La universidad 'generic' no se puede eliminar porque sirve de respaldo.
+ */
+function deleteUniversityFromList() {
+    const selector = document.getElementById('themeSelector');
+    const currentId = selector ? selector.value : '';
+    const uni = getUniversityById(currentId);
+
+    if (!uni) return;
+    if (uni.id === 'generic') {
+        alert('La universidad genérica no se puede eliminar.');
+        return;
+    }
+
+    if (!confirm(`¿Eliminar la universidad "${uni.name}"? Esta acción no se puede deshacer.`)) return;
+
+    const universities = getUniversities().filter(u => u.id !== currentId);
+    saveUniversities(universities);
+    renderThemeSelector();
+    changeTheme('generic');
+}
 
 // ============================================================================
 // GUARDAR Y CARGAR PROYECTO (JSON)
@@ -1671,7 +1876,7 @@ function saveJSON() {
         const projectData = {
             version: '2.0',
             timestamp: new Date().toISOString(),
-            theme: document.body.getAttribute('data-theme') || 'tsw',
+            theme: document.body.getAttribute('data-theme') || 'generic',
             reportData: reportData
         };
 
@@ -1780,7 +1985,7 @@ function loadJSON(input) {
             alert(
                 'Proyecto cargado exitosamente\n\n' +
                 `Bloques: ${reportData.length}\n` +
-                `Tema: ${projectData.theme || 'tsw'}`
+                `Tema: ${projectData.theme || 'generic'}`
             );
 
         } catch (error) {
