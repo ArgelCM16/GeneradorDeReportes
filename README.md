@@ -370,7 +370,4 @@ Dale una estrella en GitHub para apoyar el desarrollo.
 [Volver arriba](#generador-de-reportes-académicos)
 
 </div>
-#   G e n e r a d o r D e R e p o r t e s  
- #   G e n e r a d o r D e R e p o r t e s  
- #   G e n e r a d o r D e R e p o r t e s  
- 
+
