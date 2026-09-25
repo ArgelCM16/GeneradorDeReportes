@@ -1,0 +1,911 @@
+/* ============================================================================
+   REDISEÑO VISUAL (Google Stitch - "Project Redesign Initiative")
+   ----------------------------------------------------------------------------
+   Solo cambia la apariencia: se carga DESPUÉS de style.css y sobrescribe sus
+   estilos. No toca ninguna función. Para volver al diseño anterior basta con
+   quitar el <link> de este archivo en index.html.
+
+   Lenguaje visual: tipografía Plus Jakarta Sans, paleta slate, barra lateral
+   navy, tarjetas blancas muy redondeadas con sombra difusa, campos con fondo
+   slate-50 y anillo de foco suave, etiquetas pequeñas en MAYÚSCULAS.
+
+   El color de acento sigue al tema de la universidad (--secondary), así cada
+   institución conserva su identidad; la genérica usa el naranja del diseño.
+   ============================================================================ */
+
+:root {
+    --ui-navy: #0f172a;
+    --ui-navy-2: #1e293b;
+    --ui-navy-3: #334155;
+    --ui-slate-50: #f8fafc;
+    --ui-slate-100: #f1f5f9;
+    --ui-slate-200: #e2e8f0;
+    --ui-slate-300: #cbd5e1;
+    --ui-slate-400: #94a3b8;
+    --ui-slate-500: #64748b;
+    --ui-slate-600: #475569;
+    --ui-slate-700: #334155;
+    --ui-slate-800: #1e293b;
+    --ui-slate-900: #0f172a;
+    --ui-emerald: #059669;
+    --ui-rose: #e11d48;
+    --ui-radius-field: 12px;
+    --ui-radius-card: 24px;
+    --ui-shadow-card: 0 8px 30px rgba(15, 23, 42, 0.06);
+    --ui-font: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+/* Anillo de foco y fondos suaves derivados del acento */
+body {
+    --ui-accent: var(--secondary);
+    --ui-accent-soft: color-mix(in srgb, var(--ui-accent) 12%, transparent);
+    --ui-accent-ring: color-mix(in srgb, var(--ui-accent) 18%, transparent);
+    font-family: var(--ui-font);
+    color: var(--ui-slate-800);
+    background: var(--ui-slate-50);
+    -webkit-font-smoothing: antialiased;
+}
+
+/* El tema genérico usa gris como acento; en el rediseño se ve apagado,
+   así que usamos el naranja del diseño de Stitch. */
+body[data-theme="generic"],
+body:not([data-theme]) {
+    --ui-accent: #f97316;
+}
+
+/* ============================================================================
+   BARRA LATERAL
+   ============================================================================ */
+.toolbox {
+    width: 256px;
+    min-width: 256px;
+    background: var(--ui-navy);
+    color: var(--ui-slate-300);
+    padding: 18px 14px;
+    gap: 6px;
+    box-shadow: none;
+    border-right: 1px solid var(--ui-navy-2);
+}
+
+.toolbox::-webkit-scrollbar-track { background: transparent; }
+.toolbox::-webkit-scrollbar-thumb { background: rgba(148, 163, 184, 0.3); border-radius: 999px; }
+
+/* Títulos de sección: "Bloques", "Google Drive" */
+.toolbox h3 {
+    margin: 14px 4px 4px !important;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ui-slate-400);
+    opacity: 1;
+}
+
+.toolbox hr {
+    border-top-color: var(--ui-navy-2) !important;
+    margin: 12px 0 !important;
+}
+
+/* Selector de tema / universidad */
+.theme-selector label {
+    font-size: 10px !important;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ui-slate-400);
+    opacity: 1 !important;
+    margin-bottom: 6px !important;
+}
+
+.theme-selector select {
+    background: var(--ui-navy-2) !important;
+    border: 1px solid var(--ui-navy-3) !important;
+    border-radius: var(--ui-radius-field) !important;
+    padding: 9px 12px !important;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff !important;
+    margin-bottom: 8px !important;
+    transition: border-color 0.2s ease;
+}
+
+.theme-selector select:hover,
+.theme-selector select:focus {
+    border-color: var(--ui-accent) !important;
+    outline: none;
+}
+
+.theme-selector select option {
+    background: var(--ui-navy-2);
+}
+
+/* Botones de la barra lateral */
+.toolbox button {
+    gap: 10px;
+    padding: 9px 12px;
+    border: 1px solid var(--ui-navy-2);
+    border-radius: 10px;
+    background: rgba(30, 41, 59, 0.55);
+    color: var(--ui-slate-300);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.toolbox button:hover {
+    background: var(--ui-navy-2);
+    border-color: var(--ui-navy-3);
+    color: #fff;
+    transform: none;
+    box-shadow: none;
+}
+
+.toolbox button:active {
+    transform: scale(0.98);
+}
+
+.toolbox button .material-symbols-outlined {
+    font-size: 19px;
+    color: var(--ui-slate-400);
+    transition: color 0.2s ease;
+}
+
+.toolbox button:hover .material-symbols-outlined {
+    color: var(--ui-accent);
+}
+
+/* El &ensp; del HTML ya separa icono y texto; con el gap basta */
+.toolbox button span + span {
+    margin-left: -6px;
+}
+
+/* Configuración */
+.btn-settings {
+    margin-bottom: 4px;
+    border: 1px solid var(--ui-navy-3) !important;
+    background: transparent !important;
+}
+
+.btn-settings:hover {
+    background: var(--ui-navy-2) !important;
+}
+
+/* Declaración IA: bloque destacado con el acento */
+.btn-ai {
+    background: linear-gradient(90deg, var(--ui-accent-soft), transparent) !important;
+    border: 1px solid color-mix(in srgb, var(--ui-accent) 45%, transparent) !important;
+    color: #fff !important;
+    font-weight: 600 !important;
+}
+
+.btn-ai .material-symbols-outlined {
+    color: var(--ui-accent) !important;
+}
+
+.btn-ai:hover {
+    background: linear-gradient(90deg, color-mix(in srgb, var(--ui-accent) 25%, transparent), transparent) !important;
+    border-color: var(--ui-accent) !important;
+    color: #fff !important;
+    transform: none !important;
+}
+
+/* Guardar / Cargar proyecto y botones de Drive: estilo neutro */
+.btn-json {
+    background: rgba(30, 41, 59, 0.55) !important;
+    font-weight: 500;
+}
+
+.btn-json:hover {
+    background: var(--ui-navy-2) !important;
+}
+
+/* Desconectar de Drive: acción de peligro discreta */
+.btn-danger {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #fb7185 !important;
+}
+
+.btn-danger .material-symbols-outlined {
+    color: #fb7185 !important;
+}
+
+.btn-danger:hover {
+    background: rgba(136, 19, 55, 0.3) !important;
+    color: #fda4af !important;
+}
+
+/* Google Drive */
+.drive-section {
+    gap: 6px;
+}
+
+#drive-status {
+    color: var(--ui-slate-400);
+    opacity: 1 !important;
+    margin: 0 4px 4px !important;
+}
+
+.drive-help-btn {
+    background: var(--ui-navy-2);
+    border: 1px solid var(--ui-navy-3);
+    color: var(--ui-slate-300);
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    justify-content: center;
+}
+
+/* Guardar TXT: neutro. Imprimir PDF: acción principal con el acento */
+.btn-save {
+    background: var(--ui-navy-2) !important;
+    font-weight: 500;
+}
+
+.btn-save:hover {
+    background: var(--ui-navy-3) !important;
+}
+
+.btn-print {
+    background: linear-gradient(90deg, var(--ui-accent), color-mix(in srgb, var(--ui-accent) 70%, #000)) !important;
+    border-color: transparent !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+    justify-content: center;
+    box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--ui-accent) 55%, transparent) !important;
+}
+
+.btn-print .material-symbols-outlined,
+.btn-print:hover .material-symbols-outlined {
+    color: #fff;
+}
+
+.btn-print:hover {
+    filter: brightness(1.08);
+}
+
+/* Créditos */
+.credits {
+    border-top: 1px solid var(--ui-navy-2);
+    color: var(--ui-slate-500);
+}
+
+/* ============================================================================
+   EDITOR (COLUMNA CENTRAL)
+   ============================================================================ */
+#editor-container {
+    background: var(--ui-slate-50);
+    padding: 28px 32px;
+    border-right: 1px solid var(--ui-slate-200);
+}
+
+/* Encabezado de la columna */
+#editor-container::before {
+    content: "Editor del reporte";
+    display: block;
+    margin: 0 0 18px;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ui-slate-900);
+}
+
+#editor-container::-webkit-scrollbar-track { background: transparent; }
+#editor-container::-webkit-scrollbar-thumb { background: var(--ui-slate-300); border-radius: 999px; }
+#editor-container::-webkit-scrollbar-thumb:hover { background: var(--ui-slate-400); }
+
+/* Bienvenida */
+.welcome-message {
+    background: #fff;
+    border: 1px dashed var(--ui-slate-300);
+    border-radius: var(--ui-radius-card);
+    padding: 56px 28px;
+    color: var(--ui-slate-500);
+}
+
+.welcome-message h2 {
+    color: var(--ui-slate-900);
+    font-weight: 800;
+    letter-spacing: -0.02em;
+}
+
+/* Tarjetas de bloque */
+.block-card {
+    margin-bottom: 20px;
+    padding: 24px 26px;
+    background: #fff;
+    border: 1px solid var(--ui-slate-100);
+    border-left: 1px solid var(--ui-slate-100);
+    border-radius: var(--ui-radius-card);
+    box-shadow: var(--ui-shadow-card);
+    overflow: hidden;
+}
+
+.block-card:hover {
+    transform: none;
+    border-color: var(--ui-slate-200);
+    box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+}
+
+/* Barra de color superior: el encabezado lleva el degradado del diseño y
+   cada tipo de bloque conserva su color de identidad. */
+.block-card::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--card-bar, var(--ui-slate-200));
+}
+
+.header-card {
+    background: #fff;
+    --card-bar: linear-gradient(90deg, var(--ui-accent), color-mix(in srgb, var(--ui-accent) 40%, var(--primary)), var(--primary));
+}
+.title-card    { --card-bar: var(--primary); }
+.subtitle-card { --card-bar: var(--ui-accent); }
+.text-card     { --card-bar: var(--ui-slate-300); }
+.code-card     { --card-bar: #f59e0b; }
+.image-card    { --card-bar: #10b981; }
+.table-card    { --card-bar: #14b8a6; }
+.ref-card      { --card-bar: #8b5cf6; }
+.ai-card {
+    background: #fff;
+    --card-bar: linear-gradient(90deg, #f43f5e, #fb923c);
+}
+
+/* Título de cada tarjeta (primer label directo) */
+.block-card > label {
+    display: block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ui-slate-500);
+    padding-right: 36px;
+}
+
+/* Título de la tarjeta de encabezado */
+.header-card > div:first-of-type > label:first-child {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.01em;
+    color: var(--ui-slate-900);
+    margin-bottom: 14px !important;
+}
+
+/* Botón de eliminar bloque */
+.delete-btn {
+    top: 16px;
+    right: 16px;
+    width: 30px;
+    height: 30px;
+    background: transparent;
+    color: var(--ui-slate-400);
+    border-radius: 10px;
+    box-shadow: none;
+    font-size: 20px;
+    font-weight: 400;
+    z-index: 1;
+}
+
+.delete-btn:hover {
+    background: #fff1f2;
+    color: var(--ui-rose);
+    transform: rotate(90deg);
+}
+
+/* ============================================================================
+   CAMPOS DEL FORMULARIO (inputs, selects, textareas)
+   ============================================================================ */
+.editor-input,
+.grid-inputs input,
+.grid-inputs select,
+.table-grid input,
+.table-controls input[type="number"],
+.ref-card select,
+.university-modal input[type="text"],
+.settings-add-row input,
+.settings-add-row select,
+.settings-prof-select {
+    font-family: var(--ui-font) !important;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ui-slate-800);
+    background-color: var(--ui-slate-50);
+    border: 1px solid var(--ui-slate-200) !important;
+    border-radius: var(--ui-radius-field) !important;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.editor-input,
+.grid-inputs input,
+.grid-inputs select {
+    padding: 11px 14px;
+}
+
+.editor-input:hover,
+.grid-inputs input:hover:not(:disabled),
+.grid-inputs select:hover,
+.table-grid input:hover,
+.ref-card select:hover {
+    background-color: #fff;
+}
+
+.editor-input:focus,
+.grid-inputs input:focus,
+.grid-inputs select:focus,
+.table-grid input:focus,
+.table-controls input[type="number"]:focus,
+.ref-card select:focus,
+.university-modal input[type="text"]:focus,
+.settings-add-row input:focus,
+.settings-add-row select:focus,
+.settings-prof-select:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--ui-accent) !important;
+    box-shadow: 0 0 0 4px var(--ui-accent-ring);
+}
+
+.editor-input::placeholder,
+.grid-inputs input::placeholder,
+.table-grid input::placeholder,
+.settings-add-row input::placeholder {
+    color: var(--ui-slate-400);
+    font-weight: 500;
+}
+
+textarea.editor-input {
+    line-height: 1.6;
+}
+
+/* Selects con flecha propia (más limpia que la nativa) */
+.grid-inputs select,
+.ref-card select,
+.settings-add-row select,
+.settings-prof-select {
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 38px !important;
+}
+
+.grid-inputs select:invalid {
+    color: var(--ui-slate-400);
+}
+
+.grid-inputs select option {
+    color: var(--ui-slate-800);
+}
+
+/* Institución: campo bloqueado con candado */
+#header-inst-display {
+    background-color: var(--ui-slate-100) !important;
+    color: var(--ui-slate-700) !important;
+    font-weight: 600;
+    cursor: not-allowed;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='11' width='18' height='11' rx='2'/%3E%3Cpath d='M7 11V7a5 5 0 0 1 10 0v4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 15px;
+    padding-right: 36px;
+}
+
+.grid-inputs {
+    gap: 14px;
+}
+
+/* Código: editor oscuro con el mismo redondeo */
+.code-input {
+    border-radius: var(--ui-radius-field);
+    border: 1px solid var(--ui-navy-2);
+    background: var(--ui-navy);
+    color: #e2e8f0;
+    font-family: 'JetBrains Mono', Consolas, 'Courier New', monospace;
+    font-size: 13px;
+    padding: 14px 16px;
+    margin-top: 10px;
+}
+
+.code-input:focus {
+    border-color: var(--ui-accent);
+    box-shadow: 0 0 0 4px var(--ui-accent-ring);
+}
+
+/* Selector de archivo de imagen */
+.image-card input[type="file"] {
+    font-family: var(--ui-font);
+    font-size: 13px;
+    color: var(--ui-slate-500);
+}
+
+.image-card input[type="file"]::file-selector-button {
+    margin-right: 12px;
+    padding: 8px 14px;
+    border: 1px solid var(--ui-slate-200);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--ui-slate-700);
+    font-family: var(--ui-font);
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.image-card input[type="file"]::file-selector-button:hover {
+    background: var(--ui-slate-100);
+}
+
+.image-card img {
+    border-radius: var(--ui-radius-field) !important;
+}
+
+/* Casillas y radios con el color de acento */
+.block-card input[type="checkbox"],
+.block-card input[type="radio"] {
+    accent-color: var(--ui-accent);
+}
+
+/* ============================================================================
+   TARJETA DE ENCABEZADO: opciones, estado y "Limpiar"
+   ============================================================================ */
+.header-card hr {
+    border-top-color: var(--ui-slate-100) !important;
+}
+
+.header-card .checkbox-container label {
+    font-weight: 500;
+    color: var(--ui-slate-700);
+}
+
+/* Pastilla verde de autoguardado */
+#header-autosave-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #047857 !important;
+    font-size: 12px !important;
+    font-weight: 600;
+}
+
+/* Botones de acción con texto */
+.action-btn {
+    border: 1px solid var(--ui-slate-200);
+    border-radius: var(--ui-radius-field);
+    background: #fff;
+    color: var(--ui-slate-700);
+    font-family: var(--ui-font);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 9px 16px;
+    gap: 6px;
+}
+
+.action-btn:hover:not(:disabled) {
+    background: var(--ui-slate-50);
+    border-color: var(--ui-slate-300);
+}
+
+.header-card .action-buttons-group .action-btn:hover {
+    background: #fff1f2;
+    border-color: #fecdd3;
+    color: var(--ui-rose);
+}
+
+/* Botón principal (Guardar / Añadir) */
+.action-btn.save-btn {
+    background: var(--ui-accent);
+    border-color: transparent;
+    color: #fff;
+    box-shadow: 0 6px 16px -6px color-mix(in srgb, var(--ui-accent) 60%, transparent);
+}
+
+.action-btn.save-btn:hover:not(:disabled) {
+    background: var(--ui-accent);
+    border-color: transparent;
+    filter: brightness(1.07);
+}
+
+/* "Añadir integrante" */
+#btn-add-member {
+    font-size: 13px;
+    padding: 7px 14px;
+    color: var(--ui-slate-600);
+    border-style: dashed;
+}
+
+/* Botones de icono (✏️ 🗑️) */
+.icon-btn {
+    border: 1px solid var(--ui-slate-200);
+    border-radius: 10px;
+    background: #fff;
+}
+
+.icon-btn:hover:not(:disabled) {
+    background: var(--ui-slate-50);
+    border-color: var(--ui-slate-300);
+}
+
+/* ============================================================================
+   TABLA EN EL EDITOR
+   ============================================================================ */
+.table-controls label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ui-slate-600);
+}
+
+.table-controls input[type="number"] {
+    width: 64px;
+    padding: 7px 8px;
+}
+
+.table-controls button {
+    padding: 7px 14px;
+    border-radius: 10px;
+    border: 1px solid var(--ui-slate-200);
+    background: #fff !important;
+    color: var(--ui-slate-600) !important;
+    font-family: var(--ui-font);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.table-controls .btn-add-row:hover {
+    background: #ecfdf5 !important;
+    border-color: #a7f3d0;
+    color: #047857 !important;
+}
+
+.table-controls .btn-remove-row:hover {
+    background: #fff1f2 !important;
+    border-color: #fecdd3;
+    color: var(--ui-rose) !important;
+}
+
+.table-grid {
+    gap: 6px;
+}
+
+.table-grid input {
+    padding: 9px 10px;
+    font-size: 13px;
+    border-radius: 10px !important;
+}
+
+/* La primera fila son los encabezados de la tabla */
+.table-grid input:nth-child(-n+6) {
+    background: var(--ui-slate-100);
+    font-weight: 700;
+}
+
+/* ============================================================================
+   VISTA PREVIA: hoja de papel sobre fondo gris
+   ============================================================================ */
+#preview-container {
+    background: #fff;
+    border: 22px solid var(--ui-slate-200);
+    border-left-width: 26px;
+    border-right-width: 26px;
+    padding: 44px 48px;
+    box-shadow:
+        inset 0 0 0 1px rgba(15, 23, 42, 0.06),
+        inset 0 10px 24px -18px rgba(15, 23, 42, 0.35);
+}
+
+#preview-container::-webkit-scrollbar-track { background: transparent; }
+#preview-container::-webkit-scrollbar-thumb { background: var(--ui-slate-300); border-radius: 999px; }
+
+/* ============================================================================
+   MODALES (Configuración, Universidad, Google Drive)
+   ============================================================================ */
+.university-modal-overlay {
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+.university-modal {
+    position: relative;
+    border-radius: var(--ui-radius-card);
+    padding: 30px 28px 24px;
+    font-family: var(--ui-font);
+    box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.45);
+    overflow-x: hidden;
+}
+
+.university-modal::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--ui-accent), var(--primary));
+}
+
+.university-modal h3 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ui-slate-900);
+}
+
+.university-modal label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ui-slate-500);
+}
+
+.university-modal input[type="text"] {
+    padding: 10px 14px;
+}
+
+.university-logo-preview {
+    border-radius: 10px;
+    border-color: var(--ui-slate-300);
+}
+
+/* Pestañas de Configuración */
+.settings-tabs {
+    gap: 4px;
+    padding: 4px;
+    border-bottom: none;
+    background: var(--ui-slate-100);
+    border-radius: 14px;
+}
+
+.settings-tabs button {
+    margin: 0;
+    padding: 8px 6px;
+    border: none;
+    border-radius: 10px;
+    color: var(--ui-slate-500);
+    font-family: var(--ui-font);
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.settings-tabs button:hover {
+    color: var(--ui-slate-800);
+}
+
+.settings-tabs button.active {
+    background: #fff;
+    color: var(--ui-slate-900);
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+}
+
+.settings-add-row input {
+    padding: 10px 14px;
+}
+
+.settings-add-row select,
+.settings-prof-select {
+    font-size: 13px;
+}
+
+.settings-prof-select {
+    padding: 7px 10px;
+}
+
+.settings-list li {
+    border-bottom-color: var(--ui-slate-100);
+    border-radius: 10px;
+    padding: 9px 8px;
+}
+
+.settings-list li:hover {
+    background: var(--ui-slate-50);
+}
+
+.settings-item-name {
+    color: var(--ui-slate-800);
+    font-weight: 500;
+}
+
+.settings-empty {
+    border: 1px dashed var(--ui-slate-300);
+    border-radius: 14px;
+    margin-top: 10px;
+}
+
+/* Lista de archivos de Drive */
+.drive-file-item {
+    border: 1px solid var(--ui-slate-200);
+    border-radius: var(--ui-radius-field);
+}
+
+.drive-file-item:hover {
+    border-color: var(--ui-accent);
+    background: var(--ui-slate-50);
+}
+
+/* ============================================================================
+   IMPRESIÓN: el marco gris de la vista previa no debe salir en el PDF
+   ============================================================================ */
+@media print {
+    #preview-container {
+        border: none !important;
+    }
+
+    #editor-container::before {
+        content: none;
+    }
+}
+
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+@media (max-width: 1024px) {
+    .toolbox {
+        width: 220px;
+        min-width: 220px;
+    }
+
+    #editor-container {
+        padding: 22px 20px;
+    }
+
+    #preview-container {
+        border-width: 14px;
+        padding: 30px;
+    }
+}
+
+@media (max-width: 768px) {
+    .toolbox {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #preview-container {
+        border-width: 10px;
+        padding: 22px;
+    }
+}
+
+/* ============================================================================
+   AJUSTES FINOS
+   ============================================================================ */
+
+/* Nombres del alumno / integrantes: una fila completa cada uno */
+#team-members-container {
+    grid-template-columns: 1fr;
+}
+
+/* Estado de guardado y "Limpiar" alineados a la derecha */
+.header-card .card-actions {
+    row-gap: 12px !important;
+}
+
+.header-card .action-buttons-group {
+    margin-left: auto;
+}
+
+/* Fila para añadir en Configuración: el nombre ocupa el espacio disponible */
+.settings-add-row input {
+    flex: 1 1 140px;
+}
+
+.settings-add-row select {
+    flex: 0 1 150px;
+    min-width: 0;
+}
+
+.settings-add-row .action-btn {
+    flex-shrink: 0;
+}
+
+.settings-modal {
+    width: 540px;
+}

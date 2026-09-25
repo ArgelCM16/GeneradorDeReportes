@@ -10,9 +10,15 @@
     <meta name="author" content="Jorge J. Pedrozo Romero" />
     <title>Generador de Documentos Académicos</title>
     <link rel="stylesheet" href="CSS/style.css" />
+    <!-- Rediseño visual (Google Stitch). Quitar esta línea vuelve al diseño anterior. -->
+    <link rel="stylesheet" href="CSS/redesign.css" />
     <link rel="icon" href="ASSETS/favicon.png" />
     <link
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
@@ -173,10 +179,10 @@
         </button>
 
         <button
-          class="btn-json"
+          class="btn-json btn-danger"
           id="btn-drive-disconnect"
           onclick="disconnectGoogleDrive()"
-          style="display: none; background: #c0392b !important;"
+          style="display: none;"
         >
           <span class="material-symbols-outlined">logout</span>
           <span>&ensp;Desconectar</span>
