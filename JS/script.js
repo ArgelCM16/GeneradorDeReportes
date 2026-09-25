@@ -407,14 +407,23 @@ function renderEditor() {
 
 
 // Función auxiliar para generar las opciones de los select desde localStorage
-function generateSelectOptions(storageKey, selectedValue) {
-    const list = JSON.parse(localStorage.getItem(storageKey)) || [];
-    let options = '<option value="">Seleccione...</option>';
+function generateSelectOptions(storageKey, selectedValue, placeholder = 'Seleccione...') {
+    const list = getSimpleList(storageKey);
+    let options = `<option value="">${escapeHtml(placeholder)}</option>`;
     list.forEach(item => {
         const isSelected = item === selectedValue ? 'selected' : '';
-        options += `<option value="${escapeAttr(item)}" ${isSelected}>${item}</option>`;
+        options += `<option value="${escapeAttr(item)}" ${isSelected}>${escapeHtml(item)}</option>`;
     });
     return options;
+}
+
+function getSimpleList(storageKey) {
+    try {
+        const list = JSON.parse(localStorage.getItem(storageKey));
+        return Array.isArray(list) ? list : [];
+    } catch (e) {
+        return [];
+    }
 }
 
 
@@ -432,12 +441,11 @@ function renderHeaderEditor(block, deleteBtn) {
     const currentUni = getUniversityById(savedTheme || 'generic') || getUniversityById('generic');
     const currentInstName = currentUni ? currentUni.name : '';
 
-    // Actualizamos el modelo de datos por defecto
+    // Los datos se guardan automáticamente con cada cambio (ver
+    // persistHeaderFromDOM), así que el formulario siempre está editable.
     const d = savedData || { names: [], name: '', group: '', subject: '', prof: '', term: '', date: '', isTeam: false };
-    const isLocked = savedData ? 'disabled' : '';
-    
-    // Si está bloqueado, mejor ocultamos el botón de añadir por completo para que se vea más limpio
-    const displayAddBtn = (d.isTeam && !savedData) ? 'inline-block' : 'none';
+
+    const displayAddBtn = d.isTeam ? 'inline-block' : 'none';
 
     // Lógica para renderizar los inputs de nombres guardados
     let membersHtml = '';
@@ -447,12 +455,12 @@ function renderHeaderEditor(block, deleteBtn) {
         let placeholderText = d.isTeam ? `Nombre del integrante ${i + 1}` : 'Nombre del Alumno';
         
         let deleteBtnElement = (d.isTeam && i > 0) ? 
-            `<button type="button" class="icon-btn action-icon btn-remove-member" onclick="removeTeamMember(this)" title="Eliminar integrante" ${isLocked}>🗑️</button>` : '';
+            `<button type="button" class="icon-btn action-icon btn-remove-member" onclick="removeTeamMember(this)" title="Eliminar integrante">🗑️</button>` : '';
 
         // FORZAMOS EL TAMAÑO: display: flex y flex: 1 en el input
         membersHtml += `
             <div class="input-with-action member-row" style="display: flex; width: 100%;">
-                <input type="text" class="student-name-input" placeholder="${placeholderText}" value="${escapeAttr(name)}" ${isLocked} oninput="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
+                <input type="text" class="student-name-input" placeholder="${placeholderText}" value="${escapeAttr(name)}" oninput="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
                 ${deleteBtnElement}
             </div>
         `;
@@ -469,35 +477,25 @@ function renderHeaderEditor(block, deleteBtn) {
                     ${membersHtml}
                 </div>
                 
-                <button type="button" id="btn-add-member" class="action-btn" onclick="addTeamMember()" style="display: ${displayAddBtn};" ${isLocked}>
+                <button type="button" id="btn-add-member" class="action-btn" onclick="addTeamMember()" style="display: ${displayAddBtn};">
                     ➕ Añadir integrante
                 </button>
             </div>
 
             <div class="grid-inputs">
-                <input type="text" placeholder="Grupo" value="${escapeAttr(d.group || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
-                
-                <div class="input-with-action" style="display: flex; width: 100%;">
-                    <select id="select-subject-main" ${isLocked} onchange="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
-                        ${generateSelectOptions('list_subjects', d.subject)}
-                    </select>
-                    <button type="button" class="icon-btn action-icon" onclick="addSubjectToList()" title="Añadir materia" ${isLocked}>➕</button>
-                    <button type="button" class="icon-btn action-icon" onclick="editSubjectInList()" title="Editar materia seleccionada" ${isLocked}>✏️</button>
-                    <button type="button" class="icon-btn action-icon" onclick="deleteSubjectFromList()" title="Eliminar materia seleccionada" ${isLocked}>🗑️</button>
-                </div>
+                <input type="text" placeholder="Grupo" value="${escapeAttr(d.group || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
 
-                <div class="input-with-action" style="display: flex; width: 100%;">
-                    <select id="select-prof-main" ${isLocked} onchange="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
-                        ${generateSelectOptions('list_profs', d.prof)}
-                    </select>
-                    <button type="button" class="icon-btn action-icon" onclick="addProfToList()" title="Añadir profesor" ${isLocked}>➕</button>
-                    <button type="button" class="icon-btn action-icon" onclick="editProfInList()" title="Editar profesor seleccionado" ${isLocked}>✏️</button>
-                    <button type="button" class="icon-btn action-icon" onclick="deleteProfFromList()" title="Eliminar profesor seleccionado" ${isLocked}>🗑️</button>
-                </div>
+                <select id="select-subject-main" required onchange="onHeaderSubjectChange(this)" title="Las materias se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
+                    ${generateSelectOptions('list_subjects', d.subject, 'Materia...')}
+                </select>
 
-                <input type="text" id="header-inst-display" value="${escapeAttr(currentInstName)}" disabled readonly title="La institución se define según el tema seleccionado en el menú lateral. Usa los botones junto a 'Tema' para añadir, editar o eliminar universidades." style="width: 100%; box-sizing: border-box; background: #f0f0f0; cursor: not-allowed;">
-                <input type="text" placeholder="Cuatrimestre" value="${escapeAttr(d.term || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
-                <input type="date" value="${escapeAttr(d.date || '')}" ${isLocked} oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                <select id="select-prof-main" required onchange="renderPreview()" title="Los profesores se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
+                    ${generateSelectOptions('list_profs', d.prof, 'Profesor...')}
+                </select>
+
+                <input type="text" id="header-inst-display" value="${escapeAttr(currentInstName)}" disabled readonly title="La institución se define según el tema seleccionado en el menú lateral. Las universidades se administran en ⚙️ Configuración." style="width: 100%; box-sizing: border-box; background: #f0f0f0; cursor: not-allowed;">
+                <input type="text" placeholder="Cuatrimestre" value="${escapeAttr(d.term || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                <input type="date" value="${escapeAttr(d.date || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
             </div>
             
             <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0 15px 0;">
@@ -506,19 +504,18 @@ function renderHeaderEditor(block, deleteBtn) {
                 
                 <div class="options-group" style="display: flex; gap: 20px; align-items: center;">
                     <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
-                        <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()" ${d.includeLogo ? 'checked' : ''} ${isLocked} style="margin: 0; width: 15px; height: 15px;">
+                        <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()" ${d.includeLogo ? 'checked' : ''} style="margin: 0; width: 15px; height: 15px;">
                         <label for="check-include-logo" style="margin: 0; cursor: pointer; line-height: 1; font-size: 14px; padding-top: 1px;">Incluir logos</label>
                     </div>
                     <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
-                        <input type="checkbox" id="check-is-team" onchange="toggleTeamMode(this)" ${d.isTeam ? 'checked' : ''} ${isLocked} style="margin: 0; width: 15px; height: 15px;">
+                        <input type="checkbox" id="check-is-team" onchange="toggleTeamMode(this)" ${d.isTeam ? 'checked' : ''} style="margin: 0; width: 15px; height: 15px;">
                         <label for="check-is-team" style="margin: 0; cursor: pointer; line-height: 1; font-size: 14px; padding-top: 1px;">Es tarea en equipo</label>
                     </div>
                 </div>
 
-                <div class="action-buttons-group" style="display: flex; gap: 10px;">
-                    <button type="button" class="action-btn save-btn" onclick="saveHeaderData()" title="Guardar datos">💾</button>
-                    <button type="button" class="action-btn edit-btn" onclick="editHeaderData()" title="Editar datos">✏️</button>
-                    <button type="button" class="action-btn" onclick="deleteHeaderData()" title="Eliminar datos">🗑️</button>
+                <div class="action-buttons-group" style="display: flex; gap: 10px; align-items: center;">
+                    <span id="header-autosave-status" style="font-size: 12px; color: #888;">Se guarda automáticamente</span>
+                    <button type="button" class="action-btn" onclick="clearHeaderData()" title="Borrar todos los datos del encabezado">🧹 Limpiar</button>
                 </div>
                 
             </div>
@@ -621,97 +618,159 @@ function addTeamMember() {
         renderPreview();
     }
 }
-function editSubjectInList() {
-    const selectEl = document.getElementById('select-subject-main');
-    const currentValue = selectEl.value;
-    
-    if (!currentValue) {
-        return alert("Por favor, selecciona una materia de la lista para editarla.");
-    }
 
-    const newValue = prompt("Editar nombre de la materia:", currentValue);
-    if (!newValue || newValue.trim() === "" || newValue.trim() === currentValue) return;
+// ==========================================
+// LISTAS DE MATERIAS Y PROFESORES
+// Se administran desde el panel de ⚙️ Configuración (ver openSettingsModal).
+// ==========================================
 
-    const trimmedNew = newValue.trim();
-    let subjects = JSON.parse(localStorage.getItem('list_subjects')) || [];
-    
-    // Actualizar en el arreglo
-    const index = subjects.indexOf(currentValue);
-    if (index > -1) {
-        subjects[index] = trimmedNew;
-        localStorage.setItem('list_subjects', JSON.stringify(subjects));
-    }
+// Relaciona cada lista con el <select> del encabezado y el campo guardado.
+const SIMPLE_LISTS = {
+    list_subjects: { selectId: 'select-subject-main', headerKey: 'subject', label: 'materia', plural: 'materias', placeholder: 'Materia...' },
+    list_profs:    { selectId: 'select-prof-main',    headerKey: 'prof',    label: 'profesor', plural: 'profesores', placeholder: 'Profesor...' }
+};
 
-    // Volver a renderizar las opciones y seleccionar el nuevo valor
-    selectEl.innerHTML = generateSelectOptions('list_subjects', trimmedNew);
-    
-    // Sincronizar con los datos guardados si estaba seleccionado
-    syncGlobalHeaderData('subject', currentValue, trimmedNew);
+function saveSimpleList(storageKey, list) {
+    localStorage.setItem(storageKey, JSON.stringify(list));
 }
 
-function editProfInList() {
-    const selectEl = document.getElementById('select-prof-main');
-    const currentValue = selectEl.value;
-    
-    if (!currentValue) {
-        return alert("Por favor, selecciona un profesor de la lista para editarlo.");
+/**
+ * Vuelve a generar las opciones del <select> del encabezado (si está en
+ * pantalla) conservando la selección actual, o cambiándola a `selectValue`.
+ */
+function refreshHeaderSelect(storageKey, selectValue) {
+    const cfg = SIMPLE_LISTS[storageKey];
+    const selectEl = document.getElementById(cfg.selectId);
+    if (!selectEl) return;
+
+    const value = selectValue !== undefined ? selectValue : selectEl.value;
+    selectEl.innerHTML = generateSelectOptions(storageKey, value, cfg.placeholder);
+    renderPreview();
+}
+
+/**
+ * Añade un elemento a una lista. Devuelve un mensaje de error o null si todo salió bien.
+ */
+function addListItem(storageKey, rawValue) {
+    const value = (rawValue || '').trim();
+    if (!value) return 'Escribe un nombre.';
+
+    const list = getSimpleList(storageKey);
+    if (list.includes(value)) return `"${value}" ya está en la lista.`;
+
+    list.push(value);
+    saveSimpleList(storageKey, list);
+    refreshHeaderSelect(storageKey);
+    return null;
+}
+
+function editListItem(storageKey, oldValue) {
+    const cfg = SIMPLE_LISTS[storageKey];
+    const newValue = prompt(`Editar ${cfg.label}:`, oldValue);
+    if (newValue === null) return false;
+
+    const trimmed = newValue.trim();
+    if (!trimmed || trimmed === oldValue) return false;
+
+    const list = getSimpleList(storageKey);
+    if (list.includes(trimmed)) {
+        alert(`"${trimmed}" ya está en la lista.`);
+        return false;
     }
 
-    const newValue = prompt("Editar nombre del profesor:", currentValue);
-    if (!newValue || newValue.trim() === "" || newValue.trim() === currentValue) return;
+    const index = list.indexOf(oldValue);
+    if (index === -1) return false;
+    list[index] = trimmed;
+    saveSimpleList(storageKey, list);
+    renameInSubjectProfMap(storageKey, oldValue, trimmed);
 
-    const trimmedNew = newValue.trim();
-    let profs = JSON.parse(localStorage.getItem('list_profs')) || [];
-    
-    const index = profs.indexOf(currentValue);
-    if (index > -1) {
-        profs[index] = trimmedNew;
-        localStorage.setItem('list_profs', JSON.stringify(profs));
-    }
+    // Si el elemento editado estaba seleccionado en el encabezado, seguirlo.
+    const selectEl = document.getElementById(cfg.selectId);
+    const wasSelected = selectEl && selectEl.value === oldValue;
+    syncGlobalHeaderData(cfg.headerKey, oldValue, trimmed);
+    refreshHeaderSelect(storageKey, wasSelected ? trimmed : undefined);
+    return true;
+}
 
-    selectEl.innerHTML = generateSelectOptions('list_profs', trimmedNew);
-    syncGlobalHeaderData('prof', currentValue, trimmedNew);
+function deleteListItem(storageKey, value) {
+    const cfg = SIMPLE_LISTS[storageKey];
+    if (!confirm(`¿Eliminar "${value}" de la lista de ${cfg.plural}?`)) return false;
+
+    saveSimpleList(storageKey, getSimpleList(storageKey).filter(item => item !== value));
+    renameInSubjectProfMap(storageKey, value, null);
+
+    const selectEl = document.getElementById(cfg.selectId);
+    const wasSelected = selectEl && selectEl.value === value;
+    syncGlobalHeaderData(cfg.headerKey, value, '');
+    refreshHeaderSelect(storageKey, wasSelected ? '' : undefined);
+    return true;
 }
 
 // ==========================================
-// FUNCIONES PARA ELIMINAR DE LAS LISTAS
+// VÍNCULO MATERIA → PROFESOR
+// Cada materia puede tener un profesor asignado; al elegir la materia en el
+// encabezado, el profesor se selecciona solo. Se guarda como { materia: profesor }.
 // ==========================================
 
-function deleteSubjectFromList() {
-    const selectEl = document.getElementById('select-subject-main');
-    const currentValue = selectEl.value;
-    
-    if (!currentValue) {
-        return alert("Por favor, selecciona una materia de la lista para eliminarla.");
-    }
-
-    if (confirm(`¿Estás seguro de que deseas eliminar la materia "${currentValue}" de tu lista?`)) {
-        let subjects = JSON.parse(localStorage.getItem('list_subjects')) || [];
-        subjects = subjects.filter(s => s !== currentValue);
-        localStorage.setItem('list_subjects', JSON.stringify(subjects));
-
-        // Volver a renderizar dejando la selección vacía
-        selectEl.innerHTML = generateSelectOptions('list_subjects', '');
-        syncGlobalHeaderData('subject', currentValue, '');
+function getSubjectProfMap() {
+    try {
+        const map = JSON.parse(localStorage.getItem('subject_prof_map'));
+        return map && typeof map === 'object' && !Array.isArray(map) ? map : {};
+    } catch (e) {
+        return {};
     }
 }
 
-function deleteProfFromList() {
-    const selectEl = document.getElementById('select-prof-main');
-    const currentValue = selectEl.value;
-    
-    if (!currentValue) {
-        return alert("Por favor, selecciona un profesor de la lista para eliminarlo.");
-    }
+function saveSubjectProfMap(map) {
+    localStorage.setItem('subject_prof_map', JSON.stringify(map));
+}
 
-    if (confirm(`¿Estás seguro de que deseas eliminar al profesor "${currentValue}" de tu lista?`)) {
-        let profs = JSON.parse(localStorage.getItem('list_profs')) || [];
-        profs = profs.filter(p => p !== currentValue);
-        localStorage.setItem('list_profs', JSON.stringify(profs));
+function setSubjectProf(subject, prof) {
+    const map = getSubjectProfMap();
+    if (prof) map[subject] = prof;
+    else delete map[subject];
+    saveSubjectProfMap(map);
 
-        selectEl.innerHTML = generateSelectOptions('list_profs', '');
-        syncGlobalHeaderData('prof', currentValue, '');
+    // Si esa materia es la que está elegida en el encabezado, aplicar el cambio ya.
+    const subjectSelect = document.getElementById('select-subject-main');
+    const profSelect = document.getElementById('select-prof-main');
+    if (subjectSelect && profSelect && subjectSelect.value === subject && prof) {
+        profSelect.value = prof;
+        renderPreview();
     }
+}
+
+/**
+ * Mantiene el vínculo al renombrar (newValue) o eliminar (newValue = null)
+ * una materia o un profesor.
+ */
+function renameInSubjectProfMap(storageKey, oldValue, newValue) {
+    const map = getSubjectProfMap();
+
+    if (storageKey === 'list_subjects') {
+        if (!(oldValue in map)) return;
+        if (newValue) map[newValue] = map[oldValue];
+        delete map[oldValue];
+    } else {
+        Object.keys(map).forEach(subject => {
+            if (map[subject] !== oldValue) return;
+            if (newValue) map[subject] = newValue;
+            else delete map[subject];
+        });
+    }
+    saveSubjectProfMap(map);
+}
+
+/**
+ * Al elegir una materia en el encabezado, selecciona su profesor vinculado.
+ */
+function onHeaderSubjectChange(subjectSelect) {
+    const prof = getSubjectProfMap()[subjectSelect.value];
+    const profSelect = document.getElementById('select-prof-main');
+    if (prof && profSelect && getSimpleList('list_profs').includes(prof)) {
+        profSelect.value = prof;
+    }
+    renderPreview();
 }
 
 // Función auxiliar para mantener sincronizado el encabezado guardado si cambias algo en las listas
@@ -723,143 +782,61 @@ function syncGlobalHeaderData(key, oldValue, newValue) {
     }
 }
 
-function addSubjectToList() {
-    const newSubject = prompt("Ingrese el nombre de la nueva materia:");
-    if (!newSubject || newSubject.trim() === "") return;
-
-    const subjectName = newSubject.trim();
-    let subjects = JSON.parse(localStorage.getItem('list_subjects')) || [];
-    
-    if (!subjects.includes(subjectName)) {
-        subjects.push(subjectName);
-        localStorage.setItem('list_subjects', JSON.stringify(subjects));
-    }
-
-    const selectEl = document.getElementById('select-subject-main');
-    if (selectEl) {
-        let exists = Array.from(selectEl.options).some(opt => opt.value === subjectName);
-        if (!exists) {
-            const option = document.createElement("option");
-            option.text = subjectName;
-            option.value = subjectName;
-            selectEl.add(option);
-        }
-        selectEl.value = subjectName;
-    }
-}
-
-function addProfToList() {
-    const newProf = prompt("Ingrese el nombre del nuevo profesor:");
-    if (!newProf || newProf.trim() === "") return;
-
-    const profName = newProf.trim();
-    let profs = JSON.parse(localStorage.getItem('list_profs')) || [];
-    
-    if (!profs.includes(profName)) {
-        profs.push(profName);
-        localStorage.setItem('list_profs', JSON.stringify(profs));
-    }
-
-    const selectEl = document.getElementById('select-prof-main');
-    if (selectEl) {
-        let exists = Array.from(selectEl.options).some(opt => opt.value === profName);
-        if (!exists) {
-            const option = document.createElement("option");
-            option.text = profName;
-            option.value = profName;
-            selectEl.add(option);
-        }
-        selectEl.value = profName;
-    }
-}
-
 // ==========================================
-// FUNCIONES DE ACCIÓN PRINCIPAL (Sin IDs)
+// AUTOGUARDADO Y LIMPIEZA DEL ENCABEZADO
 // ==========================================
 
-function saveHeaderData() {
+/**
+ * Lee el formulario del encabezado y lo guarda en LocalStorage. Se llama
+ * desde renderPreview(), que ya se dispara con cada cambio del formulario,
+ * así que los datos quedan guardados sin necesidad de un botón.
+ */
+function persistHeaderFromDOM() {
     const card = document.getElementById('header-card-main');
+    if (!card) return;
 
-    if (card) {
-        // 1. Extraemos los nombres dinámicos de los integrantes
-        const nameInputs = card.querySelectorAll('.student-name-input');
-        const namesArray = Array.from(nameInputs).map(input => input.value);
+    const namesArray = Array.from(card.querySelectorAll('.student-name-input')).map(input => input.value);
+    const isTeamCheckbox = card.querySelector('#check-is-team');
 
-        // 2. Extraemos el estado de la casilla de equipo
-        const isTeamCheckbox = card.querySelector('#check-is-team');
-        const isTeam = isTeamCheckbox ? isTeamCheckbox.checked : false;
+    // IMPORTANTE: el contenedor de integrantes también tiene la clase .grid-inputs,
+    // así que hay que excluir explícitamente los inputs de nombre (y el de
+    // institución, que es de solo lectura) para no desalinear Grupo/Cuatrimestre.
+    const gridTextInputs = Array.from(card.querySelectorAll('.grid-inputs input[type="text"]'))
+        .filter(input => !input.classList.contains('student-name-input') && input.id !== 'header-inst-display');
+    const dateInput = card.querySelector('.grid-inputs input[type="date"]');
+    const logoCheckbox = card.querySelector('#check-include-logo');
 
-        // 3. Extraemos el resto de campos. IMPORTANTE: el contenedor de integrantes
-        // también tiene la clase .grid-inputs, así que hay que excluir explícitamente
-        // los inputs de nombre (y el de institución, que es de solo lectura) para no
-        // desalinear los índices de Grupo/Cuatrimestre.
-        const gridTextInputs = Array.from(card.querySelectorAll('.grid-inputs input[type="text"]'))
-            .filter(input => !input.classList.contains('student-name-input') && input.id !== 'header-inst-display');
-        const dateInput = card.querySelector('.grid-inputs input[type="date"]');
-        const logoCheckbox = card.querySelector('#check-include-logo');
+    // La institución NO se guarda aquí: siempre se deriva del tema/universidad
+    // seleccionado en el menú lateral (ver getUniversityById en renderPreview).
+    const subjectSelect = card.querySelector('#select-subject-main');
+    const profSelect = card.querySelector('#select-prof-main');
 
-        // Los selects se leen por su ID específico (materia y profesor).
-        // La institución NO se guarda aquí: siempre se deriva del tema/universidad
-        // seleccionado en el menú lateral (ver getUniversityById en renderPreview).
-        const subjectSelect = card.querySelector('#select-subject-main');
-        const profSelect = card.querySelector('#select-prof-main');
+    const hDataToSave = {
+        names: namesArray,
+        isTeam: isTeamCheckbox ? isTeamCheckbox.checked : false,
+        group: gridTextInputs[0] ? gridTextInputs[0].value : '',
+        subject: subjectSelect ? subjectSelect.value : '',
+        prof: profSelect ? profSelect.value : '',
+        term: gridTextInputs[1] ? gridTextInputs[1].value : '',
+        date: dateInput ? dateInput.value : '',
+        includeLogo: logoCheckbox ? logoCheckbox.checked : false
+    };
 
-        // Construimos el objeto con la nueva estructura
-        const hDataToSave = {
-            names: namesArray,         // Guardamos el arreglo de nombres
-            isTeam: isTeam,            // Guardamos si es equipo o no
-            group: gridTextInputs[0] ? gridTextInputs[0].value : '',
-            subject: subjectSelect ? subjectSelect.value : '',
-            prof: profSelect ? profSelect.value : '',
-            term: gridTextInputs[1] ? gridTextInputs[1].value : '',
-            date: dateInput ? dateInput.value : '',
-            includeLogo: logoCheckbox ? logoCheckbox.checked : false
-        };
+    localStorage.setItem('global_header_data', JSON.stringify(hDataToSave));
 
-        // Guardar con clave fija en LocalStorage
-        localStorage.setItem('global_header_data', JSON.stringify(hDataToSave));
-
-        // Seleccionamos todo lo que queremos bloquear (añadimos el botón de "Añadir integrante")
-        const allFields = card.querySelectorAll('input, select, .action-icon, #btn-add-member');
-        allFields.forEach(field => field.disabled = true);
-
-        // Refrescar la vista previa con los datos recién guardados
-        renderPreview();
-
-        alert("Datos guardados y bloqueados correctamente.");
-    }
+    const status = document.getElementById('header-autosave-status');
+    if (status) status.textContent = '✓ Guardado';
 }
 
-function editHeaderData() {
-    const confirmEdit = confirm("¿Deseas habilitar la edición? Los cambios no se guardarán hasta que presiones '💾'.");
-    
-    if (confirmEdit) {
-        const card = document.getElementById('header-card-main');
-        if (card) {
-            // Desbloqueamos inputs, selects, iconos de acción y el botón de añadir miembro
-            const allFields = card.querySelectorAll('input, select, .action-icon, #btn-add-member');
-            allFields.forEach(field => field.disabled = false);
+function clearHeaderData() {
+    if (!confirm("¿Limpiar todos los datos del encabezado?")) return;
 
-            // La institución nunca se edita aquí: siempre permanece bloqueada
-            // porque se deriva del tema/universidad seleccionado en el menú lateral.
-            const instDisplay = card.querySelector('#header-inst-display');
-            if (instDisplay) instDisplay.disabled = true;
-        }
-    }
-}
+    localStorage.removeItem('global_header_data');
 
-function deleteHeaderData() {
-    const confirmDelete = confirm("⚠️ ¿Estás seguro de que deseas eliminar permanentemente estos datos?");
-
-    if (confirmDelete) {
-        // Eliminar usando la clave fija
-        localStorage.removeItem('global_header_data');
-
-        // Re-renderizamos el bloque completo para que vuelva a un estado
-        // limpio y desbloqueado (en vez de limpiar campo por campo, lo cual
-        // no restablecía correctamente los checkboxes ni la vista previa).
-        render();
-    }
+    // Re-renderizamos el bloque completo para que vuelva a un estado limpio
+    // (en vez de limpiar campo por campo, lo cual no restablecía
+    // correctamente los checkboxes ni la vista previa).
+    render();
 }
 
 // ==========================================
@@ -1077,6 +1054,10 @@ function renderAIEditor(block, deleteBtn) {
  * Renderiza solo la vista previa (lado derecho)
  */
 function renderPreview() {
+    // Autoguardado del encabezado: renderPreview se dispara con cada cambio
+    // del formulario, así que aquí guardamos lo que haya en pantalla.
+    persistHeaderFromDOM();
+
     const preview = document.getElementById('preview-container');
     let figureCounter = 0;
     let tableCounter = 0;
@@ -1714,18 +1695,16 @@ function closeUniversityModal() {
 }
 
 /**
- * Abre el modal para añadir una nueva universidad o editar la seleccionada.
- * @param {boolean} isEdit - true para editar la universidad actualmente seleccionada
+ * Abre el modal para añadir una nueva universidad o editar una existente.
+ * @param {string} [editId] - id de la universidad a editar; si se omite, se añade una nueva
  */
-function openUniversityModal(isEdit) {
-    const selector = document.getElementById('themeSelector');
+function openUniversityModal(editId) {
     let editing = null;
 
-    if (isEdit) {
-        const currentId = selector ? selector.value : '';
-        editing = getUniversityById(currentId);
+    if (editId) {
+        editing = getUniversityById(editId);
         if (!editing) {
-            alert('Selecciona una universidad válida para editar.');
+            alert('No se encontró la universidad a editar.');
             return;
         }
     }
@@ -1837,16 +1816,16 @@ function saveUniversityFromModal(editingId) {
     closeUniversityModal();
     renderThemeSelector();
     changeTheme(themeToApply);
+    refreshSettingsModal();
 }
 
 /**
- * Elimina la universidad actualmente seleccionada en el selector de temas.
+ * Elimina una universidad de la lista.
  * La universidad 'generic' no se puede eliminar porque sirve de respaldo.
+ * @param {string} uniId - id de la universidad a eliminar
  */
-function deleteUniversityFromList() {
-    const selector = document.getElementById('themeSelector');
-    const currentId = selector ? selector.value : '';
-    const uni = getUniversityById(currentId);
+function deleteUniversityFromList(uniId) {
+    const uni = getUniversityById(uniId);
 
     if (!uni) return;
     if (uni.id === 'generic') {
@@ -1856,10 +1835,184 @@ function deleteUniversityFromList() {
 
     if (!confirm(`¿Eliminar la universidad "${uni.name}"? Esta acción no se puede deshacer.`)) return;
 
-    const universities = getUniversities().filter(u => u.id !== currentId);
+    const universities = getUniversities().filter(u => u.id !== uniId);
     saveUniversities(universities);
     renderThemeSelector();
-    changeTheme('generic');
+
+    // Si era el tema activo, volvemos al genérico; si no, dejamos el actual.
+    const current = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+    changeTheme(current === uniId ? 'generic' : current);
+    refreshSettingsModal();
+}
+
+// ==========================================
+// PANEL DE CONFIGURACIÓN
+// Un solo lugar para añadir, editar y eliminar universidades, materias y
+// profesores (antes eran botones sueltos junto a cada campo).
+// ==========================================
+
+let settingsActiveTab = 'universities';
+
+function openSettingsModal(tab) {
+    if (tab) settingsActiveTab = tab;
+    closeSettingsModal();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'university-modal-overlay';
+    overlay.id = 'settings-modal-overlay';
+    overlay.innerHTML = `
+        <div class="university-modal settings-modal">
+            <h3>⚙️ Configuración</h3>
+            <div class="settings-tabs">
+                <button type="button" data-tab="universities">Universidades</button>
+                <button type="button" data-tab="list_subjects">Materias</button>
+                <button type="button" data-tab="list_profs">Profesores</button>
+            </div>
+            <div id="settings-tab-content"></div>
+            <div class="university-modal-actions">
+                <button type="button" class="action-btn" onclick="closeSettingsModal()">Cerrar</button>
+            </div>
+        </div>
+    `;
+
+    // Cerrar al hacer clic fuera del cuadro
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) closeSettingsModal();
+    });
+    overlay.querySelectorAll('.settings-tabs button').forEach(btn => {
+        btn.addEventListener('click', () => {
+            settingsActiveTab = btn.dataset.tab;
+            refreshSettingsModal();
+        });
+    });
+
+    document.body.appendChild(overlay);
+    refreshSettingsModal();
+}
+
+function closeSettingsModal() {
+    const overlay = document.getElementById('settings-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+/**
+ * Vuelve a dibujar el contenido de la pestaña activa (si el panel está abierto).
+ */
+function refreshSettingsModal() {
+    const overlay = document.getElementById('settings-modal-overlay');
+    if (!overlay) return;
+
+    overlay.querySelectorAll('.settings-tabs button').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === settingsActiveTab);
+    });
+
+    const content = overlay.querySelector('#settings-tab-content');
+    if (settingsActiveTab === 'universities') {
+        renderUniversitiesTab(content);
+    } else {
+        renderSimpleListTab(content, settingsActiveTab);
+    }
+}
+
+function renderUniversitiesTab(content) {
+    const universities = getUniversities();
+    const current = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+
+    content.innerHTML = `
+        <button type="button" class="action-btn save-btn settings-add-btn" id="settings-add-uni">➕ Añadir universidad</button>
+        <ul class="settings-list">
+            ${universities.map(u => `
+                <li data-id="${escapeAttr(u.id)}">
+                    <span class="settings-color-dot" style="background: ${escapeAttr((u.color && u.color.primary) || '#374151')};"></span>
+                    <span class="settings-item-name">${escapeHtml(u.name)}${u.id === current ? ' <em>(en uso)</em>' : ''}</span>
+                    <button type="button" class="icon-btn" data-action="edit" title="Editar">✏️</button>
+                    ${u.id === 'generic' ? '' : '<button type="button" class="icon-btn" data-action="delete" title="Eliminar">🗑️</button>'}
+                </li>
+            `).join('')}
+        </ul>
+    `;
+
+    content.querySelector('#settings-add-uni').addEventListener('click', () => openUniversityModal());
+    content.querySelectorAll('.settings-list li').forEach(li => {
+        const id = li.dataset.id;
+        li.querySelectorAll('button[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (btn.dataset.action === 'edit') openUniversityModal(id);
+                else deleteUniversityFromList(id);
+            });
+        });
+    });
+}
+
+function renderSimpleListTab(content, storageKey) {
+    const cfg = SIMPLE_LISTS[storageKey];
+    const list = getSimpleList(storageKey);
+
+    // En la pestaña de materias, cada una puede vincularse a un profesor.
+    const isSubjects = storageKey === 'list_subjects';
+    const profs = getSimpleList('list_profs');
+    const profMap = getSubjectProfMap();
+    const profSelectHtml = (selected, attrs) => `
+        <select class="settings-prof-select" ${attrs} title="Profesor que imparte esta materia">
+            <option value="">Sin profesor</option>
+            ${profs.map(p => `<option value="${escapeAttr(p)}" ${p === selected ? 'selected' : ''}>${escapeHtml(p)}</option>`).join('')}
+        </select>`;
+
+    content.innerHTML = `
+        <div class="settings-add-row">
+            <input type="text" id="settings-new-item" placeholder="${isSubjects ? 'Nueva materia' : 'Nombre del profesor'}">
+            ${isSubjects ? profSelectHtml('', 'id="settings-new-prof"') : ''}
+            <button type="button" class="action-btn save-btn" id="settings-add-item">➕ Añadir</button>
+        </div>
+        ${isSubjects && !profs.length ? '<p class="settings-hint">Añade profesores en su pestaña para poder vincularlos a cada materia.</p>' : ''}
+        <p id="settings-error" class="settings-error"></p>
+        ${list.length ? `
+            <ul class="settings-list">
+                ${list.map((item, i) => `
+                    <li data-index="${i}">
+                        <span class="settings-item-name">${escapeHtml(item)}</span>
+                        ${isSubjects ? profSelectHtml(profMap[item] || '', 'data-action="link"') : ''}
+                        <button type="button" class="icon-btn" data-action="edit" title="Editar">✏️</button>
+                        <button type="button" class="icon-btn" data-action="delete" title="Eliminar">🗑️</button>
+                    </li>
+                `).join('')}
+            </ul>
+        ` : `<p class="settings-empty">Todavía no has añadido ${escapeHtml(cfg.plural)}.</p>`}
+    `;
+
+    const input = content.querySelector('#settings-new-item');
+    const add = () => {
+        const error = addListItem(storageKey, input.value);
+        if (error) {
+            content.querySelector('#settings-error').textContent = error;
+            return;
+        }
+        const newProf = content.querySelector('#settings-new-prof');
+        if (newProf && newProf.value) setSubjectProf(input.value.trim(), newProf.value);
+        refreshSettingsModal();
+        const newInput = document.getElementById('settings-new-item');
+        if (newInput) newInput.focus();
+    };
+    content.querySelector('#settings-add-item').addEventListener('click', add);
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') add();
+    });
+
+    content.querySelectorAll('.settings-list li').forEach(li => {
+        const item = list[parseInt(li.dataset.index, 10)];
+        const linkSelect = li.querySelector('select[data-action="link"]');
+        if (linkSelect) {
+            linkSelect.addEventListener('change', () => setSubjectProf(item, linkSelect.value));
+        }
+        li.querySelectorAll('button[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const changed = btn.dataset.action === 'edit'
+                    ? editListItem(storageKey, item)
+                    : deleteListItem(storageKey, item);
+                if (changed) refreshSettingsModal();
+            });
+        });
+    });
 }
 
 // ============================================================================

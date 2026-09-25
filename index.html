@@ -46,36 +46,17 @@
         >
           <!-- Las opciones se generan dinámicamente en JS/script.js -->
         </select>
-        <div style="display: flex; gap: 6px; margin-bottom: 15px">
-          <button
-            type="button"
-            class="theme-mgmt-btn"
-            onclick="openUniversityModal(false)"
-            title="Añadir universidad"
-            style="flex: 1"
-          >
-            ➕
-          </button>
-          <button
-            type="button"
-            class="theme-mgmt-btn"
-            onclick="openUniversityModal(true)"
-            title="Editar universidad seleccionada"
-            style="flex: 1"
-          >
-            ✏️
-          </button>
-          <button
-            type="button"
-            class="theme-mgmt-btn"
-            onclick="deleteUniversityFromList()"
-            title="Eliminar universidad seleccionada"
-            style="flex: 1"
-          >
-            🗑️
-          </button>
-        </div>
       </div>
+
+      <button
+        type="button"
+        class="btn-settings"
+        onclick="openSettingsModal()"
+        title="Administrar universidades, materias y profesores"
+      >
+        <span class="material-symbols-outlined">settings</span>
+        <span>&ensp;Configuración</span>
+      </button>
 
       <h3>Bloques</h3>
       <button onclick="addBlock('header')">

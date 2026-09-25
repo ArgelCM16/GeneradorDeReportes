@@ -225,6 +225,11 @@ body {
     background: #229954 !important;
 }
 
+/* Botón "Desconectar" de Google Drive */
+.btn-danger {
+    background: #c0392b !important;
+}
+
 /* Los botones de Drive están dentro de un div: replicar la columna flex de
    .toolbox para que tengan el mismo ancho y separación que el resto. */
 .drive-section {
@@ -254,20 +259,113 @@ body {
     color: white;
 }
 
-/* Botones de gestión de universidades (añadir/editar/eliminar) en el nav oscuro */
-.theme-mgmt-btn {
-    background: rgba(255, 255, 255, 0.12);
-    border: 1px solid rgba(255, 255, 255, 0.25);
-    color: white;
-    border-radius: 5px;
-    padding: 6px 0;
-    cursor: pointer;
-    font-size: 0.85em;
-    transition: background 0.2s ease;
+/* Botón de Configuración en el nav (abre el panel de universidades/materias/profesores) */
+.btn-settings {
+    margin-bottom: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.25) !important;
 }
 
-.theme-mgmt-btn:hover {
-    background: rgba(255, 255, 255, 0.25);
+/* Panel de Configuración */
+.settings-modal {
+    width: 480px;
+}
+
+.settings-tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 2px solid #e0e0e0;
+    margin-bottom: 15px;
+}
+
+.settings-tabs button {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    padding: 8px 4px;
+    cursor: pointer;
+    font-size: 0.9em;
+    color: #666;
+}
+
+.settings-tabs button.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+    font-weight: 600;
+}
+
+.settings-add-row {
+    display: flex;
+    gap: 8px;
+}
+
+.settings-add-row input {
+    flex: 1;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 6px;
+    border: 2px solid #e0e0e0;
+    font-family: inherit;
+}
+
+.settings-add-btn {
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+.settings-error {
+    color: #c0392b;
+    font-size: 0.8em;
+    margin: 4px 0 0;
+    min-height: 1em;
+}
+
+.settings-empty {
+    color: #777;
+    font-size: 0.9em;
+    text-align: center;
+    padding: 15px 0;
+}
+
+.settings-list {
+    list-style: none;
+    padding: 0;
+    margin: 8px 0 0;
+    max-height: 45vh;
+    overflow-y: auto;
+}
+
+.settings-list li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 6px;
+    border-bottom: 1px solid #eee;
+}
+
+.settings-list li:hover {
+    background: #f7f7f7;
+}
+
+.settings-item-name {
+    flex: 1;
+    min-width: 0;
+    overflow-wrap: anywhere;
+    color: #333;
+}
+
+.settings-item-name em {
+    color: #888;
+    font-size: 0.85em;
+}
+
+.settings-color-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    border: 1px solid rgba(0, 0, 0, 0.15);
 }
 
 /* Modal para añadir/editar universidades (logo y color de tema) */
@@ -666,14 +764,33 @@ textarea.editor-input {
     margin-top: 10px;
 }
 
-.grid-inputs input {
+.grid-inputs input,
+.grid-inputs select {
     padding: 10px;
     border: 2px solid #e0e0e0;
     border-radius: 6px;
+    font-family: inherit;
+    font-size: 0.95em;
+    color: #333;
+    background-color: #fff;
     transition: border-color 0.2s ease;
 }
 
-.grid-inputs input:focus {
+.grid-inputs select {
+    cursor: pointer;
+}
+
+/* Mientras no se elige nada, el select se ve como un placeholder (gris) */
+.grid-inputs select:invalid {
+    color: #757575;
+}
+
+.grid-inputs select option {
+    color: #333;
+}
+
+.grid-inputs input:focus,
+.grid-inputs select:focus {
     outline: none;
     border-color: var(--secondary);
 }
@@ -1237,4 +1354,39 @@ textarea.editor-input {
         transform: scale(1);
         opacity: 1;
     }
+}
+
+.settings-list .icon-btn {
+    height: 32px;
+    flex-shrink: 0;
+}
+
+/* Botones con texto (no solo icono): tamaño de letra normal */
+.settings-modal .action-btn,
+#header-card-main .action-buttons-group .action-btn {
+    font-size: 0.95em;
+}
+
+/* Selector de profesor vinculado a cada materia (pestaña Materias) */
+.settings-prof-select,
+.settings-add-row select {
+    padding: 6px 8px;
+    border-radius: 6px;
+    border: 2px solid #e0e0e0;
+    font-family: inherit;
+    font-size: 0.85em;
+    background: #fff;
+    color: #333;
+    max-width: 150px;
+    cursor: pointer;
+}
+
+.settings-add-row select {
+    padding: 8px;
+}
+
+.settings-hint {
+    color: #777;
+    font-size: 0.8em;
+    margin: 6px 0 0;
 }
