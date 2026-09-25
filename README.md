@@ -225,6 +225,8 @@ generador-reportes-academicos/
 ├── ASSETS
 │   ├── favicon.png
 │   └── img
+├── CLAUDE.md			# Guía técnica del proyecto (para Claude Code y desarrolladores)
+├── contexto.md			# Estado actual, decisiones y planes
 ├── Contributing.md
 ├── CSS
 │   ├── style.css		# Estilos base y temas
@@ -414,8 +416,21 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 - [x] Persistencia completa del estado
 - [x] Validación y manejo de errores robusto
 
+### Próxima Función: Colaboración en Vivo (en planeación)
+
+Trabajar el mismo reporte entre varios integrantes del equipo, al mismo tiempo y desde distintas computadoras:
+
+- [ ] Botón **Compartir** que genera un enlace del reporte
+- [ ] Inicio de sesión con Google para saber quién edita qué
+- [ ] Los cambios de cada integrante se ven en los demás en uno o dos segundos
+- [ ] Bloqueo por bloque: mientras alguien edita un bloque, los demás ven "✏️ Ana está editando"
+- [ ] Lista de quién está conectado
+- [ ] Encabezado compartido (integrantes, grupo, materia...)
+
+Se hará con Firebase (plan gratuito) y por etapas. Si no compartes el reporte, la app seguirá funcionando igual que ahora, sin cuenta ni internet. El plan detallado está en [contexto.md](contexto.md).
+
 ### Versión 3.0 (Futuro)
-- [ ] Editor colaborativo en tiempo real
+- [ ] Edición simultánea dentro del mismo bloque (como Google Docs)
 - [ ] Sistema de versiones integrado
 
 ---
