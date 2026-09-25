@@ -1254,6 +1254,12 @@ document.addEventListener('DOMContentLoaded', initPaneResizer);
 // siguiente hoja.
 // ==========================================
 
+// Tamaño natural de las imágenes ya cargadas (src -> { w, h }). Sirve para
+// que la imagen ocupe su alto real desde antes de terminar de cargar; si no,
+// mide 0 al paginar, "cabe" en cualquier lado y luego desborda la hoja.
+const previewImageSizes = new Map();
+let repaginateTimer = null;
+
 function paginatePreview(container, html) {
     // Al rearmar las hojas el panel se vacía un momento; guardamos la posición
     // de desplazamiento para que no brinque al inicio mientras se escribe.
@@ -1265,6 +1271,19 @@ function paginatePreview(container, html) {
     const source = document.createElement('div');
     source.innerHTML = html;
     container.innerHTML = '';
+
+    // Imágenes: con tamaño conocido se les pone width/height (el navegador
+    // reserva su alto); las nuevas se miden al cargar y se repagina una vez.
+    const unknownImages = [];
+    source.querySelectorAll('img').forEach(img => {
+        const size = previewImageSizes.get(img.getAttribute('src'));
+        if (size) {
+            img.setAttribute('width', size.w);
+            img.setAttribute('height', size.h);
+        } else {
+            unknownImages.push(img);
+        }
+    });
 
     let pageEl = null;
     let body = null;
@@ -1455,6 +1474,19 @@ function paginatePreview(container, html) {
         scroller.scrollTop = scrollTop;
         scroller.scrollLeft = scrollLeft;
     }
+
+    // Cuando terminen de cargar las imágenes nuevas, se guardan sus medidas
+    // y se vuelve a paginar (la siguiente vez ya se conocen: no hay ciclo).
+    unknownImages.forEach(img => {
+        const remember = () => {
+            if (!img.naturalWidth || !img.naturalHeight) return;
+            previewImageSizes.set(img.getAttribute('src'), { w: img.naturalWidth, h: img.naturalHeight });
+            clearTimeout(repaginateTimer);
+            repaginateTimer = setTimeout(renderPreview, 30);
+        };
+        if (img.complete) remember();
+        else img.addEventListener('load', remember, { once: true });
+    });
 }
 
 // ==========================================

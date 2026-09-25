@@ -113,6 +113,7 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 - `data-page-break="before|after|both"` fuerza saltos de página. El índice usa `after`: con portada queda solo en la hoja 2; con encabezado normal queda debajo del encabezado en la hoja 1; en ambos casos el contenido empieza en la hoja siguiente. La portada (`.p-cover`) va sola en su hoja y sin número.
 - Después de paginar, `fillTocPageNumbers()` pone a cada entrada del índice la página donde quedó su título (`data-toc-ref` → `data-toc-anchor`).
 - Como se repagina con cada tecla, `paginatePreview()` conserva la posición de desplazamiento del panel.
+- Imágenes: al paginar, una imagen que no ha terminado de cargar mide 0 de alto. `previewImageSizes` guarda el tamaño de cada imagen ya cargada (se le pone `width`/`height` para reservar su alto) y, cuando carga una imagen nueva, se repagina una vez. Además, en la hoja se limitan a `max-height: 18cm`.
 - Ancho de la vista previa: el divisor `#pane-resizer` (entre `.editor-pane` y `#preview-pane`) se arrastra con eventos de puntero; también responde a las flechas y el doble clic lo regresa al tamaño normal. `setPreviewWidth(px | null)` limita el ancho a mínimo 320 px y deja al editor al menos 380 px. `togglePreviewExpanded()` (botón de la barra de la vista previa) alterna entre el 60% del espacio y el tamaño normal. Si el zoom está en `fit`, la hoja se reajusta al cambiar el ancho.
 
 ### Exportación
@@ -143,7 +144,8 @@ No hay pruebas en el repositorio. Lo que ha funcionado es Chrome sin interfaz:
 2. Antes de `</body>`, agrega un `<script>` que al cargar ejecute las acciones (`addBlock`, `openSettingsModal`, `dispatchEvent(new Event('input'))`...), revise los resultados y los escriba en un `<pre id="TEST_RESULTS">`. Sustituye `alert`, `confirm` y `prompt` por funciones falsas.
 3. Ejecuta `chrome.exe --headless=new --allow-file-access-from-files --user-data-dir=<temporal> --virtual-time-budget=6000 --dump-dom <archivo>` y lee el `<pre>`.
 4. Para ver cómo se ve: `--screenshot=<png> --window-size=1440,900`.
-5. Para la impresión: copia los CSS cambiando `@media print` por `@media all` y toma una captura.
+5. Para la impresión: `--print-to-pdf=<archivo>` y cuenta las páginas del PDF (`/Type /Page`); deben ser las mismas que `.preview-page` en la vista previa. **Oculta el `<pre id="TEST_RESULTS">`** antes de imprimir (`#TEST_RESULTS{display:none}`), o saldrá como una hoja extra.
+6. Proyecto de prueba completo: `EXAMPLES/PROYECTO-PRUEBA-COMPLETO.json` (se carga con "Cargar Proyecto").
 
 Chrome está en `C:\Program Files\Google\Chrome\Application\chrome.exe`.
 

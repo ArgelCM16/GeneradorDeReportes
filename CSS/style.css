@@ -1736,8 +1736,20 @@ textarea.editor-input {
 /* Párrafo partido entre dos hojas: la última línea de la primera parte
    también va justificada, y la continuación no deja espacio arriba */
 .p-split-start {
-    text-align-last: justify;
     margin-bottom: 0 !important;
+}
+
+/* Solo los párrafos: en el código cada línea termina en salto de línea y
+   se estiraría toda a lo ancho */
+.p-text.p-split-start {
+    text-align-last: justify;
+}
+
+pre.p-split-start,
+pre.p-split-rest,
+.code-preview {
+    text-align: left;
+    text-align-last: auto;
 }
 
 .p-split-rest {
@@ -1855,4 +1867,10 @@ body.is-resizing-panes {
     .preview-expand-btn {
         display: none;
     }
+}
+
+/* Una imagen nunca debe ser más alta que lo que cabe en una hoja */
+.preview-page .preview-image-container img {
+    max-height: 18cm;
+    object-fit: contain;
 }
