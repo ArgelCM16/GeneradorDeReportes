@@ -58,9 +58,19 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 | `list_universities` | Universidades: `{ id, name, builtin, color { primary, secondary, accent }, logoLeft, logoRight }` (logos en data URL) |
 | `list_subjects` / `list_profs` | Arreglos de texto con las materias y los profesores |
 | `subject_prof_map` | Vínculo `{ "materia": "profesor" }` |
+| `documentName` | Nombre del documento (vacío = "Reporte sin título") |
+| `autosaveEnabled` | `'0'` si el autoguardado está desactivado (por defecto activo) |
 | `previewWidth` | Ancho (px) elegido para la vista previa; sin valor = el del CSS (460 px) |
 | `citationStyle` | Formato de las referencias: `ieee` (por defecto) o `apa` |
 | `previewZoom` | Zoom de la vista previa: `fit` (ajustar al ancho, por defecto) o un nivel de 0.25 a 1.5; solo pantalla |
+
+### Documento: nombre, autoguardado y "Nuevo"
+
+- **Nunca leas ni escribas `global_header_data` directo**: usa `getHeaderData()` / `setHeaderData()`. Con el autoguardado activo usan el almacenamiento del navegador (como siempre); desactivado, usan la memoria (`headerDataMemory`) y no escriben nada.
+- `isAutosaveEnabled()` / `setAutosaveEnabled()` / `toggleAutosave()` (la pastilla de la barra del editor es el interruptor). Sin autoguardado, `saveToLocalStorage()` no escribe los bloques. Al volver a activarlo se guarda de inmediato lo que haya en pantalla.
+- Cambios sin guardar: `markDocumentSaved()` guarda una "foto" del documento (`getDocumentSnapshot()`: bloques + encabezado + nombre); `hasUnsavedChanges()` la compara. Se marca como guardado al cargar la página, al guardar el JSON o en Drive, al cargar un proyecto y con "Nuevo". Sin autoguardado y con cambios, la pastilla dice "Cambios sin guardar" y el navegador avisa antes de cerrar (`beforeunload`).
+- Nombre del documento: `setDocumentName()` / `getDocumentName()` (input `#document-name` en la barra del editor). También es el título de la pestaña (`document.title`), que el navegador usa como nombre del PDF al imprimir. `getSafeFileName()` lo limpia para usarlo en los archivos JSON, TXT y Drive. Se guarda en el proyecto (`documentName`); al cargar un proyecto viejo se toma del nombre del archivo.
+- `newDocument()` (botón "Nuevo"): pide confirmación y borra bloques, encabezado, nombre y el archivo de Drive activo. Conserva universidades, materias, profesores y el tema.
 
 ### Renderizado
 
@@ -92,7 +102,7 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 
 ### Proyecto (guardar y cargar)
 
-- `buildProjectData()` / `buildProjectJSON()`: `{ version: '2.1', timestamp, theme, reportData, headerData, citationStyle, settings: { universities, subjects, profs, subjectProfMap } }`.
+- `buildProjectData()` / `buildProjectJSON()`: `{ version: '2.1', timestamp, theme, documentName, reportData, headerData, citationStyle, settings: { universities, subjects, profs, subjectProfMap } }`.
 - `applyProjectData(data)`: primero integra la configuración con `mergeProjectSettings` (solo **añade** lo que falta; lo local nunca se sobrescribe), luego restaura el encabezado, los bloques y el tema. Los proyectos antiguos (versión `2.0`, sin `headerData` ni `settings`) siguen funcionando.
 - Lo usan `saveJSON` / `loadJSON` (archivo) y `saveProjectToDrive` / `loadProjectFromDrive` (Drive).
 

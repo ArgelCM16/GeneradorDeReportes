@@ -29,6 +29,7 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 | Índice | Bloque "Índice" (botón en la barra lateral): tabla de contenido con títulos y subtítulos y su número de página real. Siempre va después del encabezado: en la hoja siguiente a la portada, o debajo del encabezado normal; el contenido empieza en la hoja de después. Solo puede haber uno |
 | Zoom | Botones − % + en la barra de la vista previa; por defecto ajusta la hoja al ancho del panel (solo pantalla) |
 | Ancho de la vista previa | Divisor arrastrable entre el editor y la vista previa (doble clic = tamaño normal) y botón para agrandarla al 60%; el ancho se recuerda |
+| Documento | Nombre editable en la barra del editor (nombre del PDF, TXT, JSON y Drive); botón "Nuevo" para empezar de cero; la pastilla de autoguardado es un interruptor (sin autoguardado avisa de cambios sin guardar) |
 | Correcciones | Nombre del alumno en la Declaración de IA; "Cuatrimestre" duplicado; encabezados de tabla mal marcados; README corrupto (texto UTF-16 al final) |
 
 ### Decisiones de diseño que conviene respetar

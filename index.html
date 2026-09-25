@@ -215,10 +215,44 @@
       <section class="editor-pane">
         <div class="editor-toolbar">
           <div class="editor-toolbar-title">
-            <h2>Editor de Reporte Académico</h2>
+            <!-- Nombre del documento: se usa al guardar el PDF, el TXT y el proyecto -->
+            <label class="document-name-wrap" title="Nombre del documento (se usa al guardar el PDF, el TXT y el proyecto)">
+              <span class="material-symbols-outlined">edit</span>
+              <input
+                type="text"
+                id="document-name"
+                class="document-name-input"
+                placeholder="Reporte sin título"
+                maxlength="120"
+                spellcheck="false"
+                aria-label="Nombre del documento"
+                oninput="setDocumentName(this.value)"
+                onkeydown="if (event.key === 'Enter') this.blur()"
+              />
+            </label>
             <span id="editor-uni-label"></span>
           </div>
-          <span class="status-pill">Guardado automáticamente</span>
+
+          <button
+            type="button"
+            class="toolbar-btn"
+            onclick="newDocument()"
+            title="Borrar todo el documento y empezar uno nuevo"
+          >
+            <span class="material-symbols-outlined">note_add</span>
+            <span>Nuevo</span>
+          </button>
+
+          <!-- Clic para activar / desactivar el autoguardado -->
+          <button
+            type="button"
+            id="autosave-toggle"
+            class="status-pill"
+            onclick="toggleAutosave()"
+            aria-pressed="true"
+          >
+            Guardado automáticamente
+          </button>
         </div>
 
         <section id="editor-container">

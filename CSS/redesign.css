@@ -1592,3 +1592,141 @@ body.is-resizing-panes .pane-resizer::after {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ============================================================================
+   BARRA DEL EDITOR: nombre editable, "Nuevo" y autoguardado
+   ============================================================================ */
+.editor-toolbar {
+    gap: 10px;
+}
+
+.document-name-wrap {
+    gap: 4px;
+    cursor: text;
+}
+
+.document-name-wrap .material-symbols-outlined {
+    font-size: 16px;
+    color: var(--ui-slate-400);
+    transition: color 0.15s ease;
+}
+
+.document-name-wrap:hover .material-symbols-outlined,
+.document-name-wrap:focus-within .material-symbols-outlined {
+    color: var(--ui-accent-dark);
+}
+
+.document-name-input {
+    font-family: var(--ui-font);
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: var(--ui-slate-900);
+    padding: 4px 8px;
+    border-radius: 10px;
+    text-overflow: ellipsis;
+}
+
+.document-name-input::placeholder {
+    color: var(--ui-slate-400);
+    font-weight: 600;
+}
+
+.document-name-input:hover {
+    border-color: var(--ui-slate-300);
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.document-name-input:focus {
+    border-color: var(--ui-blue);
+    background: #fff;
+    box-shadow: 0 0 0 3px #dbeafe;
+}
+
+/* El nombre del documento ocupa lo que haya; la universidad se recorta antes */
+#editor-uni-label {
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+.toolbar-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--ui-slate-300);
+    border-radius: 999px;
+    background: #fff;
+    color: var(--ui-slate-700);
+    font-family: var(--ui-font);
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.toolbar-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.toolbar-btn:hover {
+    border-color: #fecdd3;
+    background: #fff1f2;
+    color: var(--ui-rose);
+}
+
+/* Pastilla de autoguardado (es un botón) */
+button.status-pill {
+    font-family: var(--ui-font);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+button.status-pill:hover {
+    filter: brightness(0.97);
+}
+
+.status-pill.is-off {
+    background: var(--ui-slate-100);
+    border-color: var(--ui-slate-300);
+    color: var(--ui-slate-600) !important;
+}
+
+.status-pill.is-off::before {
+    content: "○";
+}
+
+.status-pill.is-dirty {
+    background: #fffbeb;
+    border-color: #fcd34d;
+    color: #b45309 !important;
+}
+
+.status-pill.is-dirty::before {
+    content: "●";
+}
+
+/* Pastilla de la tarjeta del encabezado sin autoguardado */
+#header-autosave-status.is-off {
+    background: var(--ui-slate-100);
+    border-color: var(--ui-slate-300);
+    color: var(--ui-slate-600) !important;
+}
+
+/* El nombre del documento tiene prioridad de espacio; la universidad se
+   recorta antes (y se oculta si el editor es muy angosto) */
+.editor-toolbar-title {
+    min-width: 0;
+}
+
+.document-name-wrap {
+    flex: 1 1 auto;
+    min-width: 150px;
+}
+
+#editor-uni-label {
+    flex: 0 10 auto;
+    max-width: 40%;
+}
+
+@media (max-width: 1280px) {
+    #editor-uni-label {
+        display: none;
+    }
+}

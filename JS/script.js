@@ -364,7 +364,16 @@ function render() {
  */
 function renderEditor() {
     const editor = document.getElementById('editor-container');
-    editor.innerHTML = ""; 
+    editor.innerHTML = "";
+
+    if (reportData.length === 0) {
+        editor.innerHTML = `
+            <div class="welcome-message">
+                <h2>¡Bienvenido!</h2>
+                <p>Selecciona tu institución y comienza agregando bloques desde el menú lateral.</p>
+            </div>`;
+    }
+
 
     reportData.forEach(block => {
         const div = document.createElement('div');
@@ -440,7 +449,7 @@ function getSimpleList(storageKey) {
 
 
 function renderHeaderEditor(block, deleteBtn) {
-    const savedData = JSON.parse(localStorage.getItem('global_header_data'));
+    const savedData = getHeaderData();
     
     let savedTheme = localStorage.getItem('selectedTheme');
     if (savedTheme) {
@@ -833,10 +842,9 @@ function onHeaderSubjectChange(subjectSelect) {
 
 // Función auxiliar para mantener sincronizado el encabezado guardado si cambias algo en las listas
 function syncGlobalHeaderData(key, oldValue, newValue) {
-    let savedData = JSON.parse(localStorage.getItem('global_header_data'));
+    const savedData = getHeaderData();
     if (savedData && savedData[key] === oldValue) {
-        savedData[key] = newValue;
-        localStorage.setItem('global_header_data', JSON.stringify(savedData));
+        setHeaderData({ ...savedData, [key]: newValue });
     }
 }
 
@@ -914,16 +922,20 @@ function persistHeaderFromDOM() {
     if (!card) return;
 
     const hDataToSave = readHeaderFromDOM(card);
-    localStorage.setItem('global_header_data', JSON.stringify(hDataToSave));
+    setHeaderData(hDataToSave);
 
     const status = document.getElementById('header-autosave-status');
-    if (status) status.textContent = '✓ Guardado';
+    if (status) {
+        const on = isAutosaveEnabled();
+        status.textContent = on ? '✓ Guardado' : 'Sin autoguardado';
+        status.classList.toggle('is-off', !on);
+    }
 }
 
 function clearHeaderData() {
     if (!confirm("¿Limpiar todos los datos del encabezado?")) return;
 
-    localStorage.removeItem('global_header_data');
+    setHeaderData(null);
 
     // Re-renderizamos el bloque completo para que vuelva a un estado limpio
     // (en vez de limpiar campo por campo, lo cual no restablecía
@@ -1722,7 +1734,7 @@ function renderAIEditor(block, deleteBtn) {
     const ai = block.aiData || {};
     
     // Nombre del alumno del encabezado (se usa si no se escribe otro aquí)
-    const studentName = getHeaderStudentName(JSON.parse(localStorage.getItem('global_header_data')));
+    const studentName = getHeaderStudentName(getHeaderData());
     
     return `
         <div class="block-card ai-card">
@@ -1790,7 +1802,7 @@ function renderPreview() {
     let refCounter = 0;
 
     // 1. Obtener los datos del encabezado desde el LocalStorage
-    const savedHeader = JSON.parse(localStorage.getItem('global_header_data')) || {};
+    const savedHeader = getHeaderData() || {};
 
     // Títulos y subtítulos que van en el índice (con un número de ancla)
     const tocAnchors = getTocAnchors();
@@ -1851,7 +1863,7 @@ function renderPreview() {
             
 case 'header':
             // Por defecto, leemos de los datos guardados
-            let liveData = JSON.parse(localStorage.getItem('global_header_data')) || {};
+            let liveData = { ...(getHeaderData() || {}) };
             
             // Aseguramos compatibilidad inicial si el objeto en localStorage usa el formato antiguo
             if (liveData.name && !liveData.names) {
@@ -2006,7 +2018,7 @@ function exportTXT() {
     textContent += "=".repeat(60) + "\n\n";
 
     // 1. Obtener los datos del encabezado desde el LocalStorage
-    const savedHeader = JSON.parse(localStorage.getItem('global_header_data')) || {};
+    const savedHeader = getHeaderData() || {};
 
     reportData.forEach(block => {
         switch(block.type) {
@@ -2220,7 +2232,7 @@ function exportTXT() {
     const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = "reporte_academico.txt";
+    link.download = `${getSafeFileName()}.txt`;
     link.click();
     
     setTimeout(() => URL.revokeObjectURL(link.href), 100);
@@ -2255,6 +2267,10 @@ function formatIEEEReference(type, author, title, source, year, url) {
 let autosaveQuotaWarningShown = false;
 
 function saveToLocalStorage() {
+    if (!isAutosaveEnabled()) {
+        updateAutosaveUI();
+        return;
+    }
     try {
         localStorage.setItem('reportData', JSON.stringify(reportData));
         autosaveQuotaWarningShown = false;
@@ -2295,7 +2311,10 @@ let autosaveTimer = null;
 
 function scheduleAutosave() {
     clearTimeout(autosaveTimer);
-    autosaveTimer = setTimeout(saveToLocalStorage, 500);
+    autosaveTimer = setTimeout(() => {
+        saveToLocalStorage();
+        updateAutosaveUI();
+    }, 500);
 }
 
 // ============================================================================
@@ -2827,6 +2846,178 @@ function renderSimpleListTab(content, storageKey) {
 }
 
 // ============================================================================
+// DOCUMENTO: NOMBRE, AUTOGUARDADO Y NUEVO DOCUMENTO
+// ============================================================================
+
+const DEFAULT_DOCUMENT_NAME = 'Reporte sin título';
+
+// Con el autoguardado apagado, el encabezado y el nombre viven solo en memoria
+// (y en el documento), no en el almacenamiento del navegador.
+let headerDataMemory = null;
+let documentNameMemory = '';
+let savedDocumentSnapshot = null;
+
+function isAutosaveEnabled() {
+    return localStorage.getItem('autosaveEnabled') !== '0';
+}
+
+/**
+ * Datos del encabezado. Con autoguardado se leen del navegador (como siempre);
+ * sin él, de la memoria.
+ */
+function getHeaderData() {
+    if (isAutosaveEnabled()) {
+        try {
+            return JSON.parse(localStorage.getItem('global_header_data'));
+        } catch (e) {
+            return null;
+        }
+    }
+    return headerDataMemory ? { ...headerDataMemory } : null;
+}
+
+function setHeaderData(data) {
+    headerDataMemory = data ? { ...data } : null;
+    if (!isAutosaveEnabled()) return;
+    if (data) localStorage.setItem('global_header_data', JSON.stringify(data));
+    else localStorage.removeItem('global_header_data');
+}
+
+// ---------- Nombre del documento ----------
+
+function getDocumentName() {
+    return (documentNameMemory || '').trim();
+}
+
+/**
+ * El nombre se usa para los archivos (PDF, TXT, JSON y Drive) y como título de
+ * la pestaña; el navegador usa ese título como nombre del PDF al imprimir.
+ */
+function setDocumentName(name) {
+    documentNameMemory = (name || '').slice(0, 120);
+    if (isAutosaveEnabled()) localStorage.setItem('documentName', documentNameMemory);
+
+    const input = document.getElementById('document-name');
+    if (input && input.value !== documentNameMemory) input.value = documentNameMemory;
+    document.title = getDocumentName() || DEFAULT_DOCUMENT_NAME;
+    updateAutosaveUI();
+}
+
+/**
+ * Nombre del documento sin caracteres que no se permiten en archivos.
+ */
+function getSafeFileName() {
+    const clean = (getDocumentName() || DEFAULT_DOCUMENT_NAME)
+        .replace(/[\\/:*?"<>|]+/g, '-')
+        .replace(/\s+/g, ' ')
+        .trim();
+    return clean || DEFAULT_DOCUMENT_NAME;
+}
+
+// ---------- Cambios sin guardar ----------
+
+function getDocumentSnapshot() {
+    return JSON.stringify({ reportData, header: getHeaderData(), name: getDocumentName() });
+}
+
+function markDocumentSaved() {
+    savedDocumentSnapshot = getDocumentSnapshot();
+    updateAutosaveUI();
+}
+
+function hasUnsavedChanges() {
+    return !isAutosaveEnabled() && savedDocumentSnapshot !== null && getDocumentSnapshot() !== savedDocumentSnapshot;
+}
+
+// ---------- Interruptor de autoguardado ----------
+
+function toggleAutosave() {
+    setAutosaveEnabled(!isAutosaveEnabled());
+}
+
+function setAutosaveEnabled(enabled) {
+    if (enabled) {
+        localStorage.setItem('autosaveEnabled', '1');
+        // Guardar de inmediato lo que haya en pantalla
+        setHeaderData(headerDataMemory);
+        localStorage.setItem('documentName', documentNameMemory);
+        saveToLocalStorage();
+    } else {
+        // Lo último guardado pasa a memoria y desde aquí ya no se escribe
+        try {
+            headerDataMemory = JSON.parse(localStorage.getItem('global_header_data'));
+        } catch (e) {
+            headerDataMemory = null;
+        }
+        localStorage.setItem('autosaveEnabled', '0');
+        markDocumentSaved();
+    }
+    renderPreview();
+    updateAutosaveUI();
+}
+
+function updateAutosaveUI() {
+    const pill = document.getElementById('autosave-toggle');
+    if (!pill) return;
+    const on = isAutosaveEnabled();
+    const dirty = hasUnsavedChanges();
+
+    pill.classList.toggle('is-off', !on);
+    pill.classList.toggle('is-dirty', dirty);
+    pill.textContent = on
+        ? 'Guardado automáticamente'
+        : (dirty ? 'Cambios sin guardar' : 'Autoguardado desactivado');
+    pill.title = on
+        ? 'Clic para desactivar el autoguardado'
+        : 'Clic para activar el autoguardado (tus cambios se guardan en este navegador)';
+    pill.setAttribute('aria-pressed', on ? 'true' : 'false');
+}
+
+// ---------- Nuevo documento ----------
+
+function newDocument() {
+    const message = '¿Borrar todo el documento y empezar uno nuevo?\n\n' +
+        'Se borran todos los bloques, los datos del encabezado y el nombre del documento.\n' +
+        'Tus universidades, materias y profesores se conservan.' +
+        (hasUnsavedChanges() ? '\n\n⚠️ Tienes cambios sin guardar.' : '');
+    if (!confirm(message)) return;
+
+    reportData = [];
+    setHeaderData(null);
+    setDocumentName('');
+    driveCurrentFileId = null;
+    driveCurrentFileName = null;
+    render();
+    saveToLocalStorage();
+    markDocumentSaved();
+
+    const editor = document.getElementById('editor-container');
+    if (editor) editor.scrollTop = 0;
+    const input = document.getElementById('document-name');
+    if (input) input.focus();
+}
+
+// ---------- Inicio ----------
+
+document.addEventListener('DOMContentLoaded', function() {
+    try {
+        headerDataMemory = JSON.parse(localStorage.getItem('global_header_data'));
+    } catch (e) {
+        headerDataMemory = null;
+    }
+    setDocumentName(localStorage.getItem('documentName') || '');
+    markDocumentSaved();
+});
+
+// Sin autoguardado, avisar antes de cerrar si hay cambios sin guardar
+window.addEventListener('beforeunload', event => {
+    if (hasUnsavedChanges()) {
+        event.preventDefault();
+        event.returnValue = '';
+    }
+});
+
+// ============================================================================
 // GUARDAR Y CARGAR PROYECTO (JSON)
 // ============================================================================
 
@@ -2842,11 +3033,8 @@ function saveJSON() {
         // Crear Blob
         const blob = new Blob([jsonString], { type: 'application/json' });
 
-        // Crear nombre de archivo con fecha y hora
-        const now = new Date();
-        const dateStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
-        const timeStr = now.toTimeString().slice(0, 5).replace(':', '-'); // HH-MM
-        const filename = `REPORTE-FECHA-${dateStr}-HORA-${timeStr}.json`;
+        // El archivo se llama como el documento
+        const filename = `${getSafeFileName()}.json`;
 
         // Crear enlace de descarga
         const link = document.createElement('a');
@@ -2861,6 +3049,7 @@ function saveJSON() {
         // Liberar memoria
         URL.revokeObjectURL(link.href);
 
+        markDocumentSaved();
         console.log('Proyecto guardado:', filename);
         alert('Proyecto guardado exitosamente como ' + filename);
 
@@ -2879,7 +3068,7 @@ function saveJSON() {
 function buildProjectData() {
     let headerData = null;
     try {
-        headerData = JSON.parse(localStorage.getItem('global_header_data'));
+        headerData = getHeaderData();
     } catch (e) {
         headerData = null;
     }
@@ -2888,6 +3077,7 @@ function buildProjectData() {
         version: '2.1',
         timestamp: new Date().toISOString(),
         theme: document.body.getAttribute('data-theme') || 'generic',
+        documentName: getDocumentName(),
         reportData: reportData,
         headerData: headerData,
         citationStyle: getCitationStyle(),
@@ -2940,7 +3130,7 @@ function mergeProjectSettings(settings) {
  * Aplica un proyecto ya leído (de un archivo o de Google Drive).
  * Los proyectos antiguos (sin headerData/settings) siguen funcionando igual.
  */
-function applyProjectData(projectData) {
+function applyProjectData(projectData, fallbackName = '') {
     if (!projectData.reportData || !Array.isArray(projectData.reportData)) {
         throw new Error('Formato de archivo inválido');
     }
@@ -2950,7 +3140,7 @@ function applyProjectData(projectData) {
     mergeProjectSettings(projectData.settings);
 
     if (projectData.headerData && typeof projectData.headerData === 'object') {
-        localStorage.setItem('global_header_data', JSON.stringify(projectData.headerData));
+        setHeaderData(projectData.headerData);
     }
 
     if (projectData.citationStyle === 'apa' || projectData.citationStyle === 'ieee') {
@@ -2964,7 +3154,9 @@ function applyProjectData(projectData) {
         changeTheme(projectData.theme);
     }
 
+    setDocumentName(projectData.documentName || fallbackName.replace(/\.json$/i, ''));
     render();
+    markDocumentSaved();
 }
 
 /**
@@ -3013,7 +3205,7 @@ function loadJSON(input) {
             }
 
             // Cargar bloques, encabezado, configuración y tema
-            applyProjectData(projectData);
+            applyProjectData(projectData, file.name);
 
             // Limpiar input para permitir cargar el mismo archivo de nuevo
             input.value = '';
@@ -3189,7 +3381,7 @@ async function saveProjectToDrive() {
     const now = new Date();
     const dateStr = now.toISOString().slice(0, 10);
     const timeStr = now.toTimeString().slice(0, 5).replace(':', '-');
-    const suggestedName = driveCurrentFileName || `REPORTE-FECHA-${dateStr}-HORA-${timeStr}.json`;
+    const suggestedName = driveCurrentFileName || `${getSafeFileName()}.json`;
 
     let filename = prompt('¿Con qué nombre quieres guardar el archivo en Google Drive?', suggestedName);
     if (filename === null) return; // el usuario canceló
@@ -3234,6 +3426,7 @@ async function saveProjectToDrive() {
         const data = await res.json();
         driveCurrentFileId = data.id;
         driveCurrentFileName = filename;
+        markDocumentSaved();
         alert(`Proyecto guardado en Google Drive como "${filename}".`);
     } catch (err) {
         console.error('Error al guardar en Drive:', err);
@@ -3328,7 +3521,7 @@ async function loadProjectFromDrive(fileId, fileName) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const projectData = await res.json();
 
-        applyProjectData(projectData);
+        applyProjectData(projectData, fileName);
         driveCurrentFileId = fileId;
         driveCurrentFileName = fileName;
         alert(`Proyecto "${fileName}" cargado desde Google Drive.`);

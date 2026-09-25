@@ -1874,3 +1874,49 @@ body.is-resizing-panes {
     max-height: 18cm;
     object-fit: contain;
 }
+
+/* ============================================================================
+   BARRA DEL EDITOR: nombre del documento, "Nuevo" y autoguardado
+   ============================================================================ */
+.document-name-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    flex: 1;
+}
+
+.document-name-input {
+    flex: 1;
+    min-width: 0;
+    font: inherit;
+    font-size: 1.1em;
+    font-weight: 700;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    padding: 4px 6px;
+    background: transparent;
+}
+
+.document-name-input:hover,
+.document-name-input:focus {
+    border-color: #cbd5e1;
+    background: #fff;
+    outline: none;
+}
+
+.toolbar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+    padding: 5px 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #fff;
+    cursor: pointer;
+}
+
+.status-pill {
+    cursor: pointer;
+}

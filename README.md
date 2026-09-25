@@ -20,7 +20,9 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 - **Universidades Configurables**: Incluye UPY, TSW y UPP, y puedes añadir las tuyas con colores y logos propios
 - **Panel de Configuración**: Administra universidades, materias y profesores en un solo lugar
 - **Materia → Profesor**: Vincula cada materia con su profesor; al elegir la materia, el profesor se llena solo
-- **Autoguardado**: Los datos del encabezado se guardan solos mientras escribes
+- **Autoguardado**: Todo se guarda solo mientras escribes; se puede desactivar con un clic (y avisa si cierras con cambios sin guardar)
+- **Nombre del documento**: Se edita arriba del editor y se usa como nombre del PDF, del TXT y del proyecto
+- **Nuevo documento**: Botón "Nuevo" para borrar todo y empezar de cero (conserva tus universidades, materias y profesores)
 - **Portada**: El botón "Hacer portada" convierte el encabezado en una portada de hoja completa con todos sus datos; solo pide el nombre de la tarea
 - **Referencias IEEE o APA 7**: Elige el formato de todas las referencias desde la etiqueta de la tarjeta de referencia
 - **Vista previa real**: El documento se arma en hojas tamaño carta con márgenes y número de página, y se imprime exactamente igual
