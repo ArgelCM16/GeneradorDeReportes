@@ -225,6 +225,14 @@ body {
     background: #229954 !important;
 }
 
+/* Los botones de Drive están dentro de un div: replicar la columna flex de
+   .toolbox para que tengan el mismo ancho y separación que el resto. */
+.drive-section {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
 .btn-save,
 .btn-print {
     background: var(--secondary) !important;
