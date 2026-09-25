@@ -780,6 +780,11 @@ textarea.editor-input {
     cursor: pointer;
 }
 
+/* Campos del encabezado que ocupan toda la fila (Carrera, Nombre de la tarea) */
+.header-field-wide {
+    grid-column: 1 / -1;
+}
+
 /* Etiqueta encima de cada campo del encabezado */
 .header-field {
     display: flex;
@@ -1166,9 +1171,10 @@ textarea.editor-input {
    ESTILOS DE IMPRESIÓN
    ============================================================================ */
 @media print {
+    /* Sin márgenes del navegador: cada .preview-page ya trae sus 2 cm */
     @page {
         size: letter;
-        margin: 2cm;
+        margin: 0;
     }
 
     .toolbox, 
@@ -1405,4 +1411,448 @@ textarea.editor-input {
     color: #777;
     font-size: 0.8em;
     margin: 6px 0 0;
+}
+
+/* ============================================================================
+   ESTRUCTURA DE LA PÁGINA (barra lateral, editor y vista previa)
+   Base mínima; la apariencia final la da redesign.css.
+   ============================================================================ */
+.sidebar-scroll,
+.blocks-grid,
+.project-section,
+.sidebar-footer,
+.sidebar-footer-row {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+}
+
+.sidebar-brand-subtitle,
+.sidebar-section-title small {
+    font-size: 0.75em;
+    opacity: 0.7;
+    font-weight: 400;
+}
+
+.sidebar-section-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: 600;
+    margin-top: 10px;
+}
+
+.theme-selector label {
+    display: block;
+    font-size: 0.85em;
+    margin-bottom: 8px;
+    opacity: 0.9;
+}
+
+.theme-selector select {
+    width: 100%;
+    padding: 8px;
+    border-radius: 5px;
+    border: none;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    cursor: pointer;
+}
+
+.toolbox hr {
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    margin: 15px 0;
+    width: 100%;
+}
+
+#drive-status {
+    font-size: 0.75em;
+    opacity: 0.8;
+    margin: 0;
+}
+
+.credits p {
+    font-size: 0.75em;
+    opacity: 0.7;
+    text-align: center;
+    margin: 6px 0;
+}
+
+.editor-pane,
+.preview-pane {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    overflow: hidden;
+}
+
+.editor-toolbar,
+.preview-toolbar,
+.preview-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 20px;
+    flex-shrink: 0;
+}
+
+.editor-toolbar h2 {
+    margin: 0;
+    font-size: 1.1em;
+}
+
+.preview-scroll {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.header-card-top {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.header-card-title {
+    display: block;
+    font-weight: bold;
+}
+
+.header-card-subtitle {
+    margin: 2px 0 0;
+    font-size: 0.8em;
+    color: #777;
+}
+
+.header-card-heading {
+    flex: 1;
+}
+
+.field-label {
+    display: block;
+    margin-top: 10px;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #555;
+}
+
+@media print {
+    .editor-pane,
+    .preview-toolbar,
+    .preview-footer {
+        display: none !important;
+    }
+
+    .preview-pane,
+    .preview-scroll {
+        display: block !important;
+        overflow: visible !important;
+        height: auto !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: white !important;
+        border: none !important;
+    }
+}
+
+/* ============================================================================
+   PORTADA (primera hoja del documento)
+   ============================================================================ */
+/* La portada ocupa su hoja completa (ver paginatePreview) */
+.p-cover {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 0.5em 0 1em;
+}
+
+.p-cover-logos {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    margin-bottom: 3em;
+}
+
+.p-cover-logos img {
+    height: 7em;
+    max-width: 11em;
+    object-fit: contain;
+}
+
+.p-cover-uni {
+    font-size: 1.7em;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--primary);
+    line-height: 1.3;
+}
+
+.p-cover-career {
+    margin-top: 0.6em;
+    font-size: 1.15em;
+    color: #475569;
+}
+
+.p-cover-title {
+    margin: auto 0;
+    padding: 2em 0;
+    font-size: 2.3em;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--primary);
+}
+
+.p-cover-details {
+    width: 100%;
+    max-width: 32em;
+    margin: 0 auto 3em;
+    text-align: left;
+    line-height: 1.7;
+}
+
+.p-cover-row span {
+    font-weight: 700;
+}
+
+.p-cover-students div {
+    padding-left: 1.5em;
+}
+
+.p-cover-date {
+    font-size: 1.05em;
+    color: #475569;
+}
+
+.p-cover-empty {
+    color: #94a3b8;
+    font-style: italic;
+}
+
+/* Referencias en formato APA: sangría francesa y sin numeración */
+.p-ref-apa {
+    padding-left: 2.5em;
+    text-indent: -2.5em;
+    margin-bottom: 12px;
+    line-height: 1.6;
+    font-size: 0.95em;
+}
+
+/* ============================================================================
+   ZOOM DE LA VISTA PREVIA (solo en pantalla)
+   ============================================================================ */
+@media screen {
+    #preview-container {
+        zoom: var(--preview-zoom, 1);
+    }
+}
+
+.preview-zoom {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    margin-left: auto;
+}
+
+.preview-zoom button {
+    min-width: 28px;
+    padding: 3px 8px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 12px;
+}
+
+/* Etiqueta de formato en la tarjeta de referencia */
+.block-tag {
+    font-size: 12px;
+}
+
+.header-card-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+
+
+/* ============================================================================
+   HOJAS DE LA VISTA PREVIA (tamaño carta real; se imprimen tal cual)
+   ============================================================================ */
+#preview-container.preview-paper {
+    flex: none;
+    max-width: none;
+    margin: 0 auto;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+    box-shadow: none;
+}
+
+.preview-page {
+    position: relative;
+    width: 8.5in;
+    height: 11in;
+    padding: 2cm;
+    box-sizing: border-box;
+    margin: 0 auto 24px;
+    background: #fff;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.15);
+}
+
+.preview-page-body {
+    height: 100%;
+    overflow: hidden;
+    display: flow-root;
+}
+
+.preview-page-number {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 1cm;
+    text-align: center;
+    font-size: 0.85em;
+    color: #64748b;
+}
+
+/* Párrafo partido entre dos hojas: la última línea de la primera parte
+   también va justificada, y la continuación no deja espacio arriba */
+.p-split-start {
+    text-align-last: justify;
+    margin-bottom: 0 !important;
+}
+
+.p-split-rest {
+    margin-top: 0 !important;
+}
+
+.preview-page-body > :first-child {
+    margin-top: 0;
+}
+
+/* Índice */
+.p-toc-title {
+    text-align: center;
+    font-size: 1.6em;
+    color: var(--primary);
+    margin: 0 0 1.2em;
+}
+
+.p-toc-entry {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    margin: 0.55em 0;
+}
+
+.p-toc-level-1 {
+    font-weight: 700;
+}
+
+.p-toc-level-2 {
+    padding-left: 1.5em;
+}
+
+.p-toc-dots {
+    flex: 1;
+    border-bottom: 1.5px dotted #94a3b8;
+    transform: translateY(-0.3em);
+}
+
+.p-toc-page {
+    min-width: 1.5em;
+    text-align: right;
+}
+
+.p-toc-empty {
+    color: #94a3b8;
+    font-style: italic;
+    text-align: center;
+}
+
+.block-hint {
+    margin: 4px 0 8px;
+    font-size: 0.85em;
+    color: #777;
+}
+
+@media print {
+    .preview-page {
+        margin: 0;
+        box-shadow: none;
+        page-break-after: always;
+        break-after: page;
+    }
+
+    .preview-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
+    }
+}
+
+/* ============================================================================
+   DIVISOR ENTRE EL EDITOR Y LA VISTA PREVIA (se arrastra)
+   ============================================================================ */
+.pane-resizer {
+    flex: 0 0 8px;
+    position: relative;
+    cursor: col-resize;
+    background: #e0e0e0;
+    touch-action: none;
+    z-index: 2;
+}
+
+.pane-resizer:hover,
+.pane-resizer:focus-visible,
+body.is-resizing-panes .pane-resizer {
+    background: var(--secondary);
+    outline: none;
+}
+
+/* Mientras se arrastra: no seleccionar texto y cursor fijo en toda la página */
+body.is-resizing-panes {
+    cursor: col-resize;
+    user-select: none;
+}
+
+.preview-expand-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2px 6px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+}
+
+@media print {
+    .pane-resizer {
+        display: none !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .pane-resizer,
+    .preview-expand-btn {
+        display: none;
+    }
 }

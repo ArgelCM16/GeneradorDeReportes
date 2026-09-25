@@ -45,6 +45,14 @@ function escapeHtml(text) {
  * @param {string} type - Tipo de bloque: header, title, subtitle, text, code, image, ref
  */
 function addBlock(type) {
+    // Solo puede haber un índice: si ya existe, se muestra el que hay
+    if (type === 'toc' && reportData.some(b => b.type === 'toc')) {
+        render();
+        const tocCard = document.querySelector('.toc-card');
+        if (tocCard) tocCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+    }
+
     const id = Date.now();
     let newBlock = { id, type, content: "" };
     
@@ -345,6 +353,7 @@ function updateTableCaption(id, value) {
  * Renderiza todo el editor y la vista previa
  */
 function render() {
+    placeTocAfterHeader();
     renderEditor();
     renderPreview();
 	initializeDragAndDrop();
@@ -367,6 +376,9 @@ function renderEditor() {
         switch(block.type) {
             case 'header':
                 blockHTML = renderHeaderEditor(block, deleteBtn);
+                break;
+            case 'toc':
+                blockHTML = renderTocEditor(block, deleteBtn);
                 break;
             case 'title':
                 blockHTML = renderTitleEditor(block, deleteBtn);
@@ -467,11 +479,18 @@ function renderHeaderEditor(block, deleteBtn) {
     });
 
     return `
-        <div class="block-card header-card" id="header-card-main">
+        <div class="block-card header-card${d.coverMode ? ' is-cover-mode' : ''}" id="header-card-main" data-cover-mode="${d.coverMode ? '1' : '0'}">
             ${deleteBtn}
             
             <div style="margin-bottom: 15px;">
-                <label style="font-weight: bold; display: block; margin-bottom: 10px;">Datos del Alumno / Equipo:</label>
+                <div class="header-card-top">
+                    <span class="header-card-icon material-symbols-outlined">school</span>
+                    <div class="header-card-heading">
+                        <label class="header-card-title">Datos del Alumno / Equipo</label>
+                        <p class="header-card-subtitle">Configuración de entrega académica y portada institucional</p>
+                    </div>
+                    <span class="header-uni-badge" id="header-uni-badge">${escapeHtml(getUniShortName(currentUni))}</span>
+                </div>
 
                 <span class="header-field-label" id="label-student-names">${d.isTeam ? 'Integrantes del equipo' : 'Nombre del alumno'}</span>
                 <div id="team-members-container" class="grid-inputs" style="margin-bottom: 10px;">
@@ -485,6 +504,12 @@ function renderHeaderEditor(block, deleteBtn) {
 
             <!-- Cada campo lleva su etiqueta arriba, para saber qué es aunque ya esté lleno -->
             <div class="grid-inputs">
+                <!-- Solo en modo portada -->
+                <div class="header-field header-field-wide" id="header-task-field" style="${d.coverMode ? '' : 'display: none;'}">
+                    <label for="header-task-name">Nombre de la tarea</label>
+                    <input type="text" id="header-task-name" placeholder="Ej. Práctica 3: Redes Neuronales" value="${escapeAttr(d.taskName || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                </div>
+
                 <div class="header-field">
                     <label for="header-group">Grupo</label>
                     <input type="text" id="header-group" placeholder="Ej. IDY-7A" value="${escapeAttr(d.group || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
@@ -509,6 +534,11 @@ function renderHeaderEditor(block, deleteBtn) {
                     <input type="text" id="header-inst-display" value="${escapeAttr(currentInstName)}" disabled readonly title="La institución se define según el tema seleccionado en el menú lateral. Las universidades se administran en ⚙️ Configuración." style="width: 100%; box-sizing: border-box; background: #f0f0f0; cursor: not-allowed;">
                 </div>
 
+                <div class="header-field header-field-wide">
+                    <label for="header-career">Carrera</label>
+                    <input type="text" id="header-career" placeholder="Ej. Ingeniería en Datos" value="${escapeAttr(d.career || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                </div>
+
                 <div class="header-field">
                     <label for="header-term">Cuatrimestre</label>
                     <input type="text" id="header-term" placeholder="Ej. 7" value="${escapeAttr(d.term || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
@@ -527,7 +557,7 @@ function renderHeaderEditor(block, deleteBtn) {
                 <div class="options-group" style="display: flex; gap: 20px; align-items: center;">
                     <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
                         <input type="checkbox" id="check-include-logo" name="check-include-logo" onchange="renderPreview()" ${d.includeLogo ? 'checked' : ''} style="margin: 0; width: 15px; height: 15px;">
-                        <label for="check-include-logo" style="margin: 0; cursor: pointer; line-height: 1; font-size: 14px; padding-top: 1px;">Incluir logos</label>
+                        <label for="check-include-logo" style="margin: 0; cursor: pointer; line-height: 1; font-size: 14px; padding-top: 1px;">Incluir logos oficiales</label>
                     </div>
                     <div class="checkbox-container" style="display: flex; align-items: center; gap: 6px;">
                         <input type="checkbox" id="check-is-team" onchange="toggleTeamMode(this)" ${d.isTeam ? 'checked' : ''} style="margin: 0; width: 15px; height: 15px;">
@@ -537,7 +567,10 @@ function renderHeaderEditor(block, deleteBtn) {
 
                 <div class="action-buttons-group" style="display: flex; gap: 10px; align-items: center;">
                     <span id="header-autosave-status" style="font-size: 12px; color: #888;">Se guarda automáticamente</span>
-                    <button type="button" class="action-btn" onclick="clearHeaderData()" title="Borrar todos los datos del encabezado">🧹 Limpiar</button>
+                    <div class="header-card-buttons">
+                        <button type="button" class="action-btn" onclick="clearHeaderData()" title="Borrar todos los datos del encabezado">🧹 Limpiar formulario</button>
+                        <button type="button" class="action-btn save-btn" id="btn-toggle-cover" onclick="toggleCoverMode()" title="Cambia el formato del encabezado a portada de hoja completa (y de regreso)"><span id="header-cover-btn-icon">${d.coverMode ? '↩' : '📄'}</span> <span id="header-cover-btn-label">${d.coverMode ? 'Volver a encabezado' : 'Hacer portada'}</span></button>
+                    </div>
                 </div>
                 
             </div>
@@ -842,6 +875,36 @@ function formatTerm(term) {
 // ==========================================
 
 /**
+ * Lee los datos del formulario del encabezado. Cada campo se busca por su id
+ * (antes Grupo y Cuatrimestre se leían por posición, y cualquier campo nuevo
+ * los desalineaba). La institución no se lee: sale del tema seleccionado.
+ */
+function readHeaderFromDOM(card) {
+    const value = id => {
+        const el = card.querySelector('#' + id);
+        return el ? el.value : '';
+    };
+    const checked = id => {
+        const el = card.querySelector('#' + id);
+        return el ? el.checked : false;
+    };
+
+    return {
+        names: Array.from(card.querySelectorAll('.student-name-input')).map(input => input.value),
+        isTeam: checked('check-is-team'),
+        group: value('header-group'),
+        subject: value('select-subject-main'),
+        prof: value('select-prof-main'),
+        career: value('header-career'),
+        term: value('header-term'),
+        date: value('header-date'),
+        includeLogo: checked('check-include-logo'),
+        coverMode: card.dataset.coverMode === '1',
+        taskName: value('header-task-name')
+    };
+}
+
+/**
  * Lee el formulario del encabezado y lo guarda en LocalStorage. Se llama
  * desde renderPreview(), que ya se dispara con cada cambio del formulario,
  * así que los datos quedan guardados sin necesidad de un botón.
@@ -850,33 +913,7 @@ function persistHeaderFromDOM() {
     const card = document.getElementById('header-card-main');
     if (!card) return;
 
-    const namesArray = Array.from(card.querySelectorAll('.student-name-input')).map(input => input.value);
-    const isTeamCheckbox = card.querySelector('#check-is-team');
-
-    // IMPORTANTE: el contenedor de integrantes también tiene la clase .grid-inputs,
-    // así que hay que excluir explícitamente los inputs de nombre (y el de
-    // institución, que es de solo lectura) para no desalinear Grupo/Cuatrimestre.
-    const gridTextInputs = Array.from(card.querySelectorAll('.grid-inputs input[type="text"]'))
-        .filter(input => !input.classList.contains('student-name-input') && input.id !== 'header-inst-display');
-    const dateInput = card.querySelector('.grid-inputs input[type="date"]');
-    const logoCheckbox = card.querySelector('#check-include-logo');
-
-    // La institución NO se guarda aquí: siempre se deriva del tema/universidad
-    // seleccionado en el menú lateral (ver getUniversityById en renderPreview).
-    const subjectSelect = card.querySelector('#select-subject-main');
-    const profSelect = card.querySelector('#select-prof-main');
-
-    const hDataToSave = {
-        names: namesArray,
-        isTeam: isTeamCheckbox ? isTeamCheckbox.checked : false,
-        group: gridTextInputs[0] ? gridTextInputs[0].value : '',
-        subject: subjectSelect ? subjectSelect.value : '',
-        prof: profSelect ? profSelect.value : '',
-        term: gridTextInputs[1] ? gridTextInputs[1].value : '',
-        date: dateInput ? dateInput.value : '',
-        includeLogo: logoCheckbox ? logoCheckbox.checked : false
-    };
-
+    const hDataToSave = readHeaderFromDOM(card);
     localStorage.setItem('global_header_data', JSON.stringify(hDataToSave));
 
     const status = document.getElementById('header-autosave-status');
@@ -898,6 +935,600 @@ function clearHeaderData() {
 // termina modificaciones Argel cano para el header (listas desplegables y botones de acción)
 // ==========================================
 
+// ==========================================
+// PORTADA (modo del encabezado)
+// El botón "Hacer portada" no agrega un bloque: cambia el formato del propio
+// encabezado para que en el documento salga como portada de hoja completa.
+// Lo único extra que se pide es el nombre de la tarea.
+// ==========================================
+
+function toggleCoverMode() {
+    const card = document.getElementById('header-card-main');
+    if (!card) return;
+    card.dataset.coverMode = card.dataset.coverMode === '1' ? '0' : '1';
+    updateCoverModeUI(card);
+    renderPreview();
+
+    if (card.dataset.coverMode === '1') {
+        const taskInput = document.getElementById('header-task-name');
+        if (taskInput) taskInput.focus();
+    }
+}
+
+/**
+ * Muestra u oculta el campo "Nombre de la tarea" y cambia el texto del botón.
+ */
+function updateCoverModeUI(card) {
+    const isCover = card.dataset.coverMode === '1';
+    const taskField = document.getElementById('header-task-field');
+    if (taskField) taskField.style.display = isCover ? '' : 'none';
+    const label = document.getElementById('header-cover-btn-label');
+    if (label) label.textContent = isCover ? 'Volver a encabezado' : 'Hacer portada';
+    const icon = document.getElementById('header-cover-btn-icon');
+    if (icon) icon.textContent = isCover ? '↩' : '📄';
+    card.classList.toggle('is-cover-mode', isCover);
+}
+
+/**
+ * "2026-09-25" -> "25 de septiembre de 2026"
+ */
+function formatLongDate(isoDate) {
+    if (!isoDate) return '';
+    const [y, m, d] = isoDate.split('-').map(Number);
+    if (!y || !m || !d) return isoDate;
+    const months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
+        'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    return `${d} de ${months[m - 1]} de ${y}`;
+}
+
+/**
+ * HTML de la portada en la vista previa, con todos los datos del encabezado.
+ */
+function renderCoverPreview(headerData, uni) {
+    const h = headerData || {};
+    const u = uni || {};
+
+    const names = ((h.names && h.names.length) ? h.names : [h.name || ''])
+        .map(n => (n || '').trim()).filter(Boolean);
+    const emptyName = '<span class="p-cover-empty">[Nombre del alumno]</span>';
+    const studentsHtml = h.isTeam
+        ? `<div class="p-cover-row p-cover-students"><span>Integrantes:</span>${names.length ? names.map(n => `<div>${escapeHtml(n)}</div>`).join('') : `<div>${emptyName}</div>`}</div>`
+        : `<div class="p-cover-row"><span>Alumno:</span> ${names.length ? escapeHtml(names[0]) : emptyName}</div>`;
+
+    const row = (label, value) => value
+        ? `<div class="p-cover-row"><span>${label}:</span> ${escapeHtml(value)}</div>` : '';
+
+    const logos = (h.includeLogo && (u.logoLeft || u.logoRight)) ? `
+        <div class="p-cover-logos">
+            ${u.logoLeft ? `<img src="${escapeAttr(u.logoLeft)}" alt="Logo">` : '<span></span>'}
+            ${u.logoRight ? `<img src="${escapeAttr(u.logoRight)}" alt="Logo">` : '<span></span>'}
+        </div>` : '';
+
+    const task = (h.taskName || '').trim();
+
+    return `
+        <div class="p-cover">
+            ${logos}
+            <div class="p-cover-uni">${escapeHtml(u.id === 'generic' ? '' : (u.name || ''))}</div>
+            ${h.career ? `<div class="p-cover-career">${escapeHtml(h.career)}</div>` : ''}
+            <div class="p-cover-title">${task ? escapeHtml(task) : '<span class="p-cover-empty">[Nombre de la tarea]</span>'}</div>
+            <div class="p-cover-details">
+                ${row('Materia', h.subject)}
+                ${row('Profesor', h.prof)}
+                ${studentsHtml}
+                ${row('Grupo', h.group)}
+                ${row('Cuatrimestre', formatTerm(h.term))}
+            </div>
+            <div class="p-cover-date">${escapeHtml(formatLongDate(h.date))}</div>
+        </div>`;
+}
+
+// ==========================================
+// FORMATO DE LAS REFERENCIAS (IEEE o APA 7)
+// Es una sola opción para todo el documento; se elige desde la etiqueta
+// de cualquier tarjeta de referencia y se guarda con el proyecto.
+// ==========================================
+
+function getCitationStyle() {
+    return localStorage.getItem('citationStyle') === 'apa' ? 'apa' : 'ieee';
+}
+
+function setCitationStyle(style) {
+    localStorage.setItem('citationStyle', style === 'apa' ? 'apa' : 'ieee');
+    render();
+}
+
+/**
+ * Referencia en formato APA 7. Con html = true devuelve HTML (cursivas),
+ * con html = false devuelve texto plano (para el TXT).
+ */
+function formatAPAReference(type, author, title, source, year, url, html = true) {
+    const esc = html ? escapeHtml : (t => t || '');
+    const it = t => html ? `<em>${esc(t)}</em>` : esc(t);
+    const a = (author || '').trim();
+    const y = (year || '').trim() || 's.f.';
+    const authorPart = a ? `${esc(a)}${/[.]$/.test(a) ? '' : '.'} ` : '';
+
+    if (type === 'book') {
+        return `${authorPart}(${esc(y)}). ${it(title)}. ${esc(source)}.`;
+    }
+    if (type === 'article') {
+        return `${authorPart}(${esc(y)}). ${esc(title)}. ${it(source)}.`;
+    }
+    // Página web
+    return `${authorPart}(${esc(y)}). ${it(title)}. ${esc(source)}.${url ? ' ' + esc(url) : ''}`;
+}
+
+// ==========================================
+// ZOOM DE LA VISTA PREVIA (solo pantalla; no afecta la impresión)
+// Las hojas son de tamaño real (8.5 in de ancho), así que por defecto se
+// ajustan al ancho del panel ("fit"). Con − y + se pasa a un nivel fijo y
+// con clic en el porcentaje se vuelve a ajustar al ancho.
+// ==========================================
+
+const PREVIEW_ZOOM_LEVELS = [0.25, 0.33, 0.4, 0.5, 0.6, 0.75, 0.9, 1, 1.25, 1.5];
+const PAGE_WIDTH_PX = 816; // 8.5 in a 96 dpi
+
+function getPreviewZoom() {
+    const stored = localStorage.getItem('previewZoom');
+    const z = parseFloat(stored);
+    return PREVIEW_ZOOM_LEVELS.includes(z) ? z : 'fit';
+}
+
+/**
+ * Zoom con el que cabe una hoja completa a lo ancho del panel.
+ */
+function getFitZoom() {
+    const scroller = document.querySelector('.preview-scroll');
+    if (!scroller || !scroller.clientWidth) return 0.5;
+    const style = getComputedStyle(scroller);
+    const available = scroller.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
+    return Math.max(0.2, Math.min(1.5, available / PAGE_WIDTH_PX));
+}
+
+function getEffectiveZoom() {
+    const z = getPreviewZoom();
+    return z === 'fit' ? getFitZoom() : z;
+}
+
+/**
+ * @param {number|'fit'} zoom
+ */
+function setPreviewZoom(zoom) {
+    const value = PREVIEW_ZOOM_LEVELS.includes(zoom) ? zoom : 'fit';
+    localStorage.setItem('previewZoom', String(value));
+    applyPreviewZoom();
+}
+
+function applyPreviewZoom() {
+    const z = getEffectiveZoom();
+    const preview = document.getElementById('preview-container');
+    if (preview) preview.style.setProperty('--preview-zoom', z);
+    const label = document.getElementById('preview-zoom-label');
+    if (label) {
+        label.textContent = `${Math.round(z * 100)}%`;
+        label.title = getPreviewZoom() === 'fit' ? 'Ajustado al ancho' : 'Clic para ajustar al ancho';
+    }
+}
+
+/**
+ * Sube (+1) o baja (-1) un nivel de zoom a partir del zoom actual.
+ */
+function changePreviewZoom(direction) {
+    const current = getEffectiveZoom();
+    const levels = PREVIEW_ZOOM_LEVELS;
+    let next;
+    if (direction > 0) {
+        next = levels.find(l => l > current + 0.001) || levels[levels.length - 1];
+    } else {
+        next = [...levels].reverse().find(l => l < current - 0.001) || levels[0];
+    }
+    setPreviewZoom(next);
+}
+
+document.addEventListener('DOMContentLoaded', applyPreviewZoom);
+window.addEventListener('resize', () => {
+    if (getPreviewZoom() === 'fit') applyPreviewZoom();
+});
+
+// ==========================================
+// ANCHO DE LA VISTA PREVIA
+// El divisor entre el editor y la vista previa se arrastra para cambiar su
+// ancho (doble clic = tamaño normal). El botón de la barra de la vista previa
+// la agranda de un clic. El ancho elegido se recuerda.
+// ==========================================
+
+const PREVIEW_MIN_WIDTH = 320;   // ancho mínimo de la vista previa
+const EDITOR_MIN_WIDTH = 380;    // lo que siempre le queda al editor
+const PREVIEW_EXPANDED_RATIO = 0.6;
+
+function getPreviewWidthLimits() {
+    const workspace = document.querySelector('.workspace');
+    const total = workspace ? workspace.clientWidth : window.innerWidth;
+    return { min: PREVIEW_MIN_WIDTH, max: Math.max(PREVIEW_MIN_WIDTH, total - EDITOR_MIN_WIDTH), total };
+}
+
+/**
+ * Aplica un ancho (en px) a la vista previa, o `null` para volver al del CSS.
+ * @param {number|null} width
+ * @param {boolean} save - guardarlo para la próxima vez
+ */
+function setPreviewWidth(width, save = true) {
+    const pane = document.getElementById('preview-pane');
+    if (!pane) return;
+
+    if (width === null) {
+        pane.style.flex = '';
+        if (save) localStorage.removeItem('previewWidth');
+    } else {
+        const { min, max } = getPreviewWidthLimits();
+        const w = Math.round(Math.min(max, Math.max(min, width)));
+        pane.style.flex = `0 0 ${w}px`;
+        if (save) localStorage.setItem('previewWidth', String(w));
+    }
+
+    updatePreviewExpandButton();
+    // Si el zoom está en "ajustar al ancho", la hoja se agranda con el panel
+    if (getPreviewZoom() === 'fit') applyPreviewZoom();
+}
+
+function isPreviewExpanded() {
+    const pane = document.getElementById('preview-pane');
+    const { total } = getPreviewWidthLimits();
+    return !!pane && pane.getBoundingClientRect().width >= total * (PREVIEW_EXPANDED_RATIO - 0.05);
+}
+
+function togglePreviewExpanded() {
+    if (isPreviewExpanded()) {
+        setPreviewWidth(null);
+    } else {
+        setPreviewWidth(getPreviewWidthLimits().total * PREVIEW_EXPANDED_RATIO);
+    }
+}
+
+function updatePreviewExpandButton() {
+    const expanded = isPreviewExpanded();
+    const icon = document.getElementById('preview-expand-icon');
+    if (icon) icon.textContent = expanded ? 'close_fullscreen' : 'open_in_full';
+    const btn = document.getElementById('preview-expand-btn');
+    if (btn) btn.title = expanded ? 'Tamaño normal' : 'Agrandar vista previa';
+}
+
+function initPaneResizer() {
+    const resizer = document.getElementById('pane-resizer');
+    const pane = document.getElementById('preview-pane');
+    if (!resizer || !pane) return;
+
+    // Ancho guardado de la vez anterior
+    const saved = parseFloat(localStorage.getItem('previewWidth'));
+    if (saved) setPreviewWidth(saved, false);
+    else updatePreviewExpandButton();
+
+    resizer.addEventListener('pointerdown', event => {
+        event.preventDefault();
+        try { resizer.setPointerCapture(event.pointerId); } catch (e) { /* sin captura también funciona */ }
+        document.body.classList.add('is-resizing-panes');
+
+        // La vista previa está a la derecha: su ancho = borde derecho - cursor
+        const right = pane.getBoundingClientRect().right;
+        const onMove = e => setPreviewWidth(right - e.clientX, false);
+        const onUp = e => {
+            try { resizer.releasePointerCapture(e.pointerId); } catch (err) { /* ya liberado */ }
+            resizer.removeEventListener('pointermove', onMove);
+            resizer.removeEventListener('pointerup', onUp);
+            resizer.removeEventListener('pointercancel', onUp);
+            document.body.classList.remove('is-resizing-panes');
+            setPreviewWidth(pane.getBoundingClientRect().width); // guardar
+        };
+        resizer.addEventListener('pointermove', onMove);
+        resizer.addEventListener('pointerup', onUp);
+        resizer.addEventListener('pointercancel', onUp);
+    });
+
+    resizer.addEventListener('dblclick', () => setPreviewWidth(null));
+
+    // Con teclado: flechas para ajustar de 40 en 40 px
+    resizer.addEventListener('keydown', event => {
+        if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
+        event.preventDefault();
+        const width = pane.getBoundingClientRect().width;
+        setPreviewWidth(width + (event.key === 'ArrowLeft' ? 40 : -40));
+    });
+
+    // Si la ventana se achica, que el editor no quede aplastado
+    window.addEventListener('resize', () => {
+        const stored = parseFloat(localStorage.getItem('previewWidth'));
+        if (stored) setPreviewWidth(stored, false);
+        else updatePreviewExpandButton();
+    });
+}
+
+document.addEventListener('DOMContentLoaded', initPaneResizer);
+
+// ==========================================
+// VISTA PREVIA EN PÁGINAS REALES
+// El documento se reparte en hojas tamaño carta (8.5 x 11 in, márgenes de
+// 2 cm) y se imprime exactamente así: lo que se ve es lo que sale en el PDF.
+// Los párrafos, el código y las tablas largas se parten entre páginas; lo
+// que no se puede partir (una imagen, un encabezado) pasa completo a la
+// siguiente hoja.
+// ==========================================
+
+function paginatePreview(container, html) {
+    // Al rearmar las hojas el panel se vacía un momento; guardamos la posición
+    // de desplazamiento para que no brinque al inicio mientras se escribe.
+    const scroller = container.closest('.preview-scroll');
+    const scrollTop = scroller ? scroller.scrollTop : 0;
+    const scrollLeft = scroller ? scroller.scrollLeft : 0;
+    container.style.minHeight = container.offsetHeight + 'px';
+
+    const source = document.createElement('div');
+    source.innerHTML = html;
+    container.innerHTML = '';
+
+    let pageEl = null;
+    let body = null;
+    let pageNumber = 0;
+    let forceNewPage = false;
+
+    const startPage = (isCover = false) => {
+        pageNumber++;
+        pageEl = document.createElement('div');
+        pageEl.className = 'preview-page' + (isCover ? ' is-cover-page' : '');
+        pageEl.dataset.page = pageNumber;
+        body = document.createElement('div');
+        body.className = 'preview-page-body';
+        pageEl.appendChild(body);
+        if (!isCover) {
+            const num = document.createElement('div');
+            num.className = 'preview-page-number';
+            num.textContent = pageNumber;
+            pageEl.appendChild(num);
+        }
+        container.appendChild(pageEl);
+        forceNewPage = false;
+    };
+
+    const fits = () => body.scrollHeight <= body.clientHeight + 1;
+    const isEmpty = () => body.childElementCount === 0;
+
+    // Intenta poner en `parent` la mayor parte de `el` que quepa.
+    // Devuelve: el mismo `el` si no cupo nada, el resto que falta, o null.
+    const splitToFit = (el, parent) => {
+        if (el.matches('p.p-text') && el.children.length === 0) return splitByTokens(el, parent, ' ', node => node);
+        if (el.matches('pre')) return splitPre(el, parent);
+        if (el.matches('.preview-table-container')) return splitTable(el, parent);
+        if (el.dataset.split === 'children') return splitChildren(el, parent);
+        return el;
+    };
+
+    // Parte un elemento de texto por palabras (o líneas), con búsqueda binaria.
+    const splitByTokens = (el, parent, separator, getTextNode) => {
+        const target = getTextNode(el);
+        const tokens = target.textContent.split(separator);
+        if (tokens.length < 2) return el;
+
+        const build = count => {
+            const clone = el.cloneNode(true);
+            getTextNode(clone).textContent = tokens.slice(0, count).join(separator);
+            return clone;
+        };
+
+        let low = 0;
+        let high = tokens.length - 1;
+        while (low < high) {
+            const mid = Math.ceil((low + high) / 2);
+            const trial = build(mid);
+            parent.appendChild(trial);
+            const ok = fits();
+            parent.removeChild(trial);
+            if (ok) low = mid; else high = mid - 1;
+        }
+        if (low === 0) return el;
+
+        const first = build(low);
+        first.classList.add('p-split-start');
+        parent.appendChild(first);
+
+        const rest = el.cloneNode(true);
+        getTextNode(rest).textContent = tokens.slice(low).join(separator);
+        rest.classList.add('p-split-rest');
+        return rest;
+    };
+
+    const splitPre = (el, parent) => {
+        const inner = el.firstElementChild && el.firstElementChild.tagName === 'CODE';
+        return splitByTokens(el, parent, '\n', node => inner ? node.firstElementChild : node);
+    };
+
+    // Tabla: se reparten las filas; el encabezado se repite y la descripción
+    // va solo en la última parte.
+    const splitTable = (el, parent) => {
+        const rows = el.querySelectorAll('tbody tr');
+        if (rows.length < 2) return el;
+
+        const build = (start, end, withCaption) => {
+            const clone = el.cloneNode(true);
+            const cloneRows = clone.querySelectorAll('tbody tr');
+            cloneRows.forEach((row, i) => { if (i < start || i >= end) row.remove(); });
+            if (!withCaption) {
+                const caption = clone.querySelector('.table-caption');
+                if (caption) caption.remove();
+            }
+            return clone;
+        };
+
+        let low = 0;
+        let high = rows.length - 1;
+        while (low < high) {
+            const mid = Math.ceil((low + high) / 2);
+            const trial = build(0, mid, false);
+            parent.appendChild(trial);
+            const ok = fits();
+            parent.removeChild(trial);
+            if (ok) low = mid; else high = mid - 1;
+        }
+        if (low === 0) return el;
+
+        parent.appendChild(build(0, low, false));
+        return build(low, rows.length, true);
+    };
+
+    // Contenedores (índice, declaración de IA): se reparten sus hijos.
+    const splitChildren = (el, parent) => {
+        const first = el.cloneNode(false);
+        parent.appendChild(first);
+        const kids = Array.from(el.children);
+        let index = 0;
+        let remainderChild = null;
+
+        for (; index < kids.length; index++) {
+            first.appendChild(kids[index]);
+            if (fits()) continue;
+            first.removeChild(kids[index]);
+            const rest = splitToFit(kids[index], first);
+            if (rest !== kids[index]) {
+                remainderChild = rest;
+                index++;
+            }
+            break;
+        }
+
+        if (first.children.length === 0) {
+            parent.removeChild(first);
+            return el;
+        }
+        if (index >= kids.length && !remainderChild) return null;
+
+        const rest = el.cloneNode(false);
+        if (remainderChild) rest.appendChild(remainderChild);
+        kids.slice(index).forEach(kid => rest.appendChild(kid));
+        return rest;
+    };
+
+    const place = el => {
+        body.appendChild(el);
+        if (fits()) return;
+        body.removeChild(el);
+
+        const rest = splitToFit(el, body);
+        if (rest === el) {
+            if (isEmpty()) {
+                // No cabe ni en una hoja vacía y no se puede partir: se deja así.
+                body.appendChild(el);
+                return;
+            }
+            startPage();
+            place(el);
+            return;
+        }
+        if (rest) {
+            startPage();
+            place(rest);
+        }
+    };
+
+    Array.from(source.children).forEach(el => {
+        const isCover = el.classList.contains('p-cover');
+        const pageBreak = el.dataset.pageBreak || '';
+        const breakBefore = isCover || pageBreak === 'before' || pageBreak === 'both';
+        const breakAfter = isCover || pageBreak === 'after' || pageBreak === 'both';
+
+        if (!body || forceNewPage || (breakBefore && !isEmpty())) {
+            startPage(isCover);
+        } else if (isCover) {
+            // La hoja actual está vacía: se vuelve la hoja de portada
+            pageEl.classList.add('is-cover-page');
+            const num = pageEl.querySelector('.preview-page-number');
+            if (num) num.remove();
+        }
+
+        place(el);
+        if (breakAfter) forceNewPage = true;
+    });
+
+    // Documento vacío: una hoja en blanco
+    if (!body) startPage();
+
+    container.style.minHeight = '';
+    if (scroller) {
+        scroller.scrollTop = scrollTop;
+        scroller.scrollLeft = scrollLeft;
+    }
+}
+
+// ==========================================
+// ÍNDICE (tabla de contenido)
+// Lista los títulos y subtítulos con el número de página donde quedaron.
+// ==========================================
+
+/**
+ * El índice siempre va justo después del encabezado (o al inicio si no hay
+ * encabezado), sin importar dónde se agregó o a dónde se arrastró.
+ */
+function placeTocAfterHeader() {
+    const tocs = reportData.filter(b => b.type === 'toc');
+    if (!tocs.length) return;
+    const others = reportData.filter(b => b.type !== 'toc');
+    const insertAt = others.findIndex(b => b.type === 'header') + 1; // 0 si no hay encabezado
+    reportData = [...others.slice(0, insertAt), ...tocs, ...others.slice(insertAt)];
+}
+
+/**
+ * Map id de bloque -> número de ancla, solo para títulos y subtítulos con texto.
+ */
+function getTocAnchors() {
+    const anchors = new Map();
+    reportData.forEach(block => {
+        if ((block.type === 'title' || block.type === 'subtitle') && (block.content || '').trim()) {
+            anchors.set(block.id, anchors.size + 1);
+        }
+    });
+    return anchors;
+}
+
+function renderTocPreview(block, tocAnchors) {
+    const entries = reportData
+        .filter(b => tocAnchors.has(b.id))
+        .map(b => `
+            <div class="p-toc-entry ${b.type === 'title' ? 'p-toc-level-1' : 'p-toc-level-2'}" data-toc-ref="${tocAnchors.get(b.id)}">
+                <span class="p-toc-text">${escapeHtml(b.content.trim())}</span>
+                <span class="p-toc-dots"></span>
+                <span class="p-toc-page"></span>
+            </div>`)
+        .join('');
+
+    return `
+        <div class="p-toc" data-page-break="after" data-split="children">
+            <h2 class="p-toc-title">${escapeHtml((block.content || '').trim() || 'Índice')}</h2>
+            ${entries || '<p class="p-toc-empty">Agrega bloques de Título o Subtítulo para que aparezcan aquí.</p>'}
+        </div>`;
+}
+
+/**
+ * Después de paginar: pone a cada entrada del índice la página de su título.
+ */
+function fillTocPageNumbers(container) {
+    container.querySelectorAll('[data-toc-ref]').forEach(entry => {
+        const target = container.querySelector(`[data-toc-anchor="${entry.dataset.tocRef}"]`);
+        const page = target ? target.closest('.preview-page') : null;
+        const number = entry.querySelector('.p-toc-page');
+        if (number) number.textContent = page ? page.dataset.page : '';
+    });
+}
+
+function renderTocEditor(block, deleteBtn) {
+    const count = getTocAnchors().size;
+    return `
+        <div class="block-card toc-card">
+            ${deleteBtn}
+            <label>Índice</label>
+            <p class="block-hint">Se arma solo con los bloques de Título y Subtítulo, con el número de página donde quedó cada uno. Siempre va después del encabezado (o en la hoja siguiente a la portada) y el contenido empieza en la hoja de después. ${count ? `Ahora tiene ${count} ${count === 1 ? 'entrada' : 'entradas'}.` : 'Todavía no hay títulos.'}</p>
+            <span class="field-label">Título del índice</span>
+            <input type="text" class="editor-input" value="${escapeAttr(block.content || '')}" placeholder="Índice" oninput="updateContent(${block.id}, this.value)">
+        </div>`;
+}
+
 /**
  * Renderiza el editor de título (AHORA SEGURO)
  */
@@ -905,7 +1536,8 @@ function renderTitleEditor(block, deleteBtn) {
     return `
         <div class="block-card title-card">
             ${deleteBtn}
-            <label>Título Principal:</label>
+            <label>Título principal</label>
+            <span class="field-label">Título del reporte</span>
             <input type="text" class="editor-input" value="${escapeAttr(block.content)}" placeholder="Ej. Reporte de Práctica 1" oninput="updateContent(${block.id}, this.value)">
         </div>`;
 }
@@ -917,7 +1549,8 @@ function renderSubtitleEditor(block, deleteBtn) {
     return `
         <div class="block-card subtitle-card">
             ${deleteBtn}
-            <label>Subtítulo:</label>
+            <label>Subtítulo</label>
+            <span class="field-label">Texto del subtítulo</span>
             <input type="text" class="editor-input" value="${escapeAttr(block.content)}" placeholder="Ej. Introducción o Metodología" oninput="updateContent(${block.id}, this.value)">
         </div>`;
 }
@@ -929,7 +1562,8 @@ function renderTextEditor(block, deleteBtn) {
     return `
         <div class="block-card text-card">
             ${deleteBtn}
-            <label>Párrafo de Texto:</label>
+            <label>Párrafo</label>
+            <span class="field-label">Contenido del párrafo</span>
             <textarea class="editor-input" placeholder="Escribe tu texto aquí..." oninput="updateContent(${block.id}, this.value)">${escapeHtml(block.content)}</textarea>
         </div>`;
 }
@@ -941,7 +1575,8 @@ function renderCodeEditor(block, deleteBtn) {
     return `
         <div class="block-card code-card">
             ${deleteBtn}
-            <label>Bloque de Código:</label>
+            <label>Código</label>
+            <span class="field-label">Código fuente</span>
             <textarea class="code-input" placeholder="Pega tu código aquí..." oninput="updateContent(${block.id}, this.value)">${escapeHtml(block.content)}</textarea>
         </div>`;
 }
@@ -953,7 +1588,7 @@ function renderImageEditor(block, deleteBtn) {
     return `
         <div class="block-card image-card">
             ${deleteBtn}
-            <label>Imagen:</label>
+            <label>Imagen</label>
             <input type="file" accept="image/*" onchange="handleImage(${block.id}, this)" style="margin-top: 10px;">
             <input type="text" class="editor-input" placeholder="Descripción de la imagen" value="${escapeAttr(block.caption || '')}" oninput="updateCaption(${block.id}, this.value)">
             ${block.content ? `<img src="${escapeAttr(block.content)}" style="max-width: 100%; margin-top: 10px; border-radius: 4px;">` : ''}
@@ -1030,7 +1665,11 @@ function renderRefEditor(block, deleteBtn) {
     return `
         <div class="block-card ref-card">
             ${deleteBtn}
-            <label>Referencia Bibliográfica (IEEE):</label>
+            <label>Referencia bibliográfica</label>
+            <select class="block-tag citation-style-select" onchange="setCitationStyle(this.value)" title="Formato de todas las referencias del documento">
+                <option value="ieee" ${getCitationStyle() === 'ieee' ? 'selected' : ''}>Formato IEEE</option>
+                <option value="apa" ${getCitationStyle() === 'apa' ? 'selected' : ''}>Formato APA 7ma Ed.</option>
+            </select>
             <select onchange="updateRefType(${block.id}, this.value)" style="margin-top: 10px; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
                 <option value="web" ${block.refType === 'web' ? 'selected' : ''}>Página Web</option>
                 <option value="book" ${block.refType === 'book' ? 'selected' : ''}>Libro</option>
@@ -1056,7 +1695,7 @@ function renderAIEditor(block, deleteBtn) {
     return `
         <div class="block-card ai-card">
             ${deleteBtn}
-            <label><strong>Declaración de Uso de Inteligencia Artificial</strong></label>
+            <label>Declaración de uso de IA</label>
 
 			<div style="margin-top: 15px;">
                 <label>¿Utilizaste IA para este trabajo?</label>
@@ -1121,13 +1760,19 @@ function renderPreview() {
     // 1. Obtener los datos del encabezado desde el LocalStorage
     const savedHeader = JSON.parse(localStorage.getItem('global_header_data')) || {};
 
-    preview.innerHTML = reportData.map(block => {
+    // Títulos y subtítulos que van en el índice (con un número de ancla)
+    const tocAnchors = getTocAnchors();
+
+    const previewHTML = reportData.map(block => {
         switch(block.type) {
+            case 'toc':
+                return renderTocPreview(block, tocAnchors);
+
             case 'title':
-                return `<h1 class="p-title">${escapeHtml(block.content)}</h1>`;
+                return `<h1 class="p-title"${tocAnchors.has(block.id) ? ` data-toc-anchor="${tocAnchors.get(block.id)}"` : ''}>${escapeHtml(block.content)}</h1>`;
             
             case 'subtitle':
-                return `<h2 class="p-subtitle">${escapeHtml(block.content)}</h2>`;
+                return `<h2 class="p-subtitle"${tocAnchors.has(block.id) ? ` data-toc-anchor="${tocAnchors.get(block.id)}"` : ''}>${escapeHtml(block.content)}</h2>`;
             
             case 'text':
                 return `<p class="p-text">${escapeHtml(block.content)}</p>`;
@@ -1182,47 +1827,10 @@ case 'header':
                 liveData.isTeam = false;
             }
 
-            // MAGIA EN VIVO: Si el editor está en pantalla, leemos directamente de los elementos del DOM
+            // Si el editor está en pantalla, leemos directamente del formulario
             const headerCard = document.getElementById('header-card-main');
             if (headerCard) {
-                // 1. Extraemos TODOS los inputs de nombres usando la clase específica que creamos
-                const nameInputs = headerCard.querySelectorAll('.student-name-input');
-                const namesArray = Array.from(nameInputs).map(input => input.value);
-
-                // 2. Extraemos el checkbox de equipo
-                const isTeamCheckbox = headerCard.querySelector('#check-is-team');
-                const isTeam = isTeamCheckbox ? isTeamCheckbox.checked : false;
-
-                // 3. Extraemos el resto de inputs de texto (excluyendo los nombres y el
-                //    de institución, que es de solo lectura y se deriva del tema)
-                const inputsText = Array.from(headerCard.querySelectorAll('.grid-inputs input[type="text"]'))
-                                        .filter(input => !input.classList.contains('student-name-input') && input.id !== 'header-inst-display');
-
-                const dateInput = headerCard.querySelector('.grid-inputs input[type="date"]');
-                const logoCheckbox = headerCard.querySelector('#check-include-logo');
-
-                // 4. Extraemos los selects por sus IDs específicos (¡Más seguro!)
-                const subjectSelect = headerCard.querySelector('#select-subject-main');
-                const profSelect = headerCard.querySelector('#select-prof-main');
-
-                // Validamos que existan suficientes campos (ahora son 2 text inputs y 2 selects;
-                // la institución ya no es un campo del formulario, se deriva del tema)
-                if (inputsText.length >= 2 && subjectSelect && profSelect) {
-                    liveData = {
-                        names: namesArray,
-                        isTeam: isTeam,
-                        // Ahora inputsText solo tiene 2 elementos: 0: Grupo, 1: Cuatrimestre
-                        group: inputsText[0].value,
-                        term: inputsText[1].value,
-
-                        // Leemos directamente del valor de cada select
-                        subject: subjectSelect.value,
-                        prof: profSelect.value,
-
-                        date: dateInput ? dateInput.value : '',
-                        includeLogo: logoCheckbox ? logoCheckbox.checked : false
-                    };
-                }
+                liveData = readHeaderFromDOM(headerCard);
             }
 
             // LÓGICA DE TEMAS PARA LOGOS E INSTITUCIÓN: ambos se resuelven según la
@@ -1230,6 +1838,11 @@ case 'header':
             // editables desde el propio bloque de encabezado)
             const currentThemeId = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
             const currentUni = getUniversityById(currentThemeId) || getUniversityById('generic') || {};
+            // Modo portada: el encabezado sale como portada de hoja completa
+            if (liveData.coverMode) {
+                return renderCoverPreview(liveData, currentUni);
+            }
+
             const logoIzquierdo = currentUni.logoLeft || '';
             const logoDerecho = currentUni.logoRight || '';
 
@@ -1267,6 +1880,7 @@ case 'header':
                 <div class="p-header">
                     ${logosHTML}
                     <p><strong>Institución:</strong> ${escapeHtml(currentUni.name || '')}</p>
+                    ${liveData.career ? `<p><strong>Carrera:</strong> ${escapeHtml(liveData.career)}</p>` : ''}
                     <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(formatTerm(liveData.term))})` : ''}</p>
                     <p><strong>Profesor:</strong> ${escapeHtml(liveData.prof || '')}</p>
                     <p>${nombresHtmlFinal} ${liveData.group ? `| <strong>Grupo:</strong> ${escapeHtml(liveData.group)}` : ''}</p>
@@ -1278,6 +1892,9 @@ case 'header':
                 if (!block.refData) return '';
                 refCounter++;
                 const { author, title, source, year, url } = block.refData;
+                if (getCitationStyle() === 'apa') {
+                    return `<div class="p-ref-apa">${formatAPAReference(block.refType, author, title, source, year, url)}</div>`;
+                }
                 let refText = formatIEEEReference(block.refType, author, title, source, year, url);
                 return `
                     <div class="p-ref-ieee">
@@ -1309,8 +1926,8 @@ case 'header':
                         </div>`;
                 } else {
                     return `
-                        <div class="p-ai-declaration">
-                            <div style="margin: 20px 0;">
+                        <div class="p-ai-declaration" data-split="children">
+                            <div style="margin: 20px 0;" data-split="children">
                                 <p style="margin: 5px 0;"><strong>Nombre del estudiante:</strong> ${escapeHtml(ai.name || studentName)}</p>
                                 <p style="margin: 5px 0;"><strong>IA utilizada:</strong> ${escapeHtml(ai.aiTool)}</p>
                                 <p style="margin: 5px 0;"><strong>Fecha de uso:</strong> ${escapeHtml(ai.date)}</p>
@@ -1322,7 +1939,7 @@ case 'header':
                                 ${ai.attachments ? `<p style="margin: 10px 0 5px 0;"><strong>Archivos suministrados:</strong> ${escapeHtml(ai.attachments)}</p>` : ''}
                                 
                                 <p style="margin: 15px 0 5px 0;"><strong>Respuesta en crudo (raw):</strong></p>
-                                <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; white-space: pre-wrap; font-size: 0.85em; max-height: 300px; overflow-y: auto;">${escapeHtml(ai.rawResponse)}</pre>
+                                <pre style="background: #f4f4f4; padding: 10px; border-radius: 4px; white-space: pre-wrap; font-size: 0.85em;">${escapeHtml(ai.rawResponse)}</pre>
                             </div>
                         </div>`;
                 }
@@ -1331,6 +1948,10 @@ case 'header':
                 return "";
         }
     }).join('');
+
+    // Se arma en hojas tamaño carta, igual que como se imprimirá
+    paginatePreview(preview, previewHTML);
+    fillTocPageNumbers(preview);
 
     scheduleAutosave();
 }
@@ -1366,9 +1987,26 @@ function exportTXT() {
                     ? namesForExport.filter(n => n.trim() !== '').join(', ')
                     : (namesForExport[0] || '');
 
+                if (savedHeader.coverMode) {
+                    textContent += `PORTADA\n`;
+                    textContent += `-`.repeat(40) + "\n";
+                    if (exportUni.id && exportUni.id !== 'generic') textContent += `${exportUni.name}\n`;
+                    if (savedHeader.career) textContent += `${savedHeader.career}\n`;
+                    textContent += `\n${(savedHeader.taskName || '').trim() || '[Nombre de la tarea]'}\n\n`;
+                    if (savedHeader.subject) textContent += `Materia: ${savedHeader.subject}\n`;
+                    if (savedHeader.prof) textContent += `Profesor: ${savedHeader.prof}\n`;
+                    textContent += `${savedHeader.isTeam ? 'Integrantes' : 'Alumno'}: ${alumnoLabel || 'N/A'}\n`;
+                    if (savedHeader.group) textContent += `Grupo: ${savedHeader.group}\n`;
+                    if (savedHeader.term) textContent += `Cuatrimestre: ${formatTerm(savedHeader.term)}\n`;
+                    if (savedHeader.date) textContent += `${formatLongDate(savedHeader.date)}\n`;
+                    textContent += `\n`;
+                    break;
+                }
+
                 textContent += `DATOS DEL ESTUDIANTE\n`;
                 textContent += `-`.repeat(40) + "\n";
                 textContent += `Institución: ${exportUni.name || 'N/A'}\n`;
+                if (savedHeader.career) textContent += `Carrera: ${savedHeader.career}\n`;
                 textContent += `Materia: ${savedHeader.subject || 'N/A'} (${formatTerm(savedHeader.term) || 'N/A'})\n`;
                 textContent += `Profesor: ${savedHeader.prof || 'N/A'}\n`;
                 textContent += `Alumno: ${alumnoLabel || 'N/A'} | Grupo: ${savedHeader.group || 'N/A'}\n`;
@@ -1377,6 +2015,18 @@ function exportTXT() {
                 break;
             }
             
+            case 'toc': {
+                textContent += `${((block.content || '').trim() || 'Índice').toUpperCase()}\n`;
+                textContent += `-`.repeat(40) + "\n";
+                reportData.forEach(b => {
+                    if ((b.type === 'title' || b.type === 'subtitle') && (b.content || '').trim()) {
+                        textContent += `${b.type === 'subtitle' ? '    ' : ''}${b.content.trim()}\n`;
+                    }
+                });
+                textContent += `\n`;
+                break;
+            }
+
             case 'title':
                 textContent += `\n${"=".repeat(60)}\n`;
                 textContent += `${block.content.toUpperCase()}\n`;
@@ -1475,6 +2125,10 @@ function exportTXT() {
                 if (block.refData) {
                     refCount++;
                     const { author, title, source, year, url } = block.refData;
+                    if (getCitationStyle() === 'apa') {
+                        textContent += `\n${formatAPAReference(block.refType, author, title, source, year, url, false)}\n`;
+                        break;
+                    }
                     textContent += `\n[${refCount}] `;
                     
                     if (block.refType === 'book') {
@@ -1592,7 +2246,9 @@ function loadFromLocalStorage() {
     try {
         const saved = localStorage.getItem('reportData');
         if (saved) {
-            reportData = JSON.parse(saved);
+            // Una versión de prueba tenía bloques "cover" aparte; ahora la
+            // portada es un modo del encabezado, así que se descartan.
+            reportData = JSON.parse(saved).filter(b => b.type !== 'cover');
             render();
         }
     } catch (e) {
@@ -1686,6 +2342,16 @@ function getUniversityById(id) {
 }
 
 /**
+ * Nombre corto para insignias: "UPY - Universidad Politécnica..." -> "UPY".
+ */
+function getUniShortName(uni) {
+    if (!uni) return '';
+    if (uni.id === 'generic') return 'Genérica';
+    const short = uni.name.split(' - ')[0].trim();
+    return short.length > 16 ? short.slice(0, 15) + '…' : short;
+}
+
+/**
  * Repuebla el <select> de temas a partir de la lista de universidades.
  */
 function renderThemeSelector() {
@@ -1724,6 +2390,12 @@ function changeTheme(themeId) {
     // datos sin guardar que el usuario esté escribiendo en ese momento).
     const instDisplay = document.getElementById('header-inst-display');
     if (instDisplay) instDisplay.value = uni.name;
+
+    // Textos de la interfaz que muestran la institución actual
+    const uniBadge = document.getElementById('header-uni-badge');
+    if (uniBadge) uniBadge.textContent = getUniShortName(uni);
+    const editorUniLabel = document.getElementById('editor-uni-label');
+    if (editorUniLabel) editorUniLabel.textContent = uni.id === 'generic' ? '' : uni.name;
 
     renderPreview();
     console.log(`Tema cambiado a: ${uni.id}`);
@@ -2186,6 +2858,7 @@ function buildProjectData() {
         theme: document.body.getAttribute('data-theme') || 'generic',
         reportData: reportData,
         headerData: headerData,
+        citationStyle: getCitationStyle(),
         settings: {
             universities: getUniversities(),
             subjects: getSimpleList('list_subjects'),
@@ -2246,6 +2919,10 @@ function applyProjectData(projectData) {
 
     if (projectData.headerData && typeof projectData.headerData === 'object') {
         localStorage.setItem('global_header_data', JSON.stringify(projectData.headerData));
+    }
+
+    if (projectData.citationStyle === 'apa' || projectData.citationStyle === 'ieee') {
+        localStorage.setItem('citationStyle', projectData.citationStyle);
     }
 
     reportData = projectData.reportData;

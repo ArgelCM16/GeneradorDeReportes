@@ -22,7 +22,13 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 | Etiquetas en el encabezado | Cada campo lleva su etiqueta arriba (Grupo, Materia, Profesor...) |
 | El proyecto guarda todo | El JSON y Google Drive incluyen el encabezado y la configuración; al cargar se añade lo que falte sin sobrescribir lo local |
 | Logos ligeros | Se reducen a 400 px por lado al subirlos; si el navegador se queda sin espacio, se avisa |
-| Rediseño visual | Hecho con Google Stitch ("Project Redesign Initiative") y aplicado en `CSS/redesign.css` sin tocar la lógica |
+| Rediseño visual | Réplica de la pantalla "Rediseño Completo" de Google Stitch ("Project Redesign Initiative"): barra lateral con marca, bloques en 2 columnas y pie fijo (TXT, Configuración, Imprimir); barra superior en el editor; tarjetas con cabecera "Bloque: ..." e íconos en los campos; vista previa como hoja carta con barra superior e inferior. Estilos en `CSS/redesign.css`; la lógica no cambió |
+| Portada | Botón "Hacer portada" en la tarjeta del encabezado: el mismo encabezado cambia a formato de portada (hoja completa) y solo pide el nombre de la tarea; "Volver a encabezado" lo regresa. Nuevo campo "Carrera" en el encabezado (sale en la portada y en el encabezado normal) |
+| Formato APA | Etiqueta en la tarjeta de referencia para elegir IEEE o APA 7ma Ed. para todo el documento (se guarda con el proyecto) |
+| Vista previa real | El documento se reparte en hojas tamaño carta (márgenes de 2 cm, número de página) y se imprime exactamente así; párrafos, código y tablas largas se parten entre hojas |
+| Índice | Bloque "Índice" (botón en la barra lateral): tabla de contenido con títulos y subtítulos y su número de página real. Siempre va después del encabezado: en la hoja siguiente a la portada, o debajo del encabezado normal; el contenido empieza en la hoja de después. Solo puede haber uno |
+| Zoom | Botones − % + en la barra de la vista previa; por defecto ajusta la hoja al ancho del panel (solo pantalla) |
+| Ancho de la vista previa | Divisor arrastrable entre el editor y la vista previa (doble clic = tamaño normal) y botón para agrandarla al 60%; el ancho se recuerda |
 | Correcciones | Nombre del alumno en la Declaración de IA; "Cuatrimestre" duplicado; encabezados de tabla mal marcados; README corrupto (texto UTF-16 al final) |
 
 ### Decisiones de diseño que conviene respetar

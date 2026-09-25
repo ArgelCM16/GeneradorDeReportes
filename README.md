@@ -21,6 +21,12 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 - **Panel de Configuración**: Administra universidades, materias y profesores en un solo lugar
 - **Materia → Profesor**: Vincula cada materia con su profesor; al elegir la materia, el profesor se llena solo
 - **Autoguardado**: Los datos del encabezado se guardan solos mientras escribes
+- **Portada**: El botón "Hacer portada" convierte el encabezado en una portada de hoja completa con todos sus datos; solo pide el nombre de la tarea
+- **Referencias IEEE o APA 7**: Elige el formato de todas las referencias desde la etiqueta de la tarjeta de referencia
+- **Vista previa real**: El documento se arma en hojas tamaño carta con márgenes y número de página, y se imprime exactamente igual
+- **Índice**: Tabla de contenido automática con los títulos y subtítulos y la página donde está cada uno; siempre va después de la portada o debajo del encabezado
+- **Zoom de la vista previa**: Ajustado al ancho por defecto; acerca o aleja las hojas sin afectar la impresión
+- **Vista previa más grande**: Arrastra el divisor entre el editor y la vista previa, o usa el botón de agrandar
 - **Tablas Profesionales**: Grid visual de 1-6 columnas con diseño académico
 - **Declaración de IA**: Sistema completo para documentar uso de herramientas de IA
 - **Exportación Triple**: PDF (impresión), TXT y JSON (proyecto completo)

@@ -9,10 +9,9 @@
     />
     <meta name="author" content="Jorge J. Pedrozo Romero" />
     <title>Generador de Documentos Académicos</title>
-    <link rel="stylesheet" href="CSS/style.css" />
-    <!-- Rediseño visual (Google Stitch). Quitar esta línea vuelve al diseño anterior. -->
-    <link rel="stylesheet" href="CSS/redesign.css" />
-    <link rel="icon" href="ASSETS/favicon.png" />
+    <!-- Las fuentes van ANTES de nuestros estilos: la hoja de Material Symbols
+         trae su propio tamaño y display para los íconos y, si se cargara
+         después, pisaría los nuestros (por ejemplo, descentraba el logo). -->
     <link
       href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined"
       rel="stylesheet"
@@ -21,271 +20,264 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <link rel="stylesheet" href="CSS/style.css" />
+    <!-- Rediseño visual (Google Stitch). Quitar esta línea vuelve al diseño anterior. -->
+    <link rel="stylesheet" href="CSS/redesign.css" />
+    <link rel="icon" href="ASSETS/favicon.png" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
     <nav class="toolbox">
-      <!-- Selector de Tema -->
-      <div class="theme-selector">
-        <label
-          style="
-            font-size: 0.85em;
-            margin-bottom: 8px;
-            display: block;
-            opacity: 0.9;
-          "
-          >Tema / Universidad:</label
-        >
-        <select
-          id="themeSelector"
-          onchange="changeTheme(this.value)"
-          style="
-            width: 100%;
-            padding: 8px;
-            border-radius: 5px;
-            border: none;
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            cursor: pointer;
-            margin-bottom: 8px;
-          "
-        >
-          <!-- Las opciones se generan dinámicamente en JS/script.js -->
-        </select>
-      </div>
+      <!-- Parte desplazable de la barra lateral -->
+      <div class="sidebar-scroll">
+        <!-- Marca -->
+        <div class="sidebar-brand">
+          <span class="sidebar-brand-icon material-symbols-outlined">school</span>
+          <div class="sidebar-brand-text">
+            <div class="sidebar-brand-title">Generador de Reportes</div>
+            <div class="sidebar-brand-subtitle">
+              Reportes académicos <span class="sidebar-brand-version">v2.1</span>
+            </div>
+          </div>
+        </div>
 
-      <h3>Bloques</h3>
-      <button onclick="addBlock('header')">
-        <span class="material-symbols-outlined">vertical_align_top</span>
-        <span>&ensp;Encabezado</span>
-      </button>
+        <!-- Selector de Tema -->
+        <div class="theme-selector">
+          <label for="themeSelector">Institución / Tema</label>
+          <select id="themeSelector" onchange="changeTheme(this.value)">
+            <!-- Las opciones se generan dinámicamente en JS/script.js -->
+          </select>
+        </div>
 
-      <button onclick="addBlock('title')">
-        <span class="material-symbols-outlined">title</span>
-        <span>&ensp;Título</span>
-      </button>
+        <div class="sidebar-section-title">
+          <span>Insertar bloques</span>
+          <small>Clic para añadir</small>
+        </div>
 
-      <button onclick="addBlock('subtitle')">
-        <span class="material-symbols-outlined">format_size</span>
-        <span>&ensp;Subtítulo</span>
-      </button>
+        <div class="blocks-grid">
+          <button onclick="addBlock('header')">
+            <span class="material-symbols-outlined">vertical_align_top</span>
+            <span>Encabezado</span>
+          </button>
 
-      <button onclick="addBlock('text')">
-        <span class="material-symbols-outlined">notes</span>
-        <span>&ensp;Párrafo</span>
-      </button>
+          <button onclick="addBlock('title')">
+            <span class="material-symbols-outlined">title</span>
+            <span>Título</span>
+          </button>
 
-      <button onclick="addBlock('code')">
-        <span class="material-symbols-outlined">code</span>
-        <span>&ensp;Código</span>
-      </button>
+          <button onclick="addBlock('subtitle')">
+            <span class="material-symbols-outlined">format_size</span>
+            <span>Subtítulo</span>
+          </button>
 
-      <button onclick="addBlock('image')">
-        <span class="material-symbols-outlined">image</span>
-        <span>&ensp;Imagen</span>
-      </button>
+          <button onclick="addBlock('text')">
+            <span class="material-symbols-outlined">notes</span>
+            <span>Párrafo</span>
+          </button>
 
-      <button onclick="addBlock('table')">
-        <span class="material-symbols-outlined">table_chart</span>
-        <span>&ensp;Tabla</span>
-      </button>
+          <button onclick="addBlock('code')">
+            <span class="material-symbols-outlined">code</span>
+            <span>Código</span>
+          </button>
 
-      <button onclick="addBlock('ref')">
-        <span class="material-symbols-outlined">link</span>
-        <span>&ensp;Referencia</span>
-      </button>
+          <button onclick="addBlock('image')">
+            <span class="material-symbols-outlined">image</span>
+            <span>Imagen</span>
+          </button>
 
-      <button onclick="addBlock('ai')" class="btn-ai">
-        <span class="material-symbols-outlined">smart_toy</span>
-        <span>&ensp;Declaración IA</span>
-      </button>
+          <button onclick="addBlock('table')">
+            <span class="material-symbols-outlined">table_chart</span>
+            <span>Tabla</span>
+          </button>
 
-      <hr
-        style="
-          border: none;
-          border-top: 1px solid rgba(255, 255, 255, 0.2);
-          margin: 15px 0;
-        "
-      />
+          <button onclick="addBlock('ref')">
+            <span class="material-symbols-outlined">link</span>
+            <span>Referencia</span>
+          </button>
 
-      <button class="btn-json" onclick="saveJSON()">
-        <span class="material-symbols-outlined">cloud_download</span>
-        <span>&ensp;Guardar Proyecto</span>
-      </button>
-
-      <button
-        class="btn-json"
-        onclick="document.getElementById('loadJSONInput').click()"
-      >
-        <span class="material-symbols-outlined">cloud_upload</span>
-        <span>&ensp;Cargar Proyecto</span>
-      </button>
-      <input
-        type="file"
-        id="loadJSONInput"
-        accept=".json"
-        onchange="loadJSON(this)"
-        style="display: none"
-      />
-
-      <hr
-        style="
-          border: none;
-          border-top: 1px solid rgba(255, 255, 255, 0.2);
-          margin: 15px 0;
-        "
-      />
-
-      <!-- Google Drive -->
-      <div class="drive-section">
-        <div style="display: flex; align-items: center; justify-content: space-between;">
-          <h3 style="margin: 0;">Google Drive</h3>
-          <button
-            type="button"
-            class="drive-help-btn"
-            onclick="showGoogleDriveSetupHelp()"
-            title="¿Cómo configuro Google Drive?"
-          >
-            ?
+          <button onclick="addBlock('toc')" title="Tabla de contenido con número de página">
+            <span class="material-symbols-outlined">toc</span>
+            <span>Índice</span>
           </button>
         </div>
-        <p id="drive-status" style="font-size: 0.75em; opacity: 0.8; margin: 0;">
-          No conectado
-        </p>
 
-        <button class="btn-json" id="btn-drive-connect" onclick="connectGoogleDrive()">
-          <span class="material-symbols-outlined">login</span>
-          <span>&ensp;Conectar Google Drive</span>
+        <button onclick="addBlock('ai')" class="btn-ai">
+          <span class="btn-ai-dot"></span>
+          <span>Declaración de IA</span>
+          <span class="btn-ai-badge">IA</span>
         </button>
 
-        <button class="btn-json" id="btn-drive-save" onclick="saveProjectToDrive()" style="display: none;">
-          <span class="material-symbols-outlined">cloud_upload</span>
-          <span>&ensp;Guardar en Drive</span>
-        </button>
+        <hr />
 
-        <button class="btn-json" id="btn-drive-open" onclick="openDriveFilePicker()" style="display: none;">
-          <span class="material-symbols-outlined">folder_open</span>
-          <span>&ensp;Abrir desde Drive</span>
-        </button>
+        <!-- Google Drive -->
+        <div class="drive-section">
+          <div class="sidebar-section-title">
+            <span>Almacenamiento</span>
+            <button
+              type="button"
+              class="drive-help-btn"
+              onclick="showGoogleDriveSetupHelp()"
+              title="¿Cómo configuro Google Drive?"
+            >
+              ?
+            </button>
+          </div>
+          <p id="drive-status">No conectado</p>
 
-        <button
-          class="btn-json btn-danger"
-          id="btn-drive-disconnect"
-          onclick="disconnectGoogleDrive()"
-          style="display: none;"
-        >
-          <span class="material-symbols-outlined">logout</span>
-          <span>&ensp;Desconectar</span>
-        </button>
+          <button class="btn-json" id="btn-drive-connect" onclick="connectGoogleDrive()">
+            <span class="material-symbols-outlined">login</span>
+            <span>Conectar Google Drive</span>
+          </button>
+
+          <button class="btn-json" id="btn-drive-save" onclick="saveProjectToDrive()" style="display: none;">
+            <span class="material-symbols-outlined">cloud_upload</span>
+            <span>Guardar en Drive</span>
+          </button>
+
+          <button class="btn-json" id="btn-drive-open" onclick="openDriveFilePicker()" style="display: none;">
+            <span class="material-symbols-outlined">folder_open</span>
+            <span>Abrir desde Drive</span>
+          </button>
+
+          <button
+            class="btn-json btn-danger"
+            id="btn-drive-disconnect"
+            onclick="disconnectGoogleDrive()"
+            style="display: none;"
+          >
+            <span class="material-symbols-outlined">logout</span>
+            <span>Desconectar cuenta</span>
+          </button>
+        </div>
+
+        <hr />
+
+        <!-- Proyecto (archivo JSON) -->
+        <div class="project-section">
+          <button class="btn-project" onclick="saveJSON()">
+            <span class="material-symbols-outlined">download</span>
+            <span>Guardar Proyecto (.json)</span>
+          </button>
+
+          <button
+            class="btn-project"
+            onclick="document.getElementById('loadJSONInput').click()"
+          >
+            <span class="material-symbols-outlined">upload</span>
+            <span>Cargar Proyecto</span>
+          </button>
+          <input
+            type="file"
+            id="loadJSONInput"
+            accept=".json"
+            onchange="loadJSON(this)"
+            style="display: none"
+          />
+        </div>
+
+        <!-- Créditos -->
+        <div class="credits">
+          <p>Desarrollado por <strong>Jorge Javier Pedrozo Romero</strong></p>
+          <p>Modificado por <strong>Argel Alberto Cano Morales</strong></p>
+          <p class="credits-version">v2.1.0 • Septiembre 2026</p>
+        </div>
       </div>
 
-      <hr
-        style="
-          border: none;
-          border-top: 1px solid rgba(255, 255, 255, 0.2);
-          margin: 15px 0;
-        "
-      />
+      <!-- Acciones fijas al pie de la barra lateral -->
+      <div class="sidebar-footer">
+        <div class="sidebar-footer-row">
+          <button class="btn-save" onclick="exportTXT()" title="Guardar como texto (TXT)">
+            <span class="material-symbols-outlined">description</span>
+            <span>TXT</span>
+          </button>
 
-      <button class="btn-save" onclick="exportTXT()">
-        <span class="material-symbols-outlined">save</span>
-        <span>&ensp;Guardar TXT</span>
-      </button>
+          <!-- Configuración: se usa poco (dar de alta universidades, materias y profesores) -->
+          <button
+            type="button"
+            class="btn-settings"
+            onclick="openSettingsModal()"
+            title="Administrar universidades, materias y profesores"
+          >
+            <span class="material-symbols-outlined">settings</span>
+            <span>Configuración</span>
+          </button>
+        </div>
 
-      <button class="btn-print" onclick="window.print()">
-        <span class="material-symbols-outlined">picture_as_pdf</span>
-        <span>&ensp;Imprimir PDF</span>
-      </button>
-
-      <hr
-        style="
-          border: none;
-          border-top: 1px solid rgba(255, 255, 255, 0.2);
-          margin: 15px 0;
-        "
-      />
-
-      <!-- Configuración al final: se usa poco (dar de alta universidades, materias y profesores) -->
-      <button
-        type="button"
-        class="btn-settings"
-        onclick="openSettingsModal()"
-        title="Administrar universidades, materias y profesores"
-      >
-        <span class="material-symbols-outlined">settings</span>
-        <span>&ensp;Configuración</span>
-      </button>
-
-      <!-- Créditos -->
-      <div class="credits">
-        <p
-          style="
-            font-size: 0.75em;
-            opacity: 0.7;
-            margin: 20px 0 5px 0;
-            text-align: center;
-          "
-        >
-          Desarrollado por
-        </p>
-        <p
-          style="
-            font-size: 0.8em;
-            font-weight: bold;
-            margin: 0;
-            text-align: center;
-          "
-        >
-          Jorge Javier Pedrozo Romero
-        </p>
-
-        <p
-          style="
-            font-size: 0.75em;
-            opacity: 0.7;
-            margin: 10px 0 5px 0;
-            text-align: center;
-          "
-        >
-          Modificado por
-        </p>
-        <p
-          style="
-            font-size: 0.8em;
-            font-weight: bold;
-            margin: 0;
-            text-align: center;
-          "
-        >
-          Argel Alberto Cano Morales
-        </p>
-
-        <p
-          style="
-            font-size: 0.7em;
-            opacity: 0.6;
-            margin: 10px 0 0 0;
-            text-align: center;
-          "
-        >
-          v2.1.0 • Septiembre 2026
-        </p>
+        <button class="btn-print" onclick="window.print()">
+          <span class="material-symbols-outlined">print</span>
+          <span>Imprimir / Exportar PDF</span>
+        </button>
       </div>
     </nav>
 
     <main class="workspace">
-      <section id="editor-container">
-        <!-- Mensaje de bienvenida -->
-        <div class="welcome-message">
-          <h2>¡Bienvenido!</h2>
-          <p>
-            Selecciona tu institución arriba y comienza agregando bloques desde
-            el menú lateral.
-          </p>
+      <!-- Columna del editor -->
+      <section class="editor-pane">
+        <div class="editor-toolbar">
+          <div class="editor-toolbar-title">
+            <h2>Editor de Reporte Académico</h2>
+            <span id="editor-uni-label"></span>
+          </div>
+          <span class="status-pill">Guardado automáticamente</span>
         </div>
+
+        <section id="editor-container">
+          <!-- Mensaje de bienvenida -->
+          <div class="welcome-message">
+            <h2>¡Bienvenido!</h2>
+            <p>
+              Selecciona tu institución y comienza agregando bloques desde
+              el menú lateral.
+            </p>
+          </div>
+        </section>
       </section>
 
-      <section id="preview-container" class="preview-paper"></section>
+      <!-- Divisor: se arrastra para cambiar el ancho de la vista previa -->
+      <div
+        class="pane-resizer"
+        id="pane-resizer"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Cambiar el ancho de la vista previa"
+        tabindex="0"
+        title="Arrastra para cambiar el tamaño de la vista previa (doble clic: tamaño normal)"
+      ></div>
+
+      <!-- Columna de la vista previa -->
+      <section class="preview-pane" id="preview-pane">
+        <div class="preview-toolbar">
+          <span class="material-symbols-outlined">visibility</span>
+          <span>Vista Previa (Hoja Carta)</span>
+
+          <!-- Zoom de la vista previa (solo pantalla; no cambia la impresión) -->
+          <div class="preview-zoom">
+            <button type="button" onclick="changePreviewZoom(-1)" title="Alejar">−</button>
+            <button type="button" id="preview-zoom-label" onclick="setPreviewZoom('fit')" title="Ajustar al ancho">100%</button>
+            <button type="button" onclick="changePreviewZoom(1)" title="Acercar">+</button>
+          </div>
+
+          <!-- Agrandar / tamaño normal -->
+          <button
+            type="button"
+            class="preview-expand-btn"
+            id="preview-expand-btn"
+            onclick="togglePreviewExpanded()"
+            title="Agrandar vista previa"
+          >
+            <span class="material-symbols-outlined" id="preview-expand-icon">open_in_full</span>
+          </button>
+        </div>
+
+        <div class="preview-scroll">
+          <section id="preview-container" class="preview-paper"></section>
+        </div>
+
+        <div class="preview-footer">
+          <span class="preview-ready">Listo para imprimir</span>
+          <button type="button" class="preview-print-link" onclick="window.print()">Descargar .PDF</button>
+        </div>
+      </section>
     </main>
 
     <script src="JS/script.js"></script>
