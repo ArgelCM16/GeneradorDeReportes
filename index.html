@@ -54,16 +54,6 @@
         </select>
       </div>
 
-      <button
-        type="button"
-        class="btn-settings"
-        onclick="openSettingsModal()"
-        title="Administrar universidades, materias y profesores"
-      >
-        <span class="material-symbols-outlined">settings</span>
-        <span>&ensp;Configuración</span>
-      </button>
-
       <h3>Bloques</h3>
       <button onclick="addBlock('header')">
         <span class="material-symbols-outlined">vertical_align_top</span>
@@ -205,6 +195,25 @@
       <button class="btn-print" onclick="window.print()">
         <span class="material-symbols-outlined">picture_as_pdf</span>
         <span>&ensp;Imprimir PDF</span>
+      </button>
+
+      <hr
+        style="
+          border: none;
+          border-top: 1px solid rgba(255, 255, 255, 0.2);
+          margin: 15px 0;
+        "
+      />
+
+      <!-- Configuración al final: se usa poco (dar de alta universidades, materias y profesores) -->
+      <button
+        type="button"
+        class="btn-settings"
+        onclick="openSettingsModal()"
+        title="Administrar universidades, materias y profesores"
+      >
+        <span class="material-symbols-outlined">settings</span>
+        <span>&ensp;Configuración</span>
       </button>
 
       <!-- Créditos -->
