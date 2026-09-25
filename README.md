@@ -2,7 +2,7 @@
 
 > Herramienta web profesional para crear reportes académicos con vista previa en tiempo real
 
-![Versión](https://img.shields.io/badge/versión-2.0.0-blue)
+![Versión](https://img.shields.io/badge/versión-2.1.0-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Estado](https://img.shields.io/badge/estado-activo-success)
 
@@ -14,9 +14,13 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 
 ### Características Principales
 
-- **Guardar y Cargar Proyectos**: Sistema completo para guardar trabajo en JSON y continuarlo después
+- **Guardar y Cargar Proyectos**: Guarda el trabajo en JSON (con encabezado y configuración incluidos) y continúalo después, incluso en otra computadora
+- **Google Drive**: Guarda y abre proyectos directamente desde tu Google Drive
 - **9 Tipos de Bloques**: Encabezado, Título, Subtítulo, Párrafo, Código, Imagen, Tabla, Referencia, Declaración IA
-- **3 Temas Institucionales**: TSW, UPY, UPP con paletas personalizadas
+- **Universidades Configurables**: Incluye UPY, TSW y UPP, y puedes añadir las tuyas con colores y logos propios
+- **Panel de Configuración**: Administra universidades, materias y profesores en un solo lugar
+- **Materia → Profesor**: Vincula cada materia con su profesor; al elegir la materia, el profesor se llena solo
+- **Autoguardado**: Los datos del encabezado se guardan solos mientras escribes
 - **Tablas Profesionales**: Grid visual de 1-6 columnas con diseño académico
 - **Declaración de IA**: Sistema completo para documentar uso de herramientas de IA
 - **Exportación Triple**: PDF (impresión), TXT y JSON (proyecto completo)
@@ -31,8 +35,10 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 ### Funcionalidad de Persistencia:
 - **Guardar Proyecto**: Exporta el trabajo completo como archivo JSON
 - **Cargar Proyecto**: Restaura proyectos guardados previamente
-- **Formato**: JSON con todos los bloques, tema y metadatos
-- **Nombre automático**: `reporte_YYYY-MM-DD_HH-MM.json`
+- **Formato**: JSON con los bloques, el tema, los datos del encabezado y la configuración (universidades, materias, profesores y vínculos materia → profesor)
+- **Nombre automático**: `REPORTE-FECHA-YYYY-MM-DD-HORA-HH-MM.json`
+- **Otra computadora**: Al cargar un proyecto se añaden las universidades, materias y profesores que falten en ese navegador, sin borrar ni cambiar los que ya existen
+- **Compatibilidad**: Los proyectos guardados con versiones anteriores se siguen abriendo sin problema
 
 ### Casos de Uso:
 - **Trabajo en múltiples sesiones**: Guarda y continúa después
@@ -43,9 +49,37 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 ### Características:
 - Validación de archivos JSON
 - Confirmación antes de sobrescribir trabajo actual
-- Restauración completa de bloques y tema
+- Restauración completa de bloques, tema, encabezado y configuración
 - Manejo robusto de errores
 - Timestamp automático
+
+---
+
+## Google Drive
+
+Además de descargar el archivo JSON, puedes guardar y abrir tus proyectos directamente en Google Drive:
+
+- **Conectar Google Drive**: Inicia sesión con tu cuenta de Google
+- **Guardar en Drive**: Guarda el proyecto (te pregunta el nombre del archivo)
+- **Abrir desde Drive**: Muestra la lista de proyectos que guardaste desde la app
+
+La app solo tiene acceso a los archivos que ella misma crea en tu Drive (permiso `drive.file`).
+
+> **Importante:** Google Drive solo funciona si la página se sirve por `http://` o `https://` (por ejemplo con GitHub Pages o con la extensión Live Server de VS Code). Abrir `index.html` con doble clic (`file://`) no funciona. Si usas tu propio despliegue, sigue las instrucciones del botón **?** junto a "Google Drive" o los comentarios de `GOOGLE_DRIVE_CLIENT_ID` en `JS/script.js`.
+
+---
+
+## Panel de Configuración
+
+El botón **Configuración** de la barra lateral abre un panel con tres pestañas:
+
+- **Universidades**: añade, edita o elimina universidades (nombre, colores del tema y logos izquierdo y derecho). La universidad "Genérica" no se puede eliminar.
+- **Materias**: añade, edita o elimina materias y elige qué profesor imparte cada una.
+- **Profesores**: añade, edita o elimina profesores.
+
+Todo lo que cambies aquí se refleja al momento en el bloque de Encabezado.
+
+Los logos se reducen automáticamente a un máximo de 400 px por lado al subirlos, para que no llenen el espacio del navegador; en el documento se siguen viendo nítidos.
 
 ---
 
@@ -67,7 +101,13 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 
 ---
 
-## Temas Disponibles
+## Universidades Incluidas
+
+Además de estas, puedes añadir las tuyas desde **Configuración**. El color de la interfaz sigue a la universidad seleccionada.
+
+### Genérica (sin institución)
+- Gris neutro, sin logos
+- Para trabajos que no llevan identidad institucional
 
 ### TSW - Tecnológico de Software
 - Azul Oscuro (#2C2E5C) + Cyan (#00B8E6)
@@ -94,7 +134,7 @@ git clone https://github.com/JorgeTSW/generador-reportes-academicos.git
 
 2. Abre `index.html` en tu navegador
 
-No requiere instalación de dependencias.
+No requiere instalación de dependencias. Para usar Google Drive, sírvela por `http://` (por ejemplo con la extensión Live Server de VS Code).
 
 ### Opción 2: GitHub Pages
 
@@ -104,12 +144,15 @@ Simplemente visita: [https://JorgeTSW.github.io/generador-reportes-academicos/](
 
 ## Uso Rápido
 
-### 1. Seleccionar Tema
+### 1. Seleccionar Universidad
 Usa el selector en la parte superior de la barra lateral para elegir tu institución.
 
-### 2. Agregar Bloques
+### 2. Configurar tus Materias y Profesores
+Abre **Configuración** y añade tus materias y profesores. Vincula cada materia con su profesor para que se llene solo en el encabezado.
+
+### 3. Agregar Bloques
 Click en los botones de la barra lateral:
-- **Encabezado** - Datos del estudiante
+- **Encabezado** - Datos del estudiante (se guardan solos; el botón "Limpiar" los borra)
 - **Título** - Título del reporte
 - **Subtítulo** - Secciones
 - **Párrafo** - Texto
@@ -119,11 +162,12 @@ Click en los botones de la barra lateral:
 - **Referencia** - Bibliografía IEEE
 - **Declaración IA** - Declaración de uso de IA
 
-### 3. Exportar
+### 4. Exportar
 - **Imprimir PDF** - Ctrl+P
 - **Guardar TXT** - Botón "Guardar TXT"
 - **Guardar Proyecto** - Botón "Guardar Proyecto" (JSON)
 - **Cargar Proyecto** - Botón "Cargar Proyecto" (JSON)
+- **Guardar en Drive / Abrir desde Drive** - Sección "Google Drive" de la barra lateral
 
 ---
 
@@ -159,11 +203,12 @@ Sistema completo para cumplir con políticas de integridad académica.
 
 ### Opción "NO usé IA":
 - Disclaimer automático
-- Campo de nombre individual (para equipos)
+- Usa el nombre del alumno (o de todos los integrantes del equipo) del Encabezado
+- Campo de nombre individual para escribir otro nombre si hace falta
 - Compromiso documentado
 
 ### Opción "SÍ usé IA":
-- Nombre del estudiante
+- Nombre del estudiante (por defecto, el del Encabezado)
 - IA utilizada (ChatGPT, Claude, Gemini, etc.)
 - Fecha de uso
 - Propósito
@@ -178,11 +223,12 @@ Sistema completo para cumplir con políticas de integridad académica.
 ```
 generador-reportes-academicos/
 ├── ASSETS
-│   └── favicon.png
+│   ├── favicon.png
+│   └── img
 ├── Contributing.md
 ├── CSS
-│   └── style.css		# Estilos con temas
-├── DOCS
+│   ├── style.css		# Estilos base y temas
+│   └── redesign.css		# Rediseño visual (se carga después de style.css)
 ├── EXAMPLES			# Carpeta con ejemplos de documentos generados
 │   ├── EJEMPLO.pdf
 │   └── EJEMPLO.txt
@@ -191,10 +237,9 @@ generador-reportes-academicos/
 │   └── script.js		# Lógica de la aplicación
 ├── LICENSE
 ├── README.md
-└── SCREENSHOTS			# Carpeta con Screenshots
-    ├── S1.png
-    ├── S2.png
-    └── S3.png
+└── SCREENSHOTS			# Capturas y demos animadas
+    ├── Drag-Drop-Feature.gif
+    └── Save-Load-Feature.gif
 ```
 
 ---
@@ -204,13 +249,14 @@ generador-reportes-academicos/
 - **HTML5** - Estructura
 - **CSS3** - Estilos (Variables CSS, Grid, Flexbox)
 - **JavaScript (ES6+)** - Lógica
-- **LocalStorage** - Persistencia del tema
+- **LocalStorage** - Persistencia del tema, el encabezado, las universidades, materias y profesores
+- **Google Drive API** - Guardar y abrir proyectos en la nube (opcional)
 
-### Sin Dependencias Externas
+### Sin Frameworks
 - Sin frameworks
-- Sin librerías
 - Sin npm
 - Sin backend
+- Recursos externos: Google Fonts (Plus Jakarta Sans y Material Symbols) y Google Identity Services (solo para Google Drive)
 
 ---
 
@@ -301,11 +347,18 @@ Este proyecto fue desarrollado con asistencia de herramientas de inteligencia ar
    - Corrección de bugs visuales
    - Ajustes de impresión
 
+4. **Nuevas Funciones y Rediseño (Claude y Google Stitch)**
+   - Panel de Configuración (universidades, materias y profesores)
+   - Autoguardado del encabezado y vínculo materia → profesor
+   - Integración con Google Drive
+   - Rediseño visual generado con Google Stitch e implementado en `CSS/redesign.css`
+
 ### Declaración del Autor:
 
 **Todos los códigos generados por IA fueron exhaustivamente revisados, modificados y adaptados por el autor del proyecto.** El uso de IA fue como herramienta de asistencia en el desarrollo, manteniendo el control total sobre la arquitectura, decisiones de diseño y calidad del código final.
 
 **Autor:** Jorge Javier Pedrozo Romero
+**Modificado por:** Argel Alberto Cano Morales
 
 ---
 
@@ -322,6 +375,10 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 - GitHub: [@JorgeTSW](https://github.com/JorgeTSW)
 - Email: jorge.pedroza@tecdesoftware.edu.mx
 - Institución: Tecnológico de Software
+
+**Modificado por: Argel Alberto Cano Morales**
+
+- GitHub: [@ArgelCM16](https://github.com/ArgelCM16)
 
 ---
 
@@ -343,13 +400,21 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ## Roadmap
 
-### Versión 2.0.0 (Actual)
+### Versión 2.1.0 (Actual)
+- [x] Guardar y abrir proyectos en Google Drive
+- [x] Panel de Configuración (universidades, materias y profesores)
+- [x] Universidades personalizadas con colores y logos
+- [x] Vínculo materia → profesor
+- [x] Autoguardado del encabezado
+- [x] El proyecto incluye encabezado y configuración
+- [x] Rediseño visual
+
+### Versión 2.0.0
 - [x] Sistema de guardar/cargar proyectos en JSON
 - [x] Persistencia completa del estado
 - [x] Validación y manejo de errores robusto
 
 ### Versión 3.0 (Futuro)
-- [ ] Sincronización con Google Drive
 - [ ] Editor colaborativo en tiempo real
 - [ ] Sistema de versiones integrado
 

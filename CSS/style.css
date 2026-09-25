@@ -708,8 +708,8 @@ body {
     box-shadow: 0 0 0 3px rgba(var(--secondary-rgb), 0.1);
 }
 
-/* Cabecera de tabla (primera fila) */
-.table-grid input:nth-child(-n+6) {
+/* Cabecera de tabla (primera fila, sin importar cuántas columnas haya) */
+.table-grid input.table-header-cell {
     background: #f8f9fa;
 }
 
@@ -778,6 +778,22 @@ textarea.editor-input {
 
 .grid-inputs select {
     cursor: pointer;
+}
+
+/* Etiqueta encima de cada campo del encabezado */
+.header-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.header-field label,
+.header-field-label {
+    display: block;
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #555;
 }
 
 /* Mientras no se elige nada, el select se ve como un placeholder (gris) */

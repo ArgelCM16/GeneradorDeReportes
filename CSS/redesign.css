@@ -482,6 +482,24 @@ textarea.editor-input {
     color: var(--ui-slate-800);
 }
 
+/* Etiquetas de los campos: pequeñas, en mayúsculas */
+.header-field {
+    gap: 6px;
+}
+
+.header-field label,
+.header-field-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ui-slate-500);
+}
+
+.header-field-label {
+    margin-bottom: -4px;
+}
+
 /* Institución: campo bloqueado con candado */
 #header-inst-display {
     background-color: var(--ui-slate-100) !important;
@@ -681,7 +699,7 @@ textarea.editor-input {
 }
 
 /* La primera fila son los encabezados de la tabla */
-.table-grid input:nth-child(-n+6) {
+.table-grid input.table-header-cell {
     background: var(--ui-slate-100);
     font-weight: 700;
 }

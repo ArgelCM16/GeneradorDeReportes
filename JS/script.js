@@ -472,7 +472,8 @@ function renderHeaderEditor(block, deleteBtn) {
             
             <div style="margin-bottom: 15px;">
                 <label style="font-weight: bold; display: block; margin-bottom: 10px;">Datos del Alumno / Equipo:</label>
-                
+
+                <span class="header-field-label" id="label-student-names">${d.isTeam ? 'Integrantes del equipo' : 'Nombre del alumno'}</span>
                 <div id="team-members-container" class="grid-inputs" style="margin-bottom: 10px;">
                     ${membersHtml}
                 </div>
@@ -482,20 +483,41 @@ function renderHeaderEditor(block, deleteBtn) {
                 </button>
             </div>
 
+            <!-- Cada campo lleva su etiqueta arriba, para saber qué es aunque ya esté lleno -->
             <div class="grid-inputs">
-                <input type="text" placeholder="Grupo" value="${escapeAttr(d.group || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                <div class="header-field">
+                    <label for="header-group">Grupo</label>
+                    <input type="text" id="header-group" placeholder="Ej. IDY-7A" value="${escapeAttr(d.group || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                </div>
 
-                <select id="select-subject-main" required onchange="onHeaderSubjectChange(this)" title="Las materias se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
-                    ${generateSelectOptions('list_subjects', d.subject, 'Materia...')}
-                </select>
+                <div class="header-field">
+                    <label for="select-subject-main">Materia</label>
+                    <select id="select-subject-main" required onchange="onHeaderSubjectChange(this)" title="Las materias se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
+                        ${generateSelectOptions('list_subjects', d.subject, 'Selecciona una materia...')}
+                    </select>
+                </div>
 
-                <select id="select-prof-main" required onchange="renderPreview()" title="Los profesores se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
-                    ${generateSelectOptions('list_profs', d.prof, 'Profesor...')}
-                </select>
+                <div class="header-field">
+                    <label for="select-prof-main">Profesor</label>
+                    <select id="select-prof-main" required onchange="renderPreview()" title="Los profesores se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
+                        ${generateSelectOptions('list_profs', d.prof, 'Selecciona un profesor...')}
+                    </select>
+                </div>
 
-                <input type="text" id="header-inst-display" value="${escapeAttr(currentInstName)}" disabled readonly title="La institución se define según el tema seleccionado en el menú lateral. Las universidades se administran en ⚙️ Configuración." style="width: 100%; box-sizing: border-box; background: #f0f0f0; cursor: not-allowed;">
-                <input type="text" placeholder="Cuatrimestre" value="${escapeAttr(d.term || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
-                <input type="date" value="${escapeAttr(d.date || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                <div class="header-field">
+                    <label for="header-inst-display">Institución</label>
+                    <input type="text" id="header-inst-display" value="${escapeAttr(currentInstName)}" disabled readonly title="La institución se define según el tema seleccionado en el menú lateral. Las universidades se administran en ⚙️ Configuración." style="width: 100%; box-sizing: border-box; background: #f0f0f0; cursor: not-allowed;">
+                </div>
+
+                <div class="header-field">
+                    <label for="header-term">Cuatrimestre</label>
+                    <input type="text" id="header-term" placeholder="Ej. 7" value="${escapeAttr(d.term || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                </div>
+
+                <div class="header-field">
+                    <label for="header-date">Fecha de entrega</label>
+                    <input type="date" id="header-date" value="${escapeAttr(d.date || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                </div>
             </div>
             
             <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 20px 0 15px 0;">
@@ -560,6 +582,9 @@ function toggleTeamMode(checkbox) {
     const addMemberBtn = document.getElementById('btn-add-member');
     const container = document.getElementById('team-members-container');
     const memberRows = container.querySelectorAll('.member-row');
+
+    const namesLabel = document.getElementById('label-student-names');
+    if (namesLabel) namesLabel.textContent = isTeam ? 'Integrantes del equipo' : 'Nombre del alumno';
 
     if (isTeam) {
         // MODO EQUIPO: Mostrar botón de añadir
@@ -626,8 +651,8 @@ function addTeamMember() {
 
 // Relaciona cada lista con el <select> del encabezado y el campo guardado.
 const SIMPLE_LISTS = {
-    list_subjects: { selectId: 'select-subject-main', headerKey: 'subject', label: 'materia', plural: 'materias', placeholder: 'Materia...' },
-    list_profs:    { selectId: 'select-prof-main',    headerKey: 'prof',    label: 'profesor', plural: 'profesores', placeholder: 'Profesor...' }
+    list_subjects: { selectId: 'select-subject-main', headerKey: 'subject', label: 'materia', plural: 'materias', placeholder: 'Selecciona una materia...' },
+    list_profs:    { selectId: 'select-prof-main',    headerKey: 'prof',    label: 'profesor', plural: 'profesores', placeholder: 'Selecciona un profesor...' }
 };
 
 function saveSimpleList(storageKey, list) {
@@ -783,6 +808,36 @@ function syncGlobalHeaderData(key, oldValue, newValue) {
 }
 
 // ==========================================
+// FORMATO DE DATOS DEL ENCABEZADO
+// ==========================================
+
+/**
+ * Nombre(s) del alumno según el encabezado guardado. En equipo devuelve todos
+ * los integrantes separados por comas. Acepta el formato antiguo ({ name }).
+ */
+function getHeaderStudentName(headerData) {
+    const h = headerData || {};
+    const names = ((h.names && h.names.length) ? h.names : [h.name || ''])
+        .map(n => (n || '').trim())
+        .filter(Boolean);
+    if (!names.length) return '';
+    return h.isTeam ? names.join(', ') : names[0];
+}
+
+/**
+ * Da formato al cuatrimestre sin repetir la palabra:
+ * "7" -> "7° Cuatrimestre", "7mo" -> "7mo Cuatrimestre",
+ * "7mo Cuatrimestre" -> se deja igual.
+ */
+function formatTerm(term) {
+    const t = (term || '').trim();
+    if (!t) return '';
+    if (/cuatrimestre/i.test(t)) return t;
+    if (/^\d+$/.test(t)) return `${t}° Cuatrimestre`;
+    return `${t} Cuatrimestre`;
+}
+
+// ==========================================
 // AUTOGUARDADO Y LIMPIEZA DEL ENCABEZADO
 // ==========================================
 
@@ -920,6 +975,7 @@ function renderTableEditor(block, deleteBtn) {
             const placeholder = row === 0 ? `Encabezado ${col + 1}` : `Fila ${row}, Col ${col + 1}`;
             gridHTML += `<input 
                 type="text" 
+                ${row === 0 ? 'class="table-header-cell"' : ''}
                 placeholder="${placeholder}" 
                 value="${escapeAttr(value)}" 
                 oninput="updateTableCell(${block.id}, ${row}, ${col}, this.value)"
@@ -994,9 +1050,8 @@ function renderRefEditor(block, deleteBtn) {
 function renderAIEditor(block, deleteBtn) {
     const ai = block.aiData || {};
     
-    // Obtener el nombre del estudiante del header si existe
-    const headerBlock = reportData.find(b => b.type === 'header');
-    const studentName = headerBlock && headerBlock.hData ? headerBlock.hData.name : '';
+    // Nombre del alumno del encabezado (se usa si no se escribe otro aquí)
+    const studentName = getHeaderStudentName(JSON.parse(localStorage.getItem('global_header_data')));
     
     return `
         <div class="block-card ai-card">
@@ -1038,7 +1093,7 @@ function renderAIEditor(block, deleteBtn) {
                     <p style="margin: 0 0 10px 0; font-size: 0.9em; color: #555;">
                         <strong>Completa los siguientes campos para cada uso de IA:</strong>
                     </p>
-                    <input type="text" class="editor-input" placeholder="Nombre del estudiante" value="${escapeAttr(ai.name)}" oninput="updateAI(${block.id}, 'name', this.value)">
+                    <input type="text" class="editor-input" placeholder="${studentName ? `Nombre del estudiante (por defecto: ${escapeAttr(studentName)})` : 'Nombre del estudiante'}" value="${escapeAttr(ai.name)}" oninput="updateAI(${block.id}, 'name', this.value)">
                     <input type="text" class="editor-input" placeholder="IA utilizada (ej. ChatGPT, Claude, Gemini)" value="${escapeAttr(ai.aiTool)}" oninput="updateAI(${block.id}, 'aiTool', this.value)">
                     <input type="date" class="editor-input" placeholder="Fecha de uso" value="${escapeAttr(ai.date)}" oninput="updateAI(${block.id}, 'date', this.value)">
                     <input type="text" class="editor-input" placeholder="Propósito (ej. depuración, investigación, redacción)" value="${escapeAttr(ai.purpose)}" oninput="updateAI(${block.id}, 'purpose', this.value)">
@@ -1212,7 +1267,7 @@ case 'header':
                 <div class="p-header">
                     ${logosHTML}
                     <p><strong>Institución:</strong> ${escapeHtml(currentUni.name || '')}</p>
-                    <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(liveData.term)}° Cuatrimestre)` : ''}</p>
+                    <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(formatTerm(liveData.term))})` : ''}</p>
                     <p><strong>Profesor:</strong> ${escapeHtml(liveData.prof || '')}</p>
                     <p>${nombresHtmlFinal} ${liveData.group ? `| <strong>Grupo:</strong> ${escapeHtml(liveData.group)}` : ''}</p>
                     <p><strong>Fecha:</strong> ${escapeHtml(liveData.date || '')}</p>
@@ -1234,8 +1289,8 @@ case 'header':
                 if (!block.aiData) return '';
                 const ai = block.aiData;
                 
-                // Ahora lee el nombre del estudiante directamente desde nuestro savedHeader
-                const studentName = savedHeader.name || '[Nombre del estudiante]';
+                // Nombre(s) del alumno tomados del encabezado
+                const studentName = getHeaderStudentName(savedHeader) || '[Nombre del estudiante]';
 
                 if (block.aiUsed === 'no') {
                     const declarantName = ai.name || studentName;
@@ -1314,7 +1369,7 @@ function exportTXT() {
                 textContent += `DATOS DEL ESTUDIANTE\n`;
                 textContent += `-`.repeat(40) + "\n";
                 textContent += `Institución: ${exportUni.name || 'N/A'}\n`;
-                textContent += `Materia: ${savedHeader.subject || 'N/A'} (${savedHeader.term || 'N/A'}° Cuatrimestre)\n`;
+                textContent += `Materia: ${savedHeader.subject || 'N/A'} (${formatTerm(savedHeader.term) || 'N/A'})\n`;
                 textContent += `Profesor: ${savedHeader.prof || 'N/A'}\n`;
                 textContent += `Alumno: ${alumnoLabel || 'N/A'} | Grupo: ${savedHeader.group || 'N/A'}\n`;
                 textContent += `Fecha: ${savedHeader.date || 'N/A'}\n`;
@@ -1436,8 +1491,8 @@ function exportTXT() {
             case 'ai':
                 if (block.aiData) {
                     const ai = block.aiData;
-                    // Ahora lee el nombre del estudiante directamente desde nuestro savedHeader
-                    const studentName = savedHeader.name || '[Nombre del estudiante]';
+                    // Nombre(s) del alumno tomados del encabezado
+                    const studentName = getHeaderStudentName(savedHeader) || '[Nombre del estudiante]';
                     
                     textContent += `\n${"=".repeat(60)}\n`;
                     textContent += `DECLARACIÓN DE USO DE INTELIGENCIA ARTIFICIAL\n`;
@@ -1608,8 +1663,22 @@ function getUniversities() {
     return list;
 }
 
+/**
+ * Guarda la lista de universidades. Devuelve false si el navegador se quedó
+ * sin espacio (los logos son lo que más ocupa).
+ */
 function saveUniversities(list) {
-    localStorage.setItem('list_universities', JSON.stringify(list));
+    try {
+        localStorage.setItem('list_universities', JSON.stringify(list));
+        return true;
+    } catch (e) {
+        console.error('Error al guardar universidades:', e);
+        alert(
+            'No se pudo guardar: el navegador se quedó sin espacio.\n\n' +
+            'Prueba con logos más pequeños o elimina universidades que ya no uses.'
+        );
+        return false;
+    }
 }
 
 function getUniversityById(id) {
@@ -1678,15 +1747,52 @@ document.addEventListener('DOMContentLoaded', function() {
 // MODAL PARA AÑADIR / EDITAR UNIVERSIDADES
 // ==========================================
 
+// Tamaño máximo (en píxeles, por lado) con el que se guardan los logos.
+// En el documento se muestran a 80px de alto, así que 400px sobra para que
+// se vean nítidos también al imprimir, y ocupan muy poco espacio.
+const LOGO_MAX_SIZE = 400;
+
+/**
+ * Reduce una imagen a LOGO_MAX_SIZE px como máximo por lado. Devuelve un
+ * data URL. Los PNG/GIF/WebP se guardan como PNG (conservan la transparencia)
+ * y las fotos JPEG como JPEG. Los SVG se dejan igual porque ya son ligeros.
+ */
+function shrinkLogoDataUrl(dataUrl, mimeType) {
+    return new Promise(resolve => {
+        if (mimeType === 'image/svg+xml') {
+            resolve(dataUrl);
+            return;
+        }
+
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, LOGO_MAX_SIZE / Math.max(img.width, img.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const isJpeg = mimeType === 'image/jpeg';
+            const resized = isJpeg ? canvas.toDataURL('image/jpeg', 0.9) : canvas.toDataURL('image/png');
+
+            // Si por algo la versión "reducida" pesa más, conservamos la original.
+            resolve(resized.length < dataUrl.length ? resized : dataUrl);
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+    });
+}
+
 function previewLogoFile(input, previewId) {
-    if (!input.files[0]) return;
+    const file = input.files[0];
+    if (!file) return;
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         const img = document.getElementById(previewId);
-        img.src = e.target.result;
+        img.src = await shrinkLogoDataUrl(e.target.result, file.type);
         img.style.display = 'inline-block';
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
 }
 
 function closeUniversityModal() {
@@ -1812,7 +1918,8 @@ function saveUniversityFromModal(editingId) {
         themeToApply = id;
     }
 
-    saveUniversities(universities);
+    // Si no hubo espacio, dejamos el modal abierto para que se pueda corregir.
+    if (!saveUniversities(universities)) return;
     closeUniversityModal();
     renderThemeSelector();
     changeTheme(themeToApply);
@@ -2025,16 +2132,8 @@ function renderSimpleListTab(content, storageKey) {
  */
 function saveJSON() {
     try {
-        // Crear objeto con todos los datos del proyecto
-        const projectData = {
-            version: '2.0',
-            timestamp: new Date().toISOString(),
-            theme: document.body.getAttribute('data-theme') || 'generic',
-            reportData: reportData
-        };
-
-        // Convertir a JSON con formato legible
-        const jsonString = JSON.stringify(projectData, null, 2);
+        // Convertir el proyecto completo a JSON con formato legible
+        const jsonString = buildProjectJSON();
 
         // Crear Blob
         const blob = new Blob([jsonString], { type: 'application/json' });
@@ -2065,6 +2164,98 @@ function saveJSON() {
         console.error('Error al guardar proyecto:', error);
         alert('Error al guardar el proyecto. Por favor intenta de nuevo.');
     }
+}
+
+/**
+ * Reúne todo lo que forma un proyecto: los bloques, el tema, los datos del
+ * encabezado y la configuración (universidades, materias, profesores y el
+ * vínculo materia → profesor). Así el proyecto se puede abrir en otra
+ * computadora o navegador sin perder nada.
+ */
+function buildProjectData() {
+    let headerData = null;
+    try {
+        headerData = JSON.parse(localStorage.getItem('global_header_data'));
+    } catch (e) {
+        headerData = null;
+    }
+
+    return {
+        version: '2.1',
+        timestamp: new Date().toISOString(),
+        theme: document.body.getAttribute('data-theme') || 'generic',
+        reportData: reportData,
+        headerData: headerData,
+        settings: {
+            universities: getUniversities(),
+            subjects: getSimpleList('list_subjects'),
+            profs: getSimpleList('list_profs'),
+            subjectProfMap: getSubjectProfMap()
+        }
+    };
+}
+
+/**
+ * Integra la configuración de un proyecto con la de este navegador sin borrar
+ * nada: añade las universidades, materias, profesores y vínculos que falten.
+ * Si algo ya existe aquí, se conserva la versión local.
+ */
+function mergeProjectSettings(settings) {
+    if (!settings || typeof settings !== 'object') return;
+
+    if (Array.isArray(settings.universities)) {
+        const universities = getUniversities();
+        settings.universities.forEach(u => {
+            if (u && u.id && u.name && !universities.some(local => local.id === u.id)) {
+                universities.push(u);
+            }
+        });
+        saveUniversities(universities);
+    }
+
+    [['list_subjects', settings.subjects], ['list_profs', settings.profs]].forEach(([key, incoming]) => {
+        if (!Array.isArray(incoming)) return;
+        const list = getSimpleList(key);
+        incoming.forEach(item => {
+            if (typeof item === 'string' && item.trim() && !list.includes(item)) list.push(item);
+        });
+        saveSimpleList(key, list);
+    });
+
+    if (settings.subjectProfMap && typeof settings.subjectProfMap === 'object') {
+        const map = getSubjectProfMap();
+        Object.entries(settings.subjectProfMap).forEach(([subject, prof]) => {
+            if (!(subject in map) && typeof prof === 'string') map[subject] = prof;
+        });
+        saveSubjectProfMap(map);
+    }
+}
+
+/**
+ * Aplica un proyecto ya leído (de un archivo o de Google Drive).
+ * Los proyectos antiguos (sin headerData/settings) siguen funcionando igual.
+ */
+function applyProjectData(projectData) {
+    if (!projectData.reportData || !Array.isArray(projectData.reportData)) {
+        throw new Error('Formato de archivo inválido');
+    }
+
+    // Primero la configuración: el tema del proyecto puede ser una
+    // universidad personalizada que todavía no existe en este navegador.
+    mergeProjectSettings(projectData.settings);
+
+    if (projectData.headerData && typeof projectData.headerData === 'object') {
+        localStorage.setItem('global_header_data', JSON.stringify(projectData.headerData));
+    }
+
+    reportData = projectData.reportData;
+
+    renderThemeSelector();
+    if (projectData.theme) {
+        changeTheme(projectData.theme);
+    }
+
+    render();
 }
 
 /**
@@ -2112,20 +2303,8 @@ function loadJSON(input) {
                 }
             }
 
-            // Cargar datos
-            reportData = projectData.reportData;
-
-            // Cargar tema si está disponible
-            if (projectData.theme) {
-                changeTheme(projectData.theme);
-                const selector = document.getElementById('themeSelector');
-                if (selector) {
-                    selector.value = projectData.theme;
-                }
-            }
-
-            // Renderizar
-            render();
+            // Cargar bloques, encabezado, configuración y tema
+            applyProjectData(projectData);
 
             // Limpiar input para permitir cargar el mismo archivo de nuevo
             input.value = '';
@@ -2282,16 +2461,10 @@ function updateDriveUI(connected) {
 }
 
 /**
- * Construye el mismo JSON de proyecto que usa saveJSON(), para reutilizarlo
- * también al guardar en Google Drive.
+ * JSON del proyecto completo; lo usan tanto saveJSON() como Google Drive.
  */
 function buildProjectJSON() {
-    return JSON.stringify({
-        version: '2.0',
-        timestamp: new Date().toISOString(),
-        theme: document.body.getAttribute('data-theme') || 'generic',
-        reportData: reportData
-    }, null, 2);
+    return JSON.stringify(buildProjectData(), null, 2);
 }
 
 /**
@@ -2446,19 +2619,9 @@ async function loadProjectFromDrive(fileId, fileName) {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const projectData = await res.json();
 
-        if (!projectData.reportData || !Array.isArray(projectData.reportData)) {
-            throw new Error('Formato de archivo inválido');
-        }
-
-        reportData = projectData.reportData;
+        applyProjectData(projectData);
         driveCurrentFileId = fileId;
         driveCurrentFileName = fileName;
-
-        if (projectData.theme) {
-            changeTheme(projectData.theme);
-        }
-
-        render();
         alert(`Proyecto "${fileName}" cargado desde Google Drive.`);
     } catch (err) {
         console.error('Error al cargar desde Drive:', err);
