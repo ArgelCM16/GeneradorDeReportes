@@ -20,9 +20,9 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="CSS/style.css" />
+    <link rel="stylesheet" href="CSS/style.css?v=2.2.4" />
     <!-- Rediseño visual (Google Stitch). Quitar esta línea vuelve al diseño anterior. -->
-    <link rel="stylesheet" href="CSS/redesign.css" />
+    <link rel="stylesheet" href="CSS/redesign.css?v=2.2.4" />
     <link rel="icon" href="ASSETS/favicon.png" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
@@ -36,7 +36,7 @@
           <div class="sidebar-brand-text">
             <div class="sidebar-brand-title">Generador de Reportes</div>
             <div class="sidebar-brand-subtitle">
-              Reportes académicos <span class="sidebar-brand-version">v2.1</span>
+              Reportes académicos <span class="sidebar-brand-version">v2.2</span>
             </div>
           </div>
         </div>
@@ -179,7 +179,12 @@
         <div class="credits">
           <p>Desarrollado por <strong>Jorge Javier Pedrozo Romero</strong></p>
           <p>Modificado por <strong>Argel Alberto Cano Morales</strong></p>
-          <p class="credits-version">v2.1.0 • Septiembre 2026</p>
+          <p class="credits-version">v2.2.0 • Octubre 2026</p>
+          <p class="credits-legal">
+            <a href="terminos.html" target="_blank" rel="noopener">Términos y condiciones</a>
+            ·
+            <a href="privacidad.html" target="_blank" rel="noopener">Política de privacidad</a>
+          </p>
         </div>
       </div>
 
@@ -214,6 +219,18 @@
       <!-- Columna del editor -->
       <section class="editor-pane">
         <div class="editor-toolbar">
+          <!-- Solo en celular: abre el menú lateral -->
+          <button
+            type="button"
+            class="toolbar-icon-btn mobile-only"
+            id="mobile-menu-btn"
+            onclick="toggleSidebar()"
+            aria-label="Abrir menú"
+            title="Menú"
+          >
+            <span class="material-symbols-outlined">menu</span>
+          </button>
+
           <div class="editor-toolbar-title">
             <!-- Nombre del documento: se usa al guardar el PDF, el TXT y el proyecto -->
             <label class="document-name-wrap" title="Nombre del documento (se usa al guardar el PDF, el TXT y el proyecto)">
@@ -241,6 +258,18 @@
           >
             <span class="material-symbols-outlined">note_add</span>
             <span>Nuevo</span>
+          </button>
+
+          <!-- Mostrar / ocultar la vista previa (en computadora) -->
+          <button
+            type="button"
+            class="toolbar-btn desktop-only"
+            id="preview-toggle-btn"
+            onclick="togglePreviewVisible()"
+            title="Ocultar la vista previa para que el editor ocupe todo el ancho"
+          >
+            <span class="material-symbols-outlined" id="preview-toggle-icon">visibility_off</span>
+            <span id="preview-toggle-label">Ocultar vista previa</span>
           </button>
 
           <!-- Clic para activar / desactivar el autoguardado -->
@@ -301,6 +330,17 @@
           >
             <span class="material-symbols-outlined" id="preview-expand-icon">open_in_full</span>
           </button>
+
+          <!-- Ocultar la vista previa por completo -->
+          <button
+            type="button"
+            class="preview-expand-btn desktop-only"
+            id="preview-hide-btn"
+            onclick="setPreviewHidden(true)"
+            title="Ocultar vista previa"
+          >
+            <span class="material-symbols-outlined">close</span>
+          </button>
         </div>
 
         <div class="preview-scroll">
@@ -314,6 +354,22 @@
       </section>
     </main>
 
-    <script src="JS/script.js"></script>
+    <!-- Solo en celular: fondo oscuro detrás del menú abierto -->
+    <div class="sidebar-backdrop" onclick="toggleSidebar(false)"></div>
+
+    <!-- Solo en celular: cambiar entre el editor y la vista previa -->
+    <nav class="mobile-tabs" aria-label="Cambiar entre editor y vista previa">
+      <button type="button" data-view="editor" class="is-active" onclick="setMobileView('editor')">
+        <span class="material-symbols-outlined">edit_note</span>
+        <span>Editor</span>
+      </button>
+      <button type="button" data-view="preview" onclick="setMobileView('preview')">
+        <span class="material-symbols-outlined">visibility</span>
+        <span>Vista previa</span>
+      </button>
+    </nav>
+
+    <!-- ?v=...: súbelo cada vez que cambien el CSS o el JS, para que el navegador no use una copia vieja -->
+    <script src="JS/script.js?v=2.2.4"></script>
   </body>
 </html>

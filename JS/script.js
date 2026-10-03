@@ -464,29 +464,28 @@ function renderHeaderEditor(block, deleteBtn) {
 
     // Los datos se guardan automáticamente con cada cambio (ver
     // persistHeaderFromDOM), así que el formulario siempre está editable.
-    const d = savedData || { names: [], name: '', group: '', subject: '', prof: '', term: '', date: '', isTeam: false };
+    // Sin datos todavía (documento nuevo): se llenan con el perfil del usuario
+    const d = savedData || getHeaderDefaultsFromProfile();
 
     const displayAddBtn = d.isTeam ? 'inline-block' : 'none';
 
-    // Lógica para renderizar los inputs de nombres guardados
-    let membersHtml = '';
+    // Qué campos se muestran y cómo se llaman (Configuración → Encabezado)
+    const fieldCfg = getHeaderFieldConfig();
+    const fieldStyle = key => fieldCfg[key].show ? '' : ' style="display: none;"';
+    const fieldLabel = key => escapeHtml(getHeaderFieldLabel(key, 'editor'));
+
+    // Una fila por estudiante: nombre + matrícula
     const namesArray = (d.names && d.names.length > 0) ? d.names : [d.name || ''];
+    const idsArray = d.studentIds || [];
+    const membersHtml = namesArray
+        .map((name, i) => buildMemberRowHTML(name, idsArray[i] || '', i, d.isTeam))
+        .join('');
 
-    namesArray.forEach((name, i) => {
-        let placeholderText = d.isTeam ? `Nombre del integrante ${i + 1}` : 'Nombre del Alumno';
-        
-        let deleteBtnElement = (d.isTeam && i > 0) ? 
-            `<button type="button" class="icon-btn action-icon btn-remove-member" onclick="removeTeamMember(this)" title="Eliminar integrante">🗑️</button>` : '';
-
-        // FORZAMOS EL TAMAÑO: display: flex y flex: 1 en el input
-        membersHtml += `
-            <div class="input-with-action member-row" style="display: flex; width: 100%;">
-                <input type="text" class="student-name-input" placeholder="${placeholderText}" value="${escapeAttr(name)}" oninput="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
-                ${deleteBtnElement}
-            </div>
-        `;
-    });
-
+    // Compañeros guardados para elegir en tareas en equipo
+    const classmates = getClassmates();
+    const classmateOptions = classmates
+        .map((c, i) => `<option value="${i}">${escapeHtml(c.name)}${c.studentId ? ` (${escapeHtml(c.studentId)})` : ''}</option>`)
+        .join('');
     return `
         <div class="block-card header-card${d.coverMode ? ' is-cover-mode' : ''}" id="header-card-main" data-cover-mode="${d.coverMode ? '1' : '0'}">
             ${deleteBtn}
@@ -506,9 +505,15 @@ function renderHeaderEditor(block, deleteBtn) {
                     ${membersHtml}
                 </div>
                 
-                <button type="button" id="btn-add-member" class="action-btn" onclick="addTeamMember()" style="display: ${displayAddBtn};">
-                    ➕ Añadir integrante
-                </button>
+                <div class="team-actions">
+                    <button type="button" id="btn-add-member" class="action-btn" onclick="addTeamMember()" style="display: ${displayAddBtn};">
+                        ➕ Añadir integrante
+                    </button>
+                    <select id="classmate-picker" class="classmate-picker" onchange="addClassmateToTeam(this)" title="Tus compañeros se administran en ⚙️ Configuración → Compañeros" style="display: ${d.isTeam && classmates.length ? '' : 'none'};">
+                        <option value="">👥 Añadir compañero de la lista...</option>
+                        ${classmateOptions}
+                    </select>
+                </div>
             </div>
 
             <!-- Cada campo lleva su etiqueta arriba, para saber qué es aunque ya esté lleno -->
@@ -519,42 +524,42 @@ function renderHeaderEditor(block, deleteBtn) {
                     <input type="text" id="header-task-name" placeholder="Ej. Práctica 3: Redes Neuronales" value="${escapeAttr(d.taskName || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
-                <div class="header-field">
-                    <label for="header-group">Grupo</label>
+                <div class="header-field" data-field="group"${fieldStyle('group')}>
+                    <label for="header-group">${fieldLabel('group')}</label>
                     <input type="text" id="header-group" placeholder="Ej. IDY-7A" value="${escapeAttr(d.group || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
-                <div class="header-field">
-                    <label for="select-subject-main">Materia</label>
+                <div class="header-field" data-field="subject"${fieldStyle('subject')}>
+                    <label for="select-subject-main">${fieldLabel('subject')}</label>
                     <select id="select-subject-main" required onchange="onHeaderSubjectChange(this)" title="Las materias se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
                         ${generateSelectOptions('list_subjects', d.subject, 'Selecciona una materia...')}
                     </select>
                 </div>
 
-                <div class="header-field">
-                    <label for="select-prof-main">Profesor</label>
+                <div class="header-field" data-field="prof"${fieldStyle('prof')}>
+                    <label for="select-prof-main">${fieldLabel('prof')}</label>
                     <select id="select-prof-main" required onchange="renderPreview()" title="Los profesores se administran en ⚙️ Configuración" style="width: 100%; box-sizing: border-box;">
                         ${generateSelectOptions('list_profs', d.prof, 'Selecciona un profesor...')}
                     </select>
                 </div>
 
-                <div class="header-field">
-                    <label for="header-inst-display">Institución</label>
+                <div class="header-field" data-field="institution"${fieldStyle('institution')}>
+                    <label for="header-inst-display">${fieldLabel('institution')}</label>
                     <input type="text" id="header-inst-display" value="${escapeAttr(currentInstName)}" disabled readonly title="La institución se define según el tema seleccionado en el menú lateral. Las universidades se administran en ⚙️ Configuración." style="width: 100%; box-sizing: border-box; background: #f0f0f0; cursor: not-allowed;">
                 </div>
 
-                <div class="header-field header-field-wide">
-                    <label for="header-career">Carrera</label>
+                <div class="header-field header-field-wide" data-field="career"${fieldStyle('career')}>
+                    <label for="header-career">${fieldLabel('career')}</label>
                     <input type="text" id="header-career" placeholder="Ej. Ingeniería en Datos" value="${escapeAttr(d.career || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
-                <div class="header-field">
-                    <label for="header-term">Cuatrimestre</label>
+                <div class="header-field" data-field="term"${fieldStyle('term')}>
+                    <label for="header-term">${fieldLabel('term')}</label>
                     <input type="text" id="header-term" placeholder="Ej. 7" value="${escapeAttr(d.term || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
-                <div class="header-field">
-                    <label for="header-date">Fecha de entrega</label>
+                <div class="header-field" data-field="date"${fieldStyle('date')}>
+                    <label for="header-date">${fieldLabel('date')}</label>
                     <input type="date" id="header-date" value="${escapeAttr(d.date || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
                 </div>
             </div>
@@ -628,6 +633,9 @@ function toggleTeamMode(checkbox) {
     const namesLabel = document.getElementById('label-student-names');
     if (namesLabel) namesLabel.textContent = isTeam ? 'Integrantes del equipo' : 'Nombre del alumno';
 
+    const picker = document.getElementById('classmate-picker');
+    if (picker) picker.style.display = isTeam && getClassmates().length ? '' : 'none';
+
     if (isTeam) {
         // MODO EQUIPO: Mostrar botón de añadir
         addMemberBtn.style.display = 'inline-block';
@@ -663,26 +671,69 @@ function toggleTeamMode(checkbox) {
     }
 }   
 
-// Añade un nuevo input al contenedor
-function addTeamMember() {
+/**
+ * HTML de la fila de un estudiante: nombre + matrícula (+ botón para quitarlo).
+ */
+function buildMemberRowHTML(name, studentId, index, isTeam) {
+    const showId = isHeaderFieldShown('studentId');
+    const placeholder = isTeam ? `Nombre del integrante ${index + 1}` : 'Nombre del Alumno';
+    // La primera fila (tu nombre) no se elimina, solo se limpia; las demás se quitan
+    const deleteBtn = (isTeam && index > 0)
+        ? `<button type="button" class="icon-btn action-icon btn-remove-member" onclick="removeTeamMember(this)" title="Eliminar integrante">🗑️</button>`
+        : (index === 0
+            ? `<button type="button" class="icon-btn action-icon btn-clear-member" onclick="clearMemberRow(this)" title="Limpiar nombre y matrícula">🧹</button>`
+            : '');
+    return `
+        <div class="input-with-action member-row" style="display: flex; width: 100%;">
+            <input type="text" class="student-name-input" placeholder="${placeholder}" value="${escapeAttr(name || '')}" oninput="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
+            <input type="text" class="student-id-input" placeholder="${escapeAttr(getHeaderFieldLabel('studentId', 'editor'))}" value="${escapeAttr(studentId || '')}" oninput="renderPreview()" title="${escapeAttr(getHeaderFieldLabel('studentId', 'editor'))}"${showId ? '' : ' style="display: none;"'}>
+            ${deleteBtn}
+        </div>`;
+}
+
+/**
+ * Deja en blanco el nombre y la matrícula de una fila (sin quitarla).
+ */
+function clearMemberRow(button) {
+    const row = button.closest('.member-row');
+    if (!row) return;
+    row.querySelectorAll('.student-name-input, .student-id-input').forEach(input => { input.value = ''; });
+    row.querySelector('.student-name-input').focus();
+    renderPreview();
+}
+
+// Añade una fila de integrante (vacía o con los datos de un compañero)
+function addTeamMember(name = '', studentId = '') {
     const container = document.getElementById('team-members-container');
-    const count = container.querySelectorAll('.student-name-input').length;
-    
-    // Crear el nuevo contenedor con formato
-    const newMemberRow = document.createElement('div');
-    newMemberRow.className = 'input-with-action member-row';
-    newMemberRow.style.width = '100%';
-    
-    // Inyectar el input y su botón de eliminar
-    newMemberRow.innerHTML = `
-        <input type="text" class="student-name-input" placeholder="Nombre del integrante ${count + 1}" oninput="renderPreview()">
-        <button type="button" class="icon-btn action-icon btn-remove-member" onclick="removeTeamMember(this)" title="Eliminar integrante">🗑️</button>
-    `;
-    
-    container.appendChild(newMemberRow);
-    
+    const count = container.querySelectorAll('.member-row').length;
+    container.insertAdjacentHTML('beforeend', buildMemberRowHTML(name, studentId, count, true));
+
     if (typeof renderPreview === 'function') {
         renderPreview();
+    }
+}
+
+/**
+ * Agrega al equipo al compañero elegido en la lista: llena la primera fila
+ * vacía o crea una nueva.
+ */
+function addClassmateToTeam(select) {
+    const classmate = getClassmates()[parseInt(select.value, 10)];
+    select.value = '';
+    if (!classmate) return;
+
+    const rows = Array.from(document.querySelectorAll('#team-members-container .member-row'));
+    const alreadyThere = rows.some(r => r.querySelector('.student-name-input').value.trim() === classmate.name);
+    if (alreadyThere) return;
+
+    const emptyRow = rows.find(r => !r.querySelector('.student-name-input').value.trim());
+    if (emptyRow) {
+        emptyRow.querySelector('.student-name-input').value = classmate.name;
+        const idInput = emptyRow.querySelector('.student-id-input');
+        if (idInput) idInput.value = classmate.studentId || '';
+        renderPreview();
+    } else {
+        addTeamMember(classmate.name, classmate.studentId || '');
     }
 }
 
@@ -866,16 +917,17 @@ function getHeaderStudentName(headerData) {
 }
 
 /**
- * Da formato al cuatrimestre sin repetir la palabra:
- * "7" -> "7° Cuatrimestre", "7mo" -> "7mo Cuatrimestre",
- * "7mo Cuatrimestre" -> se deja igual.
+ * Da formato al periodo sin repetir la palabra, según el tipo de periodo del
+ * perfil (cuatrimestre, semestre o año escolar):
+ * "7" -> "7° Semestre", "7mo" -> "7mo Semestre", "7mo Semestre" -> igual.
  */
 function formatTerm(term) {
     const t = (term || '').trim();
     if (!t) return '';
-    if (/cuatrimestre/i.test(t)) return t;
-    if (/^\d+$/.test(t)) return `${t}° Cuatrimestre`;
-    return `${t} Cuatrimestre`;
+    if (/cuatrimestre|semestre|año|ano escolar/i.test(t)) return t;
+    const word = getPeriodWord();
+    if (/^\d+$/.test(t)) return `${t}° ${word}`;
+    return `${t} ${word}`;
 }
 
 // ==========================================
@@ -899,6 +951,8 @@ function readHeaderFromDOM(card) {
 
     return {
         names: Array.from(card.querySelectorAll('.student-name-input')).map(input => input.value),
+        studentIds: Array.from(card.querySelectorAll('#team-members-container .member-row'))
+            .map(row => { const idInput = row.querySelector('.student-id-input'); return idInput ? idInput.value : ''; }),
         isTeam: checked('check-is-team'),
         group: value('header-group'),
         subject: value('select-subject-main'),
@@ -1000,15 +1054,20 @@ function renderCoverPreview(headerData, uni) {
     const h = headerData || {};
     const u = uni || {};
 
-    const names = ((h.names && h.names.length) ? h.names : [h.name || ''])
-        .map(n => (n || '').trim()).filter(Boolean);
+    const show = key => isHeaderFieldShown(key);
+    const lbl = key => escapeHtml(getHeaderFieldLabel(key, 'preview'));
+    const people = getHeaderPeople(h);
+    const showIds = show('studentId');
     const emptyName = '<span class="p-cover-empty">[Nombre del alumno]</span>';
     const studentsHtml = h.isTeam
-        ? `<div class="p-cover-row p-cover-students"><span>Integrantes:</span>${names.length ? names.map(n => `<div>${escapeHtml(n)}</div>`).join('') : `<div>${emptyName}</div>`}</div>`
-        : `<div class="p-cover-row"><span>Alumno:</span> ${names.length ? escapeHtml(names[0]) : emptyName}</div>`;
+        ? `<div class="p-cover-row p-cover-students"><span>Integrantes:</span>${people.length
+            ? people.map(p => `<div>${escapeHtml(p.name)}${showIds && p.id ? ` (${escapeHtml(p.id)})` : ''}</div>`).join('')
+            : `<div>${emptyName}</div>`}</div>`
+        : `<div class="p-cover-row"><span>Alumno:</span> ${people.length ? escapeHtml(people[0].name) : emptyName}</div>` +
+          (showIds && people.length && people[0].id ? `<div class="p-cover-row"><span>${lbl('studentId')}:</span> ${escapeHtml(people[0].id)}</div>` : '');
 
-    const row = (label, value) => value
-        ? `<div class="p-cover-row"><span>${label}:</span> ${escapeHtml(value)}</div>` : '';
+    const row = (key, value) => (show(key) && value)
+        ? `<div class="p-cover-row"><span>${lbl(key)}:</span> ${escapeHtml(value)}</div>` : '';
 
     const logos = (h.includeLogo && (u.logoLeft || u.logoRight)) ? `
         <div class="p-cover-logos">
@@ -1021,17 +1080,17 @@ function renderCoverPreview(headerData, uni) {
     return `
         <div class="p-cover">
             ${logos}
-            <div class="p-cover-uni">${escapeHtml(u.id === 'generic' ? '' : (u.name || ''))}</div>
-            ${h.career ? `<div class="p-cover-career">${escapeHtml(h.career)}</div>` : ''}
+            <div class="p-cover-uni">${escapeHtml(!show('institution') || u.id === 'generic' ? '' : (u.name || ''))}</div>
+            ${show('career') && h.career ? `<div class="p-cover-career">${escapeHtml(h.career)}</div>` : ''}
             <div class="p-cover-title">${task ? escapeHtml(task) : '<span class="p-cover-empty">[Nombre de la tarea]</span>'}</div>
             <div class="p-cover-details">
-                ${row('Materia', h.subject)}
-                ${row('Profesor', h.prof)}
+                ${row('subject', h.subject)}
+                ${row('prof', h.prof)}
                 ${studentsHtml}
-                ${row('Grupo', h.group)}
-                ${row('Cuatrimestre', formatTerm(h.term))}
+                ${row('group', h.group)}
+                ${row('term', formatTerm(h.term))}
             </div>
-            <div class="p-cover-date">${escapeHtml(formatLongDate(h.date))}</div>
+            <div class="p-cover-date">${show('date') ? escapeHtml(formatLongDate(h.date)) : ''}</div>
         </div>`;
 }
 
@@ -1256,6 +1315,108 @@ function initPaneResizer() {
 }
 
 document.addEventListener('DOMContentLoaded', initPaneResizer);
+
+// ==========================================
+// MOSTRAR / OCULTAR LA VISTA PREVIA Y DISEÑO PARA CELULAR
+// En computadora la vista previa se puede ocultar por completo (el editor
+// ocupa todo el ancho). En celular hay un menú lateral que se abre con ☰ y
+// dos pestañas abajo para cambiar entre el editor y la vista previa.
+//
+// OJO: la vista previa oculta NO lleva display:none; se saca de la pantalla
+// con CSS para que se siga midiendo y paginando (si no, el índice tendría
+// números equivocados y la impresión saldría mal).
+// ==========================================
+
+const MOBILE_QUERY = '(max-width: 768px)';
+
+function isMobileLayout() {
+    return window.matchMedia(MOBILE_QUERY).matches;
+}
+
+function isPreviewHidden() {
+    return localStorage.getItem('previewHidden') === '1';
+}
+
+/**
+ * Oculta o muestra la vista previa en computadora (se recuerda).
+ */
+function setPreviewHidden(hidden) {
+    localStorage.setItem('previewHidden', hidden ? '1' : '0');
+    applyPreviewVisibility();
+}
+
+function togglePreviewVisible() {
+    if (isMobileLayout()) {
+        setMobileView(document.body.classList.contains('mobile-view-preview') ? 'editor' : 'preview');
+        return;
+    }
+    setPreviewHidden(!isPreviewHidden());
+}
+
+function applyPreviewVisibility() {
+    const hidden = isPreviewHidden();
+    document.body.classList.toggle('preview-is-hidden', hidden);
+
+    const icon = document.getElementById('preview-toggle-icon');
+    if (icon) icon.textContent = hidden ? 'visibility' : 'visibility_off';
+    const label = document.getElementById('preview-toggle-label');
+    if (label) label.textContent = hidden ? 'Mostrar vista previa' : 'Ocultar vista previa';
+    const btn = document.getElementById('preview-toggle-btn');
+    if (btn) {
+        btn.title = hidden ? 'Mostrar la vista previa' : 'Ocultar la vista previa para que el editor ocupe todo el ancho';
+        btn.classList.toggle('is-active', hidden);
+    }
+
+    if (getPreviewZoom() === 'fit') applyPreviewZoom();
+}
+
+/**
+ * Celular: muestra el editor o la vista previa (ocupan toda la pantalla).
+ * @param {'editor'|'preview'} view
+ */
+function setMobileView(view) {
+    const showPreview = view === 'preview';
+    document.body.classList.toggle('mobile-view-preview', showPreview);
+    document.querySelectorAll('.mobile-tabs button').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.view === view);
+    });
+    if (showPreview && getPreviewZoom() === 'fit') applyPreviewZoom();
+}
+
+/**
+ * Celular: abre o cierra el menú lateral.
+ * @param {boolean} [open] - sin valor, alterna
+ */
+function toggleSidebar(open) {
+    const shouldOpen = typeof open === 'boolean' ? open : !document.body.classList.contains('sidebar-open');
+    document.body.classList.toggle('sidebar-open', shouldOpen);
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    applyPreviewVisibility();
+
+    // Celular: al usar un botón del menú, el menú se cierra; si fue para
+    // agregar un bloque, se vuelve al editor para verlo.
+    const toolbox = document.querySelector('.toolbox');
+    if (toolbox) {
+        toolbox.addEventListener('click', event => {
+            if (!isMobileLayout()) return;
+            const button = event.target.closest('button');
+            if (!button || button.classList.contains('drive-help-btn')) return;
+            if (button.closest('.blocks-grid') || button.classList.contains('btn-ai')) setMobileView('editor');
+            toggleSidebar(false);
+        });
+    }
+
+    // Al pasar de celular a computadora (o al revés) se limpia el estado del otro modo
+    window.matchMedia(MOBILE_QUERY).addEventListener('change', e => {
+        if (!e.matches) {
+            toggleSidebar(false);
+            setMobileView('editor');
+        }
+        if (getPreviewZoom() === 'fit') applyPreviewZoom();
+    });
+});
 
 // ==========================================
 // VISTA PREVIA EN PÁGINAS REALES
@@ -1908,27 +2069,41 @@ case 'header':
                 `;
             }
 
-            // NUEVA LÓGICA: Procesamos los nombres para mostrarlos correctamente en el documento final
-            let nombresHtmlFinal = '';
-            const listaNombres = liveData.names || [liveData.name || ''];
+            // Solo los datos que el usuario eligió mostrar, con sus nombres
+            const show = key => isHeaderFieldShown(key);
+            const lbl = key => escapeHtml(getHeaderFieldLabel(key, 'preview'));
+            const people = getHeaderPeople(liveData);
+            const showIds = show('studentId');
 
+            let nombresHtmlFinal = '';
             if (liveData.isTeam) {
-                // Filtramos entradas vacías y las unimos con comas.
-                const nombresLimpios = listaNombres.filter(n => n.trim() !== '').map(n => escapeHtml(n)).join(', ');
-                nombresHtmlFinal = `<strong>Integrantes:</strong> ${nombresLimpios || '<em>(Sin integrantes)</em>'}`;
+                const list = people
+                    .map(p => escapeHtml(p.name) + (showIds && p.id ? ` (${escapeHtml(p.id)})` : ''))
+                    .join(', ');
+                nombresHtmlFinal = `<strong>Integrantes:</strong> ${list || '<em>(Sin integrantes)</em>'}`;
             } else {
-                nombresHtmlFinal = `<strong>Alumno:</strong> ${escapeHtml(listaNombres[0] || '')}`;
+                const p = people[0] || { name: '', id: '' };
+                nombresHtmlFinal = `<strong>Alumno:</strong> ${escapeHtml(p.name)}` +
+                    (showIds && p.id ? ` | <strong>${lbl('studentId')}:</strong> ${escapeHtml(p.id)}` : '');
+            }
+
+            const termText = show('term') && liveData.term ? formatTerm(liveData.term) : '';
+            let subjectLine = '';
+            if (show('subject')) {
+                subjectLine = `<p><strong>${lbl('subject')}:</strong> ${escapeHtml(liveData.subject || '')} ${termText ? `(${escapeHtml(termText)})` : ''}</p>`;
+            } else if (termText) {
+                subjectLine = `<p><strong>${lbl('term')}:</strong> ${escapeHtml(termText)}</p>`;
             }
 
             return `
                 <div class="p-header">
                     ${logosHTML}
-                    <p><strong>Institución:</strong> ${escapeHtml(currentUni.name || '')}</p>
-                    ${liveData.career ? `<p><strong>Carrera:</strong> ${escapeHtml(liveData.career)}</p>` : ''}
-                    <p><strong>Materia:</strong> ${escapeHtml(liveData.subject || '')} ${liveData.term ? `(${escapeHtml(formatTerm(liveData.term))})` : ''}</p>
-                    <p><strong>Profesor:</strong> ${escapeHtml(liveData.prof || '')}</p>
-                    <p>${nombresHtmlFinal} ${liveData.group ? `| <strong>Grupo:</strong> ${escapeHtml(liveData.group)}` : ''}</p>
-                    <p><strong>Fecha:</strong> ${escapeHtml(liveData.date || '')}</p>
+                    ${show('institution') ? `<p><strong>${lbl('institution')}:</strong> ${escapeHtml(currentUni.name || '')}</p>` : ''}
+                    ${show('career') && liveData.career ? `<p><strong>${lbl('career')}:</strong> ${escapeHtml(liveData.career)}</p>` : ''}
+                    ${subjectLine}
+                    ${show('prof') ? `<p><strong>${lbl('prof')}:</strong> ${escapeHtml(liveData.prof || '')}</p>` : ''}
+                    <p>${nombresHtmlFinal} ${show('group') && liveData.group ? `| <strong>${lbl('group')}:</strong> ${escapeHtml(liveData.group)}` : ''}</p>
+                    ${show('date') ? `<p><strong>${lbl('date')}:</strong> ${escapeHtml(liveData.date || '')}</p>` : ''}
                     <hr>
                 </div>`;
 
@@ -2026,39 +2201,42 @@ function exportTXT() {
                 // La institución se deriva del tema/universidad seleccionado, no de savedHeader
                 const exportThemeId = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
                 const exportUni = getUniversityById(exportThemeId) || getUniversityById('generic') || {};
-                const namesForExport = (savedHeader.names && savedHeader.names.length > 0) ? savedHeader.names : [savedHeader.name || ''];
-                const alumnoLabel = savedHeader.isTeam
-                    ? namesForExport.filter(n => n.trim() !== '').join(', ')
-                    : (namesForExport[0] || '');
+                const show = key => isHeaderFieldShown(key);
+                const lbl = key => getHeaderFieldLabel(key, 'preview');
+                const people = getHeaderPeople(savedHeader);
+                const peopleText = people
+                    .map(p => p.name + (show('studentId') && p.id ? ` (${p.id})` : ''))
+                    .join(', ');
 
                 if (savedHeader.coverMode) {
                     textContent += `PORTADA\n`;
                     textContent += `-`.repeat(40) + "\n";
-                    if (exportUni.id && exportUni.id !== 'generic') textContent += `${exportUni.name}\n`;
-                    if (savedHeader.career) textContent += `${savedHeader.career}\n`;
+                    if (show('institution') && exportUni.id && exportUni.id !== 'generic') textContent += `${exportUni.name}\n`;
+                    if (show('career') && savedHeader.career) textContent += `${savedHeader.career}\n`;
                     textContent += `\n${(savedHeader.taskName || '').trim() || '[Nombre de la tarea]'}\n\n`;
-                    if (savedHeader.subject) textContent += `Materia: ${savedHeader.subject}\n`;
-                    if (savedHeader.prof) textContent += `Profesor: ${savedHeader.prof}\n`;
-                    textContent += `${savedHeader.isTeam ? 'Integrantes' : 'Alumno'}: ${alumnoLabel || 'N/A'}\n`;
-                    if (savedHeader.group) textContent += `Grupo: ${savedHeader.group}\n`;
-                    if (savedHeader.term) textContent += `Cuatrimestre: ${formatTerm(savedHeader.term)}\n`;
-                    if (savedHeader.date) textContent += `${formatLongDate(savedHeader.date)}\n`;
+                    if (show('subject') && savedHeader.subject) textContent += `${lbl('subject')}: ${savedHeader.subject}\n`;
+                    if (show('prof') && savedHeader.prof) textContent += `${lbl('prof')}: ${savedHeader.prof}\n`;
+                    textContent += `${savedHeader.isTeam ? 'Integrantes' : 'Alumno'}: ${peopleText || 'N/A'}\n`;
+                    if (show('group') && savedHeader.group) textContent += `${lbl('group')}: ${savedHeader.group}\n`;
+                    if (show('term') && savedHeader.term) textContent += `${lbl('term')}: ${formatTerm(savedHeader.term)}\n`;
+                    if (show('date') && savedHeader.date) textContent += `${formatLongDate(savedHeader.date)}\n`;
                     textContent += `\n`;
                     break;
                 }
 
                 textContent += `DATOS DEL ESTUDIANTE\n`;
                 textContent += `-`.repeat(40) + "\n";
-                textContent += `Institución: ${exportUni.name || 'N/A'}\n`;
-                if (savedHeader.career) textContent += `Carrera: ${savedHeader.career}\n`;
-                textContent += `Materia: ${savedHeader.subject || 'N/A'} (${formatTerm(savedHeader.term) || 'N/A'})\n`;
-                textContent += `Profesor: ${savedHeader.prof || 'N/A'}\n`;
-                textContent += `Alumno: ${alumnoLabel || 'N/A'} | Grupo: ${savedHeader.group || 'N/A'}\n`;
-                textContent += `Fecha: ${savedHeader.date || 'N/A'}\n`;
+                if (show('institution')) textContent += `${lbl('institution')}: ${exportUni.name || 'N/A'}\n`;
+                if (show('career') && savedHeader.career) textContent += `${lbl('career')}: ${savedHeader.career}\n`;
+                if (show('subject')) textContent += `${lbl('subject')}: ${savedHeader.subject || 'N/A'}${show('term') ? ` (${formatTerm(savedHeader.term) || 'N/A'})` : ''}\n`;
+                else if (show('term') && savedHeader.term) textContent += `${lbl('term')}: ${formatTerm(savedHeader.term)}\n`;
+                if (show('prof')) textContent += `${lbl('prof')}: ${savedHeader.prof || 'N/A'}\n`;
+                textContent += `${savedHeader.isTeam ? 'Integrantes' : 'Alumno'}: ${peopleText || 'N/A'}${show('group') ? ` | ${lbl('group')}: ${savedHeader.group || 'N/A'}` : ''}\n`;
+                if (show('date')) textContent += `${lbl('date')}: ${savedHeader.date || 'N/A'}\n`;
                 textContent += `\n`;
                 break;
             }
-            
+
             case 'toc': {
                 textContent += `${((block.content || '').trim() || 'Índice').toUpperCase()}\n`;
                 textContent += `-`.repeat(40) + "\n";
@@ -2647,6 +2825,7 @@ function saveUniversityFromModal(editingId) {
     renderThemeSelector();
     changeTheme(themeToApply);
     refreshSettingsModal();
+    if (onboardingState) renderOnboardingStep();
 }
 
 /**
@@ -2681,7 +2860,7 @@ function deleteUniversityFromList(uniId) {
 // profesores (antes eran botones sueltos junto a cada campo).
 // ==========================================
 
-let settingsActiveTab = 'universities';
+let settingsActiveTab = 'profile';
 
 function openSettingsModal(tab) {
     if (tab) settingsActiveTab = tab;
@@ -2694,9 +2873,13 @@ function openSettingsModal(tab) {
         <div class="university-modal settings-modal">
             <h3>⚙️ Configuración</h3>
             <div class="settings-tabs">
+                <button type="button" data-tab="profile">Mi perfil</button>
+                <button type="button" data-tab="header_fields">Encabezado</button>
                 <button type="button" data-tab="universities">Universidades</button>
                 <button type="button" data-tab="list_subjects">Materias</button>
                 <button type="button" data-tab="list_profs">Profesores</button>
+                <button type="button" data-tab="classmates">Compañeros</button>
+                <button type="button" data-tab="backup">Respaldo</button>
             </div>
             <div id="settings-tab-content"></div>
             <div class="university-modal-actions">
@@ -2737,7 +2920,15 @@ function refreshSettingsModal() {
     });
 
     const content = overlay.querySelector('#settings-tab-content');
-    if (settingsActiveTab === 'universities') {
+    if (settingsActiveTab === 'profile') {
+        renderProfileTab(content);
+    } else if (settingsActiveTab === 'header_fields') {
+        renderHeaderFieldsTab(content);
+    } else if (settingsActiveTab === 'backup') {
+        renderBackupTab(content);
+    } else if (settingsActiveTab === 'classmates') {
+        renderClassmatesTab(content);
+    } else if (settingsActiveTab === 'universities') {
         renderUniversitiesTab(content);
     } else {
         renderSimpleListTab(content, settingsActiveTab);
@@ -2844,6 +3035,835 @@ function renderSimpleListTab(content, storageKey) {
         });
     });
 }
+
+// ============================================================================
+// PERFIL DEL USUARIO, CAMPOS DEL ENCABEZADO Y COMPAÑEROS
+// Todo se guarda solo en este navegador.
+// ============================================================================
+
+const PERIOD_TYPES = { cuatrimestre: 'Cuatrimestre', semestre: 'Semestre', anio: 'Año escolar' };
+
+/**
+ * Perfil: { fullName, studentId, career, group, periodType, period, onboardingDone }.
+ * La universidad es la seleccionada en el tema.
+ */
+function getProfile() {
+    try {
+        const profile = JSON.parse(localStorage.getItem('user_profile'));
+        return profile && typeof profile === 'object' ? profile : {};
+    } catch (e) {
+        return {};
+    }
+}
+
+function saveProfile(profile) {
+    localStorage.setItem('user_profile', JSON.stringify(profile));
+}
+
+function getPeriodType() {
+    const type = getProfile().periodType;
+    return PERIOD_TYPES[type] ? type : 'cuatrimestre';
+}
+
+function getPeriodWord() {
+    return PERIOD_TYPES[getPeriodType()];
+}
+
+/**
+ * Valores iniciales del encabezado de un documento nuevo: los del perfil.
+ * Cambiarlos en el documento no cambia el perfil.
+ */
+function getHeaderDefaultsFromProfile() {
+    const p = getProfile();
+    return {
+        names: [p.fullName || ''], studentIds: [p.studentId || ''], isTeam: false,
+        group: p.group || '', career: p.career || '', term: p.period || '',
+        subject: '', prof: '', date: '', includeLogo: false, coverMode: false, taskName: ''
+    };
+}
+
+/**
+ * Pone los datos del perfil en el encabezado actual (conserva lo demás).
+ */
+function applyProfileToHeader() {
+    const p = getProfile();
+    const current = getHeaderData() || getHeaderDefaultsFromProfile();
+    const names = (current.names && current.names.length) ? [...current.names] : [''];
+    const ids = [...(current.studentIds || [])];
+    names[0] = p.fullName || names[0] || '';
+    ids[0] = p.studentId || ids[0] || '';
+    setHeaderData({
+        ...current, names, studentIds: ids,
+        group: p.group || current.group || '',
+        career: p.career || current.career || '',
+        term: p.period || current.term || ''
+    });
+    render();
+}
+
+/**
+ * Estudiantes del encabezado como [{ name, id }], sin filas vacías.
+ */
+function getHeaderPeople(headerData) {
+    const h = headerData || {};
+    const names = (h.names && h.names.length) ? h.names : [h.name || ''];
+    const ids = h.studentIds || [];
+    return names
+        .map((name, i) => ({ name: (name || '').trim(), id: (ids[i] || '').trim() }))
+        .filter(person => person.name);
+}
+
+// ---------- Campos del encabezado: mostrar/ocultar y renombrar ----------
+
+const HEADER_FIELDS = [
+    { key: 'institution', editor: 'Institución', preview: 'Institución', about: 'Nombre de la universidad o escuela' },
+    { key: 'career', editor: 'Carrera', preview: 'Carrera', about: 'Carrera, bachillerato, área...' },
+    { key: 'subject', editor: 'Materia', preview: 'Materia', about: 'Materia de la tarea' },
+    { key: 'prof', editor: 'Profesor', preview: 'Profesor', about: 'Profesor de la materia' },
+    { key: 'studentId', editor: 'Matrícula', preview: 'Matrícula', about: 'Matrícula de cada estudiante' },
+    { key: 'group', editor: 'Grupo', preview: 'Grupo', about: 'Grupo o salón' },
+    { key: 'term', editor: null, preview: null, about: 'Cuatrimestre, semestre o año escolar' },
+    { key: 'date', editor: 'Fecha de entrega', preview: 'Fecha', about: 'Fecha de entrega' }
+];
+
+function getHeaderFieldConfig() {
+    let stored = {};
+    try {
+        stored = JSON.parse(localStorage.getItem('header_fields')) || {};
+    } catch (e) {
+        stored = {};
+    }
+    const config = {};
+    HEADER_FIELDS.forEach(field => {
+        const saved = stored[field.key] || {};
+        config[field.key] = { show: saved.show !== false, label: (saved.label || '').trim() };
+    });
+    return config;
+}
+
+function saveHeaderFieldConfig(config) {
+    localStorage.setItem('header_fields', JSON.stringify(config));
+}
+
+function isHeaderFieldShown(key) {
+    const field = getHeaderFieldConfig()[key];
+    return !field || field.show;
+}
+
+/**
+ * Nombre de un campo: el personalizado o, si no hay, el de siempre.
+ * @param {'editor'|'preview'} context - en el editor "Fecha de entrega", en el documento "Fecha"
+ */
+function getHeaderFieldLabel(key, context = 'preview') {
+    const custom = (getHeaderFieldConfig()[key] || {}).label;
+    if (custom) return custom;
+    const field = HEADER_FIELDS.find(f => f.key === key);
+    return (field && field[context]) || getPeriodWord();
+}
+
+/**
+ * Editor de campos (lo usan la pestaña "Encabezado" y el asistente).
+ * Los cambios se guardan al momento.
+ */
+function renderHeaderFieldsEditor(container) {
+    const config = getHeaderFieldConfig();
+    container.innerHTML = `
+        <p class="settings-hint">Elige qué datos salen en el encabezado y cómo se llaman. Por ejemplo, si no estudias una ingeniería, "Carrera" puede llamarse "Escuela" o "Bachillerato".</p>
+        <div class="field-config-list">
+            ${HEADER_FIELDS.map(field => {
+                const defaultName = field.preview || getPeriodWord();
+                return `
+                <div class="field-config-row" data-key="${field.key}">
+                    <label class="field-config-toggle" title="${escapeAttr(field.about)}">
+                        <input type="checkbox" ${config[field.key].show ? 'checked' : ''}>
+                        <span>${escapeHtml(defaultName)}</span>
+                    </label>
+                    <input type="text" class="field-config-label" maxlength="40" placeholder="Se llama: ${escapeAttr(defaultName)}" value="${escapeAttr(config[field.key].label)}" title="Nombre que aparece en el encabezado">
+                </div>`;
+            }).join('')}
+        </div>`;
+
+    const save = () => {
+        const newConfig = {};
+        container.querySelectorAll('.field-config-row').forEach(row => {
+            newConfig[row.dataset.key] = {
+                show: row.querySelector('input[type="checkbox"]').checked,
+                label: row.querySelector('.field-config-label').value.trim()
+            };
+        });
+        saveHeaderFieldConfig(newConfig);
+        render();
+    };
+    container.querySelectorAll('.field-config-row input').forEach(input => {
+        input.addEventListener(input.type === 'checkbox' ? 'change' : 'input', save);
+    });
+}
+
+function renderHeaderFieldsTab(content) {
+    renderHeaderFieldsEditor(content);
+}
+
+// ---------- Compañeros de clase (nombre + matrícula) ----------
+
+function getClassmates() {
+    try {
+        const list = JSON.parse(localStorage.getItem('list_classmates'));
+        return Array.isArray(list) ? list.filter(c => c && typeof c.name === 'string' && c.name.trim()) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function saveClassmates(list) {
+    localStorage.setItem('list_classmates', JSON.stringify(list));
+    refreshClassmatePicker();
+}
+
+/**
+ * Añade un compañero. Devuelve un mensaje de error o null.
+ */
+function addClassmate(rawName, rawId) {
+    const name = (rawName || '').trim();
+    const studentId = (rawId || '').trim();
+    if (!name) return 'Escribe el nombre de tu compañero.';
+    const list = getClassmates();
+    if (list.some(c => c.name.toLowerCase() === name.toLowerCase() && (c.studentId || '') === studentId)) {
+        return `"${name}" ya está en tu lista.`;
+    }
+    list.push({ name, studentId });
+    saveClassmates(list);
+    return null;
+}
+
+function editClassmate(index) {
+    const list = getClassmates();
+    const c = list[index];
+    if (!c) return false;
+    const name = prompt('Nombre del compañero:', c.name);
+    if (name === null || !name.trim()) return false;
+    const studentId = prompt(`Matrícula de ${name.trim()}:`, c.studentId || '');
+    if (studentId === null) return false;
+    list[index] = { name: name.trim(), studentId: studentId.trim() };
+    saveClassmates(list);
+    return true;
+}
+
+function deleteClassmate(index) {
+    const list = getClassmates();
+    const c = list[index];
+    if (!c || !confirm(`¿Eliminar a "${c.name}" de tu lista de compañeros?`)) return false;
+    list.splice(index, 1);
+    saveClassmates(list);
+    return true;
+}
+
+/**
+ * Actualiza la lista de compañeros del encabezado (si está en pantalla).
+ */
+function refreshClassmatePicker() {
+    const picker = document.getElementById('classmate-picker');
+    if (!picker) return;
+    const classmates = getClassmates();
+    picker.innerHTML = '<option value="">👥 Añadir compañero de la lista...</option>' + classmates
+        .map((c, i) => `<option value="${i}">${escapeHtml(c.name)}${c.studentId ? ` (${escapeHtml(c.studentId)})` : ''}</option>`)
+        .join('');
+    const teamBox = document.getElementById('check-is-team');
+    picker.style.display = teamBox && teamBox.checked && classmates.length ? '' : 'none';
+}
+
+function renderClassmatesTab(content) {
+    const list = getClassmates();
+    content.innerHTML = `
+        <p class="settings-hint">En las tareas en equipo podrás elegirlos de una lista y se llenan solos su nombre y su matrícula.</p>
+        <div class="settings-add-row">
+            <input type="text" id="classmate-new-name" placeholder="Nombre completo">
+            <input type="text" id="classmate-new-id" class="classmate-id-field" placeholder="Matrícula">
+            <button type="button" class="action-btn save-btn" id="classmate-add">➕ Añadir</button>
+        </div>
+        <p id="settings-error" class="settings-error"></p>
+        ${list.length ? `
+            <ul class="settings-list">
+                ${list.map((c, i) => `
+                    <li data-index="${i}">
+                        <span class="settings-item-name">${escapeHtml(c.name)}${c.studentId ? ` <em>${escapeHtml(c.studentId)}</em>` : ''}</span>
+                        <button type="button" class="icon-btn" data-action="edit" title="Editar">✏️</button>
+                        <button type="button" class="icon-btn" data-action="delete" title="Eliminar">🗑️</button>
+                    </li>`).join('')}
+            </ul>` : '<p class="settings-empty">Todavía no has añadido compañeros.</p>'}`;
+
+    const nameInput = content.querySelector('#classmate-new-name');
+    const idInput = content.querySelector('#classmate-new-id');
+    const add = () => {
+        const error = addClassmate(nameInput.value, idInput.value);
+        if (error) {
+            content.querySelector('#settings-error').textContent = error;
+            return;
+        }
+        refreshSettingsModal();
+        const again = document.getElementById('classmate-new-name');
+        if (again) again.focus();
+    };
+    content.querySelector('#classmate-add').addEventListener('click', add);
+    [nameInput, idInput].forEach(input => input.addEventListener('keydown', e => { if (e.key === 'Enter') add(); }));
+
+    content.querySelectorAll('.settings-list li').forEach(li => {
+        const index = parseInt(li.dataset.index, 10);
+        li.querySelectorAll('button[data-action]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const changed = btn.dataset.action === 'edit' ? editClassmate(index) : deleteClassmate(index);
+                if (changed) refreshSettingsModal();
+            });
+        });
+    });
+}
+
+// ---------- Mi perfil ----------
+
+/**
+ * Campos del formulario del perfil (los usan la pestaña "Mi perfil" y el asistente).
+ * @param {object} p - valores
+ * @param {string[]} parts - 'personal' y/o 'school'
+ */
+function profileFormHTML(p, parts) {
+    const universities = getUniversities();
+    const currentTheme = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+    const periodType = PERIOD_TYPES[p.periodType] ? p.periodType : 'cuatrimestre';
+    let html = '<div class="profile-form">';
+    if (parts.includes('personal')) {
+        html += `
+            <div class="profile-field profile-field-wide">
+                <label for="profile-fullname">Nombre completo</label>
+                <input type="text" id="profile-fullname" value="${escapeAttr(p.fullName || '')}" placeholder="Ej. Ana Pérez López" autocomplete="name">
+            </div>
+            <div class="profile-field">
+                <label for="profile-studentid">Matrícula</label>
+                <input type="text" id="profile-studentid" value="${escapeAttr(p.studentId || '')}" placeholder="Ej. 2109045">
+            </div>`;
+    }
+    if (parts.includes('school')) {
+        html += `
+            <div class="profile-field profile-field-wide">
+                <label for="profile-university">Universidad / escuela</label>
+                <div class="profile-inline">
+                    <select id="profile-university">
+                        ${universities.map(u => `<option value="${escapeAttr(u.id)}" ${u.id === currentTheme ? 'selected' : ''}>${escapeHtml(u.name)}</option>`).join('')}
+                    </select>
+                    <button type="button" class="action-btn" id="profile-add-university" title="Agregar tu universidad con sus colores y logos">➕ Agregar</button>
+                </div>
+            </div>
+            <div class="profile-field profile-field-wide">
+                <label for="profile-career">${escapeHtml(getHeaderFieldLabel('career', 'editor'))}</label>
+                <input type="text" id="profile-career" value="${escapeAttr(p.career || '')}" placeholder="Ej. Ingeniería en Datos">
+            </div>
+            <div class="profile-field">
+                <label for="profile-group">Grupo</label>
+                <input type="text" id="profile-group" value="${escapeAttr(p.group || '')}" placeholder="Ej. IDY-7A">
+            </div>
+            <div class="profile-field">
+                <label for="profile-period">Periodo actual</label>
+                <input type="text" id="profile-period" value="${escapeAttr(p.period || '')}" placeholder="Ej. 7">
+            </div>
+            <div class="profile-field profile-field-wide">
+                <label>Tu escuela va por</label>
+                <div class="period-type-options">
+                    ${Object.entries(PERIOD_TYPES).map(([value, word]) => `
+                        <label class="period-type-option">
+                            <input type="radio" name="profile-period-type" value="${value}" ${value === periodType ? 'checked' : ''}>
+                            <span>${word}</span>
+                        </label>`).join('')}
+                </div>
+            </div>`;
+    }
+    return html + '</div>';
+}
+
+/**
+ * Lee el formulario del perfil (solo los campos que estén en pantalla).
+ */
+function readProfileForm(root) {
+    const value = id => {
+        const el = root.querySelector('#' + id);
+        return el ? el.value.trim() : undefined;
+    };
+    const data = {
+        fullName: value('profile-fullname'),
+        studentId: value('profile-studentid'),
+        career: value('profile-career'),
+        group: value('profile-group'),
+        period: value('profile-period')
+    };
+    const periodType = root.querySelector('input[name="profile-period-type"]:checked');
+    if (periodType) data.periodType = periodType.value;
+    Object.keys(data).forEach(k => data[k] === undefined && delete data[k]);
+    return data;
+}
+
+/**
+ * Conecta el selector de universidad y el botón "Agregar" del formulario.
+ */
+function bindProfileForm(root, beforeAddUniversity) {
+    const uniSelect = root.querySelector('#profile-university');
+    if (uniSelect) uniSelect.addEventListener('change', () => changeTheme(uniSelect.value));
+    const addUni = root.querySelector('#profile-add-university');
+    if (addUni) addUni.addEventListener('click', () => {
+        if (beforeAddUniversity) beforeAddUniversity();
+        openUniversityModal();
+    });
+}
+
+function renderProfileTab(content) {
+    content.innerHTML = `
+        <p class="settings-hint">Tus datos se llenan solos en el encabezado de cada documento nuevo. Si en un documento cambias algo, tu perfil no cambia.</p>
+        ${profileFormHTML(getProfile(), ['personal', 'school'])}
+        <p id="profile-message" class="settings-success"></p>
+        <div class="profile-actions">
+            <button type="button" class="action-btn save-btn" id="profile-save">💾 Guardar perfil</button>
+            <button type="button" class="action-btn" id="profile-apply" title="Pone tu nombre, matrícula, carrera, grupo y periodo en el encabezado del documento actual">Usar en el encabezado actual</button>
+        </div>
+        <button type="button" class="link-btn" id="profile-wizard">Volver a abrir el asistente de bienvenida</button>`;
+
+    bindProfileForm(content);
+    const message = content.querySelector('#profile-message');
+    const save = () => {
+        saveProfile({ ...getProfile(), ...readProfileForm(content) });
+        render();
+        message.textContent = '✓ Perfil guardado';
+    };
+    content.querySelector('#profile-save').addEventListener('click', save);
+    content.querySelector('#profile-apply').addEventListener('click', () => {
+        save();
+        applyProfileToHeader();
+        message.textContent = '✓ Perfil guardado y aplicado al encabezado actual';
+    });
+    content.querySelector('#profile-wizard').addEventListener('click', () => {
+        closeSettingsModal();
+        openOnboarding();
+    });
+}
+
+// ============================================================================
+// RESPALDO: exportar / importar toda la configuración (y el documento)
+// Un solo .json para pasar todo a otra computadora o navegador.
+// ============================================================================
+
+// Todo lo que se guarda de configuración en el navegador
+const BACKUP_KEYS = [
+    'user_profile', 'header_fields', 'list_universities', 'list_subjects', 'list_profs',
+    'subject_prof_map', 'list_classmates', 'selectedTheme', 'citationStyle',
+    'autosaveEnabled', 'previewZoom', 'previewWidth', 'previewHidden'
+];
+
+/**
+ * Arma el respaldo. Los valores de configuración van tal cual están en el
+ * navegador; el documento se toma de lo que hay en pantalla (así funciona
+ * aunque el autoguardado esté desactivado).
+ */
+function buildBackupData(includeDocument = true) {
+    const settings = {};
+    BACKUP_KEYS.forEach(key => { settings[key] = localStorage.getItem(key); });
+    return {
+        app: 'generador-reportes-academicos',
+        type: 'backup',
+        version: '2.2',
+        exportedAt: new Date().toISOString(),
+        settings,
+        document: includeDocument
+            ? { documentName: getDocumentName(), reportData, headerData: getHeaderData() }
+            : null
+    };
+}
+
+function exportBackup(includeDocument = true) {
+    const json = JSON.stringify(buildBackupData(includeDocument), null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const today = new Date().toISOString().slice(0, 10);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Respaldo Generador de Reportes ${today}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(link.href);
+}
+
+function isBackupData(data) {
+    return !!data && data.type === 'backup' && data.settings && typeof data.settings === 'object';
+}
+
+/**
+ * Resumen legible de lo que trae un respaldo (para confirmar antes de importar).
+ */
+function describeBackup(data) {
+    const parse = key => {
+        try { return JSON.parse(data.settings[key]); } catch (e) { return null; }
+    };
+    const count = key => {
+        const list = parse(key);
+        return Array.isArray(list) ? list.length : 0;
+    };
+    const profile = parse('user_profile') || {};
+    const doc = data.document;
+    const lines = [
+        `• Perfil: ${profile.fullName || '(sin nombre)'}${profile.studentId ? ` — ${profile.studentId}` : ''}`,
+        `• Universidades: ${count('list_universities')}`,
+        `• Materias: ${count('list_subjects')} · Profesores: ${count('list_profs')}`,
+        `• Compañeros: ${count('list_classmates')}`,
+        `• Configuración del encabezado y preferencias`
+    ];
+    if (doc && Array.isArray(doc.reportData)) {
+        lines.push(`• Documento: "${doc.documentName || DEFAULT_DOCUMENT_NAME}" (${doc.reportData.length} bloques)`);
+    }
+    return lines.join('\n');
+}
+
+/**
+ * Restaura un respaldo: reemplaza la configuración (y el documento, si lo trae).
+ */
+function importBackupData(data) {
+    if (!isBackupData(data)) throw new Error('El archivo no es un respaldo del Generador de Reportes.');
+
+    BACKUP_KEYS.forEach(key => {
+        if (!(key in data.settings)) return;
+        const value = data.settings[key];
+        if (value === null || value === undefined) localStorage.removeItem(key);
+        else localStorage.setItem(key, String(value));
+    });
+
+    const doc = data.document;
+    if (doc && Array.isArray(doc.reportData)) {
+        reportData = doc.reportData;
+        setHeaderData(doc.headerData || null);
+        setDocumentName(doc.documentName || '');
+        driveCurrentFileId = null;
+        driveCurrentFileName = null;
+    }
+
+    // Aplicar lo restaurado en pantalla
+    renderThemeSelector();
+    changeTheme((localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, ''));
+    const width = parseFloat(localStorage.getItem('previewWidth'));
+    setPreviewWidth(width || null, false);
+    applyPreviewZoom();
+    render();
+    if (isAutosaveEnabled()) saveToLocalStorage();
+    markDocumentSaved();
+    updateAutosaveUI();
+}
+
+/**
+ * Lee el archivo elegido, muestra el resumen y, si se confirma, lo importa.
+ */
+function importBackupFromFile(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = e => {
+        let data;
+        try {
+            data = JSON.parse(e.target.result);
+        } catch (err) {
+            alert('No se pudo leer el archivo: no es un JSON válido.');
+            return;
+        }
+
+        if (!isBackupData(data)) {
+            if (data && Array.isArray(data.reportData)) {
+                alert('Este archivo es un proyecto, no un respaldo.\n\nPara abrirlo usa "Cargar Proyecto" en el menú lateral.');
+            } else {
+                alert('El archivo no es un respaldo del Generador de Reportes.');
+            }
+            return;
+        }
+
+        const message = 'Se va a restaurar este respaldo:\n\n' + describeBackup(data) +
+            '\n\nReemplaza tu configuración actual' +
+            (data.document ? ' y el documento abierto' : '') + '. ¿Continuar?';
+        if (!confirm(message)) return;
+
+        try {
+            importBackupData(data);
+            refreshSettingsModal();
+            const status = document.getElementById('backup-message');
+            if (status) status.textContent = '✓ Respaldo restaurado';
+        } catch (err) {
+            console.error('Error al importar respaldo:', err);
+            alert('No se pudo restaurar el respaldo: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function renderBackupTab(content) {
+    const subjects = getSimpleList('list_subjects').length;
+    const profs = getSimpleList('list_profs').length;
+    const classmates = getClassmates().length;
+    const universities = getUniversities().length;
+    const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+
+    content.innerHTML = `
+        <div class="backup-section">
+            <h4>⬇️ Exportar respaldo</h4>
+            <p class="settings-hint">Descarga un archivo <strong>.json</strong> con todo lo que tienes guardado en este navegador, para pasarlo a otra computadora o no perderlo:</p>
+            <ul class="backup-list">
+                <li>Tu perfil (nombre, matrícula, escuela, carrera, grupo y periodo)</li>
+                <li>Qué datos salen en el encabezado y cómo se llaman</li>
+                <li>${plural(universities, 'universidad', 'universidades')} (con sus colores y logos)</li>
+                <li>${plural(subjects, 'materia', 'materias')} y ${plural(profs, 'profesor', 'profesores')} (con sus vínculos)</li>
+                <li>${plural(classmates, 'compañero', 'compañeros')}</li>
+                <li>Tus preferencias (tema, formato de citas, autoguardado, zoom...)</li>
+            </ul>
+            <label class="backup-check">
+                <input type="checkbox" id="backup-include-document" checked>
+                <span>Incluir también el documento actual ("${escapeHtml(getDocumentName() || DEFAULT_DOCUMENT_NAME)}")</span>
+            </label>
+            <button type="button" class="action-btn save-btn" id="backup-export">⬇️ Descargar respaldo (.json)</button>
+        </div>
+
+        <div class="backup-section">
+            <h4>⬆️ Importar respaldo</h4>
+            <p class="settings-hint">Carga un respaldo descargado antes. Antes de restaurarlo verás un resumen de lo que trae. <strong>Reemplaza tu configuración actual.</strong></p>
+            <button type="button" class="action-btn" id="backup-import">⬆️ Cargar respaldo...</button>
+            <input type="file" id="backup-file" accept=".json,application/json" style="display: none;" onchange="importBackupFromFile(this)">
+            <p id="backup-message" class="settings-success"></p>
+        </div>`;
+
+    content.querySelector('#backup-export').addEventListener('click', () => {
+        exportBackup(content.querySelector('#backup-include-document').checked);
+        content.querySelector('#backup-message').textContent = '✓ Respaldo descargado';
+    });
+    content.querySelector('#backup-import').addEventListener('click', () => {
+        content.querySelector('#backup-file').click();
+    });
+}
+
+// ============================================================================
+// ASISTENTE DE BIENVENIDA (primera vez que se abre la app)
+// ============================================================================
+
+const ONBOARDING_STEPS = [
+    { title: 'Tus datos', optional: false },
+    { title: 'Tu escuela', optional: false },
+    { title: 'Tu encabezado', optional: false },
+    { title: 'Materias y profesores', optional: true },
+    { title: 'Compañeros de clase', optional: true }
+];
+
+let onboardingState = null;
+
+function openOnboarding() {
+    closeOnboarding();
+    const p = getProfile();
+    const h = getHeaderData() || {};
+    // Si ya había datos en el encabezado, se proponen como punto de partida
+    onboardingState = {
+        step: 0,
+        profile: {
+            fullName: p.fullName || ((h.names || [])[0] || '').trim(),
+            studentId: p.studentId || ((h.studentIds || [])[0] || ''),
+            career: p.career || h.career || '',
+            group: p.group || h.group || '',
+            period: p.period || h.term || '',
+            periodType: getPeriodType()
+        },
+        subjects: [{ subject: '', prof: '' }],
+        classmates: [{ name: '', studentId: '' }]
+    };
+
+    const overlay = document.createElement('div');
+    overlay.className = 'university-modal-overlay onboarding-overlay';
+    overlay.id = 'onboarding-overlay';
+    overlay.innerHTML = '<div class="university-modal onboarding-modal" role="dialog" aria-modal="true" aria-labelledby="onboarding-title"></div>';
+    document.body.appendChild(overlay);
+    renderOnboardingStep();
+}
+
+function closeOnboarding() {
+    const overlay = document.getElementById('onboarding-overlay');
+    if (overlay) overlay.remove();
+    onboardingState = null;
+}
+
+/**
+ * Guarda en el estado lo que hay escrito en el paso actual.
+ */
+function collectOnboardingStep() {
+    const modal = document.querySelector('#onboarding-overlay .onboarding-modal');
+    if (!modal || !onboardingState) return;
+    const step = onboardingState.step;
+    if (step === 0 || step === 1) {
+        onboardingState.profile = { ...onboardingState.profile, ...readProfileForm(modal) };
+    } else if (step === 3) {
+        onboardingState.subjects = Array.from(modal.querySelectorAll('.onboarding-row')).map(row => ({
+            subject: row.querySelector('.ob-subject').value.trim(),
+            prof: row.querySelector('.ob-prof').value.trim()
+        }));
+    } else if (step === 4) {
+        onboardingState.classmates = Array.from(modal.querySelectorAll('.onboarding-row')).map(row => ({
+            name: row.querySelector('.ob-name').value.trim(),
+            studentId: row.querySelector('.ob-id').value.trim()
+        }));
+    }
+}
+
+function renderOnboardingStep() {
+    const modal = document.querySelector('#onboarding-overlay .onboarding-modal');
+    if (!modal || !onboardingState) return;
+    const state = onboardingState;
+    const step = ONBOARDING_STEPS[state.step];
+    const isLast = state.step === ONBOARDING_STEPS.length - 1;
+
+    let body = '';
+    if (state.step === 0) {
+        body = `
+            <p class="onboarding-lead">Antes de empezar, guardemos tus datos para que tus reportes se llenen solos. Todo se queda en este navegador.</p>
+            ${profileFormHTML(state.profile, ['personal'])}`;
+    } else if (state.step === 1) {
+        body = `
+            <p class="onboarding-lead">¿Dónde estudias? Esto aparece en el encabezado y en la portada.</p>
+            ${profileFormHTML(state.profile, ['school'])}`;
+    } else if (state.step === 2) {
+        body = '<div id="onboarding-fields"></div>';
+    } else if (state.step === 3) {
+        body = `
+            <p class="onboarding-lead">Si quieres, da de alta tus materias y quién las imparte. Al elegir la materia en un reporte, el profesor se llena solo. También puedes hacerlo después en ⚙️ Configuración.</p>
+            <div class="onboarding-rows">
+                ${state.subjects.map(r => `
+                    <div class="onboarding-row">
+                        <input type="text" class="ob-subject" placeholder="Materia" value="${escapeAttr(r.subject)}">
+                        <input type="text" class="ob-prof" placeholder="Profesor (opcional)" value="${escapeAttr(r.prof)}">
+                    </div>`).join('')}
+            </div>
+            <button type="button" class="link-btn" id="onboarding-add-row">➕ Agregar otra materia</button>`;
+    } else if (state.step === 4) {
+        body = `
+            <p class="onboarding-lead">Si haces tareas en equipo, guarda a tus compañeros con su matrícula y luego solo los eliges de una lista. También puedes hacerlo después.</p>
+            <div class="onboarding-rows">
+                ${state.classmates.map(r => `
+                    <div class="onboarding-row">
+                        <input type="text" class="ob-name" placeholder="Nombre completo" value="${escapeAttr(r.name)}">
+                        <input type="text" class="ob-id" placeholder="Matrícula" value="${escapeAttr(r.studentId)}">
+                    </div>`).join('')}
+            </div>
+            <button type="button" class="link-btn" id="onboarding-add-row">➕ Agregar otro compañero</button>`;
+    }
+
+    modal.innerHTML = `
+        <div class="onboarding-progress" aria-label="Paso ${state.step + 1} de ${ONBOARDING_STEPS.length}">
+            ${ONBOARDING_STEPS.map((s, i) => `<span class="onboarding-dot${i === state.step ? ' is-current' : ''}${i < state.step ? ' is-done' : ''}" title="${escapeAttr(s.title)}"></span>`).join('')}
+        </div>
+        <p class="onboarding-step-count">Paso ${state.step + 1} de ${ONBOARDING_STEPS.length}${step.optional ? ' · opcional' : ''}</p>
+        <h3 id="onboarding-title">${state.step === 0 ? '👋 ¡Bienvenido!' : escapeHtml(step.title)}</h3>
+        ${body}
+        <p id="onboarding-error" class="settings-error"></p>
+        <div class="onboarding-actions">
+            ${state.step === 0
+                ? '<button type="button" class="link-btn" id="onboarding-later">Configurar después</button>'
+                : '<button type="button" class="action-btn" id="onboarding-back">← Atrás</button>'}
+            <span class="onboarding-spacer"></span>
+            ${step.optional ? '<button type="button" class="action-btn" id="onboarding-skip">Omitir</button>' : ''}
+            <button type="button" class="action-btn save-btn" id="onboarding-next">${isLast ? '✓ Terminar' : 'Siguiente →'}</button>
+        </div>`;
+
+    if (state.step === 0 || state.step === 1) {
+        bindProfileForm(modal, collectOnboardingStep);
+    }
+    if (state.step === 2) {
+        renderHeaderFieldsEditor(modal.querySelector('#onboarding-fields'));
+    }
+
+    const addRow = modal.querySelector('#onboarding-add-row');
+    if (addRow) addRow.addEventListener('click', () => {
+        collectOnboardingStep();
+        if (state.step === 3) state.subjects.push({ subject: '', prof: '' });
+        else state.classmates.push({ name: '', studentId: '' });
+        renderOnboardingStep();
+        const rows = document.querySelectorAll('#onboarding-overlay .onboarding-row');
+        const last = rows[rows.length - 1];
+        if (last) last.querySelector('input').focus();
+    });
+
+    const later = modal.querySelector('#onboarding-later');
+    if (later) later.addEventListener('click', () => {
+        saveProfile({ ...getProfile(), onboardingDone: true });
+        closeOnboarding();
+    });
+    const back = modal.querySelector('#onboarding-back');
+    if (back) back.addEventListener('click', () => {
+        collectOnboardingStep();
+        state.step--;
+        renderOnboardingStep();
+    });
+    const skip = modal.querySelector('#onboarding-skip');
+    if (skip) skip.addEventListener('click', () => {
+        if (state.step === 3) state.subjects = [];
+        if (state.step === 4) state.classmates = [];
+        goToNextOnboardingStep(false);
+    });
+    modal.querySelector('#onboarding-next').addEventListener('click', () => goToNextOnboardingStep(true));
+
+    const firstInput = modal.querySelector('input[type="text"]');
+    if (firstInput && state.step !== 2) firstInput.focus();
+}
+
+function goToNextOnboardingStep(collect) {
+    const state = onboardingState;
+    if (!state) return;
+    if (collect) collectOnboardingStep();
+
+    if (state.step === 0 && !state.profile.fullName) {
+        const error = document.getElementById('onboarding-error');
+        if (error) error.textContent = 'Escribe tu nombre completo para continuar.';
+        const input = document.getElementById('profile-fullname');
+        if (input) input.focus();
+        return;
+    }
+
+    // Se guarda el avance en cada paso (así, por ejemplo, el paso del
+    // encabezado ya usa el tipo de periodo que se acaba de elegir)
+    saveProfile({ ...getProfile(), ...state.profile });
+
+    if (state.step < ONBOARDING_STEPS.length - 1) {
+        state.step++;
+        renderOnboardingStep();
+    } else {
+        finishOnboarding();
+    }
+}
+
+function finishOnboarding() {
+    const state = onboardingState;
+    if (!state) return;
+
+    saveProfile({ ...getProfile(), ...state.profile, onboardingDone: true });
+
+    state.subjects.filter(r => r.subject).forEach(r => {
+        addListItem('list_subjects', r.subject);
+        if (r.prof) {
+            addListItem('list_profs', r.prof);
+            setSubjectProf(r.subject, r.prof);
+        }
+    });
+    state.classmates.filter(r => r.name).forEach(r => addClassmate(r.name, r.studentId));
+
+    closeOnboarding();
+
+    // El primer documento ya empieza con el encabezado lleno
+    const header = getHeaderData();
+    if (header && !getHeaderStudentName(header)) {
+        applyProfileToHeader();
+    } else if (!reportData.length) {
+        addBlock('header');
+    } else {
+        render();
+    }
+}
+
+// La primera vez que se abre la app, se muestra el asistente
+document.addEventListener('DOMContentLoaded', function() {
+    if (!getProfile().onboardingDone) openOnboarding();
+});
 
 // ============================================================================
 // DOCUMENTO: NOMBRE, AUTOGUARDADO Y NUEVO DOCUMENTO
@@ -3085,7 +4105,10 @@ function buildProjectData() {
             universities: getUniversities(),
             subjects: getSimpleList('list_subjects'),
             profs: getSimpleList('list_profs'),
-            subjectProfMap: getSubjectProfMap()
+            subjectProfMap: getSubjectProfMap(),
+            classmates: getClassmates(),
+            headerFields: getHeaderFieldConfig(),
+            periodType: getPeriodType()
         }
     };
 }
@@ -3116,6 +4139,26 @@ function mergeProjectSettings(settings) {
         });
         saveSimpleList(key, list);
     });
+
+    // Compañeros: se añaden los que falten
+    if (Array.isArray(settings.classmates)) {
+        const classmates = getClassmates();
+        settings.classmates.forEach(c => {
+            if (c && typeof c.name === 'string' && c.name.trim() &&
+                !classmates.some(local => local.name === c.name && (local.studentId || '') === (c.studentId || ''))) {
+                classmates.push({ name: c.name.trim(), studentId: (c.studentId || '').trim() });
+            }
+        });
+        saveClassmates(classmates);
+    }
+
+    // Campos del encabezado y tipo de periodo: solo si aquí no se han configurado
+    if (settings.headerFields && typeof settings.headerFields === 'object' && !localStorage.getItem('header_fields')) {
+        saveHeaderFieldConfig(settings.headerFields);
+    }
+    if (PERIOD_TYPES[settings.periodType] && !getProfile().periodType) {
+        saveProfile({ ...getProfile(), periodType: settings.periodType });
+    }
 
     if (settings.subjectProfMap && typeof settings.subjectProfMap === 'object') {
         const map = getSubjectProfMap();
@@ -3378,9 +4421,6 @@ async function saveProjectToDrive() {
         return;
     }
 
-    const now = new Date();
-    const dateStr = now.toISOString().slice(0, 10);
-    const timeStr = now.toTimeString().slice(0, 5).replace(':', '-');
     const suggestedName = driveCurrentFileName || `${getSafeFileName()}.json`;
 
     let filename = prompt('¿Con qué nombre quieres guardar el archivo en Google Drive?', suggestedName);

@@ -1730,3 +1730,647 @@ button.status-pill:hover {
         display: none;
     }
 }
+
+/* ============================================================================
+   PERFIL, MATRÍCULAS, COMPAÑEROS Y ASISTENTE DE BIENVENIDA
+   ============================================================================ */
+
+/* Matrícula al lado del nombre */
+.member-row {
+    gap: 8px;
+}
+
+.student-id-input {
+    font-family: var(--ui-font) !important;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 14px 10px 38px;
+    border: 1px solid var(--ui-slate-200);
+    border-radius: var(--ui-radius-field);
+    background-color: var(--ui-slate-50);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='16' rx='2'/%3E%3Ccircle cx='9' cy='10' r='2'/%3E%3Cpath d='M15 8h2M15 12h2M7 16h10'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: left 12px center;
+    background-size: 16px;
+    color: var(--ui-slate-800);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.student-id-input:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--ui-blue);
+    box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.team-actions {
+    margin-top: 2px;
+}
+
+.classmate-picker {
+    padding: 7px 34px 7px 12px;
+    border: 1px dashed var(--ui-slate-300);
+    border-radius: var(--ui-radius-field);
+    background-color: #fff;
+    color: var(--ui-slate-600);
+    font-family: var(--ui-font);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 14px;
+}
+
+.classmate-picker:hover {
+    border-color: var(--ui-accent);
+}
+
+/* Pestañas de Configuración (ahora son 6) */
+.settings-modal {
+    width: 620px;
+}
+
+.settings-tabs button {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    padding: 7px 10px;
+}
+
+/* Formularios del perfil y del asistente */
+.profile-field label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ui-slate-500);
+    margin: 0;
+}
+
+.profile-field input,
+.profile-field select,
+.field-config-label,
+.onboarding-row input,
+.classmate-id-field {
+    font-family: var(--ui-font);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 10px 14px;
+    border: 1px solid var(--ui-slate-200);
+    border-radius: var(--ui-radius-field);
+    background-color: var(--ui-slate-50);
+    color: var(--ui-slate-800);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.profile-field input:focus,
+.profile-field select:focus,
+.field-config-label:focus,
+.onboarding-row input:focus {
+    outline: none;
+    background-color: #fff;
+    border-color: var(--ui-blue);
+    box-shadow: 0 0 0 3px #dbeafe;
+}
+
+.profile-field select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 36px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    cursor: pointer;
+}
+
+.profile-inline .action-btn {
+    flex-shrink: 0;
+    font-size: 12px;
+}
+
+.period-type-option {
+    padding: 8px 14px;
+    border: 1px solid var(--ui-slate-200);
+    border-radius: 999px;
+    background: var(--ui-slate-50);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ui-slate-700);
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.period-type-option:has(input:checked) {
+    border-color: var(--ui-accent);
+    background: var(--ui-accent-soft);
+    color: var(--ui-slate-900);
+}
+
+.period-type-option input {
+    accent-color: var(--ui-accent);
+    margin: 0;
+}
+
+.field-config-row {
+    padding: 6px 8px;
+    border-radius: 12px;
+}
+
+.field-config-row:hover {
+    background: var(--ui-slate-50);
+}
+
+.field-config-toggle {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ui-slate-700);
+}
+
+.field-config-toggle input {
+    accent-color: var(--ui-accent);
+    width: 16px;
+    height: 16px;
+}
+
+.field-config-row:has(input[type="checkbox"]:not(:checked)) .field-config-label,
+.field-config-row:has(input[type="checkbox"]:not(:checked)) .field-config-toggle span {
+    opacity: 0.45;
+}
+
+.settings-hint {
+    color: var(--ui-slate-500);
+    font-size: 12.5px;
+    line-height: 1.5;
+    margin: 4px 0 10px;
+}
+
+.settings-item-name em {
+    font-style: normal;
+    font-size: 12px;
+    color: var(--ui-slate-400);
+    margin-left: 6px;
+}
+
+.link-btn {
+    color: var(--ui-blue);
+    font-family: var(--ui-font);
+    font-weight: 600;
+}
+
+/* Asistente */
+.onboarding-overlay {
+    z-index: 1100;
+}
+
+.onboarding-modal {
+    width: 640px;
+    padding-top: 26px;
+}
+
+.onboarding-dot {
+    background: var(--ui-slate-200);
+    transition: background 0.2s ease;
+}
+
+.onboarding-dot.is-done,
+.onboarding-dot.is-current {
+    background: var(--ui-accent);
+}
+
+.onboarding-step-count {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ui-slate-400);
+    margin-top: 10px;
+}
+
+.onboarding-modal h3 {
+    margin: 4px 0 6px;
+    font-size: 22px;
+}
+
+.onboarding-lead {
+    color: var(--ui-slate-600);
+    font-size: 14px;
+    margin: 0 0 14px;
+}
+
+.onboarding-actions {
+    padding-top: 16px;
+    border-top: 1px solid var(--ui-slate-100);
+}
+
+/* El ícono de la matrícula necesita su espacio (la regla general de los campos lo quitaba) */
+.grid-inputs .student-id-input {
+    padding-left: 38px !important;
+}
+
+/* 6 pestañas en una sola fila */
+.settings-modal {
+    width: 700px;
+}
+
+.settings-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+}
+
+.settings-tabs button {
+    font-size: 12.5px;
+    padding: 7px 8px;
+}
+
+/* ============================================================================
+   RESPALDO (Configuración → Respaldo)
+   ============================================================================ */
+.settings-modal {
+    width: 760px;
+}
+
+.backup-section {
+    padding: 16px 18px;
+    margin-bottom: 14px;
+    border: 1px solid var(--ui-slate-200);
+    border-radius: 16px;
+    background: var(--ui-slate-50);
+}
+
+.backup-section h4 {
+    margin: 0 0 4px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ui-slate-900);
+}
+
+.backup-list {
+    margin: 0 0 12px;
+    padding-left: 20px;
+    font-size: 13px;
+    line-height: 1.7;
+    color: var(--ui-slate-700);
+}
+
+.backup-check {
+    display: flex !important;
+    align-items: center;
+    gap: 8px;
+    margin: 0 0 12px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    letter-spacing: 0 !important;
+    text-transform: none !important;
+    color: var(--ui-slate-700) !important;
+    cursor: pointer;
+}
+
+.backup-check input {
+    accent-color: var(--ui-accent);
+    width: 16px;
+    height: 16px;
+}
+
+/* Enlaces legales en los créditos */
+.credits-legal {
+    font-size: 10px !important;
+    color: var(--ui-slate-500) !important;
+}
+
+.credits-legal a:hover {
+    color: var(--ui-slate-300);
+}
+
+/* ============================================================================
+   MOSTRAR / OCULTAR VISTA PREVIA (computadora)
+   ============================================================================ */
+#preview-toggle-btn.is-active {
+    border-color: var(--ui-accent);
+    background: var(--ui-accent-soft);
+    color: var(--ui-slate-900);
+}
+
+#preview-toggle-btn:hover {
+    border-color: var(--ui-slate-400);
+    background: #fff;
+    color: var(--ui-slate-900);
+}
+
+/* Sin vista previa, el editor centra sus tarjetas un poco más anchas */
+body.preview-is-hidden #editor-container > * {
+    max-width: 900px;
+}
+
+.toolbar-icon-btn {
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--ui-slate-300);
+    border-radius: 12px;
+    background: #fff;
+    color: var(--ui-slate-700);
+    cursor: pointer;
+}
+
+.toolbar-icon-btn .material-symbols-outlined {
+    font-size: 22px;
+}
+
+/* ============================================================================
+   CELULAR (hasta 768 px)
+   ============================================================================ */
+@media screen and (max-width: 768px) {
+    .desktop-only,
+    .pane-resizer,
+    .preview-expand-btn,
+    #editor-uni-label {
+        display: none !important;
+    }
+
+    .mobile-only {
+        display: inline-flex;
+    }
+
+    body {
+        flex-direction: row;
+        height: 100vh;
+        height: 100dvh;
+    }
+
+    /* Menú lateral: cajón que se abre desde la izquierda */
+    .toolbox {
+        position: fixed;
+        top: 0;
+        left: 0;
+        bottom: 0;
+        width: 280px;
+        min-width: 0;
+        max-width: 85vw;
+        max-height: none;
+        flex-direction: column;
+        flex-wrap: nowrap;
+        padding: 0;
+        z-index: 950;
+        transform: translateX(-105%);
+        transition: transform 0.25s ease;
+    }
+
+    body.sidebar-open .toolbox {
+        transform: none;
+        box-shadow: 12px 0 40px rgba(15, 23, 42, 0.45);
+    }
+
+    .blocks-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .sidebar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 940;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(2px);
+    }
+
+    body.sidebar-open .sidebar-backdrop {
+        display: block;
+    }
+
+    /* Editor y vista previa ocupan toda la pantalla; se cambia con las pestañas */
+    .workspace {
+        flex-direction: column;
+        width: 100%;
+        min-width: 0;
+        padding-bottom: 60px;
+    }
+
+    .editor-pane {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+
+    .preview-pane,
+    .preview-pane[style] {
+        flex: 1 1 auto !important;
+        width: 100%;
+        border-left: none;
+    }
+
+    /* La vista previa que no se ve también queda fuera de pantalla, pero medible */
+    body:not(.mobile-view-preview) .preview-pane {
+        position: fixed;
+        top: 0;
+        left: -100000px;
+        width: 100vw;
+        height: 100vh;
+        visibility: hidden;
+        pointer-events: none;
+    }
+
+    body.mobile-view-preview .editor-pane {
+        display: none;
+    }
+
+    /* Barra del editor */
+    .editor-toolbar {
+        padding: 10px 12px;
+        gap: 8px;
+    }
+
+    .document-name-wrap {
+        min-width: 0;
+    }
+
+    .document-name-wrap .material-symbols-outlined {
+        display: none;
+    }
+
+    .document-name-input {
+        font-size: 16px;
+        padding: 6px 8px;
+    }
+
+    .editor-toolbar .toolbar-btn {
+        padding: 6px 10px;
+    }
+
+    .editor-toolbar .toolbar-btn span:not(.material-symbols-outlined) {
+        display: none;
+    }
+
+    #autosave-toggle {
+        padding: 4px 8px;
+        font-size: 0 !important;
+        gap: 0;
+    }
+
+    #autosave-toggle::before {
+        font-size: 13px;
+    }
+
+    #editor-container {
+        padding: 14px 10px 24px;
+    }
+
+    /* Tarjetas y formularios en una columna */
+    .block-card,
+    .header-card {
+        padding: 18px 14px;
+        border-radius: 18px;
+        margin-bottom: 16px;
+    }
+
+    .grid-inputs {
+        grid-template-columns: 1fr;
+    }
+
+    .header-card-top {
+        padding-right: 30px;
+    }
+
+    .header-uni-badge {
+        display: none;
+    }
+
+    .header-card-title {
+        font-size: 17px !important;
+    }
+
+    .student-id-input {
+        flex-basis: 38%;
+    }
+
+    .header-card .options-group {
+        flex-direction: column;
+        align-items: flex-start !important;
+        gap: 10px !important;
+    }
+
+    .header-card-buttons {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .header-card-buttons .action-btn {
+        justify-content: center;
+    }
+
+    .ref-card > label {
+        padding-right: 36px;
+    }
+
+    .block-tag {
+        position: static;
+        margin: -8px 0 12px;
+    }
+
+    .table-grid {
+        overflow-x: auto;
+    }
+
+    /* Vista previa */
+    .preview-toolbar {
+        padding: 10px 12px;
+    }
+
+    .preview-scroll {
+        padding: 12px;
+    }
+
+    .preview-footer {
+        padding: 8px 14px 10px;
+    }
+
+    /* Ventanas (Configuración, asistente...) salen desde abajo */
+    .university-modal-overlay {
+        align-items: flex-end;
+    }
+
+    .university-modal,
+    .settings-modal,
+    .onboarding-modal {
+        width: 100% !important;
+        max-width: 100vw !important;
+        max-height: 92vh;
+        max-height: 92dvh;
+        border-radius: 22px 22px 0 0;
+        padding: 24px 16px 20px;
+    }
+
+    .profile-form,
+    .onboarding-row,
+    .field-config-row {
+        grid-template-columns: 1fr;
+    }
+
+    .field-config-row {
+        gap: 6px;
+    }
+
+    .settings-add-row {
+        flex-wrap: wrap;
+    }
+
+    .settings-add-row input,
+    .settings-add-row select {
+        flex: 1 1 100%;
+    }
+
+    .onboarding-actions {
+        flex-wrap: wrap;
+    }
+
+    /* Pestañas de abajo: Editor / Vista previa */
+    .mobile-tabs {
+        display: flex;
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        height: 60px;
+        z-index: 900;
+        padding: 6px 10px calc(6px + env(safe-area-inset-bottom));
+        gap: 8px;
+        background: var(--ui-navy);
+        border-top: 1px solid var(--ui-slate-800);
+    }
+
+    .mobile-tabs button {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        border: none;
+        border-radius: 12px;
+        background: transparent;
+        color: var(--ui-slate-400);
+        font-family: var(--ui-font);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .mobile-tabs button.is-active {
+        background: var(--ui-slate-800);
+        color: #fff;
+    }
+
+    .mobile-tabs button.is-active .material-symbols-outlined {
+        color: var(--ui-accent);
+    }
+}
+
+/* Pestañas de Configuración: se deslizan sin mostrar barra de desplazamiento */
+.settings-tabs {
+    scrollbar-width: none;
+}
+
+.settings-tabs::-webkit-scrollbar {
+    display: none;
+}

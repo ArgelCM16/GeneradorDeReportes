@@ -7,7 +7,22 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
 ---
 
-## Estado actual (versión 2.1.0)
+## Estado actual (versión 2.2.0)
+
+### Qué se hizo en la versión 2.2.0
+
+| Cambio | Detalle |
+|---|---|
+| Asistente de bienvenida | La primera vez: nombre y matrícula; escuela, carrera, grupo y periodo; qué datos salen en el encabezado; y, opcionales, materias/profesores y compañeros |
+| Perfil | Llena solo el encabezado de cada documento nuevo; cambiar el documento no cambia el perfil |
+| Matrícula | Por estudiante y por integrante del equipo |
+| Compañeros | Lista con nombre y matrícula; en equipo se eligen de un menú |
+| Campos del encabezado | Cada dato se puede mostrar/ocultar y renombrar (p. ej. "Carrera" → "Escuela") |
+| Periodo | Cuatrimestre, semestre o año escolar (se elige en el perfil) |
+| Vista previa y celular | La vista previa se puede ocultar por completo en computadora; en celular hay menú desplegable (☰) y pestañas Editor / Vista previa |
+| Respaldo | Configuración → Respaldo: exporta/importa en un .json todo lo guardado en el navegador (y opcionalmente el documento); al importar muestra un resumen y reemplaza la configuración |
+
+## Estado de la versión 2.1.0
 
 - Rama de trabajo: `test`. La rama `main` todavía **no** tiene los cambios de la 2.1.0 (falta el Pull Request de `test` a `main`).
 - Todo funciona sin servidor. Google Drive es opcional y requiere servir la página por http(s).

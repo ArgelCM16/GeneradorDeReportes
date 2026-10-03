@@ -2,7 +2,7 @@
 
 > Herramienta web profesional para crear reportes académicos con vista previa en tiempo real
 
-![Versión](https://img.shields.io/badge/versión-2.1.0-blue)
+![Versión](https://img.shields.io/badge/versión-2.2.0-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Estado](https://img.shields.io/badge/estado-activo-success)
 
@@ -14,6 +14,13 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 
 ### Características Principales
 
+- **Asistente de bienvenida**: La primera vez te pide tus datos (nombre, matrícula, escuela, carrera, grupo y periodo) para que tus reportes se llenen solos
+- **Mi perfil**: Tus datos llenan el encabezado de cada documento nuevo; en cada documento los puedes cambiar sin tocar tu perfil
+- **Matrícula por estudiante**: Cada alumno o integrante del equipo lleva su matrícula
+- **Compañeros de clase**: Guarda a tus compañeros con su matrícula y elígelos de una lista en las tareas en equipo
+- **Encabezado a tu medida**: Elige qué datos salen y cómo se llaman (por ejemplo, "Carrera" → "Escuela")
+- **Cuatrimestre, semestre o año escolar**: Se elige una vez en tu perfil
+- **Respaldo**: Exporta e importa en un `.json` toda tu configuración (perfil, encabezado, universidades, materias, profesores, compañeros y preferencias) y, si quieres, el documento actual
 - **Guardar y Cargar Proyectos**: Guarda el trabajo en JSON (con encabezado y configuración incluidos) y continúalo después, incluso en otra computadora
 - **Google Drive**: Guarda y abre proyectos directamente desde tu Google Drive
 - **9 Tipos de Bloques**: Encabezado, Título, Subtítulo, Párrafo, Código, Imagen, Tabla, Referencia, Declaración IA
@@ -29,6 +36,8 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 - **Índice**: Tabla de contenido automática con los títulos y subtítulos y la página donde está cada uno; siempre va después de la portada o debajo del encabezado
 - **Zoom de la vista previa**: Ajustado al ancho por defecto; acerca o aleja las hojas sin afectar la impresión
 - **Vista previa más grande**: Arrastra el divisor entre el editor y la vista previa, o usa el botón de agrandar
+- **Ocultar la vista previa**: El editor ocupa todo el ancho; la puedes volver a mostrar con un clic
+- **Celular**: Menú lateral desplegable (☰) y pestañas para cambiar entre el editor y la vista previa
 - **Tablas Profesionales**: Grid visual de 1-6 columnas con diseño académico
 - **Declaración de IA**: Sistema completo para documentar uso de herramientas de IA
 - **Exportación Triple**: PDF (impresión), TXT y JSON (proyecto completo)
@@ -242,6 +251,8 @@ generador-reportes-academicos/
 ├── EXAMPLES			# Carpeta con ejemplos de documentos generados
 │   ├── EJEMPLO.pdf
 │   └── EJEMPLO.txt
+├── terminos.html		# Términos y condiciones
+├── privacidad.html		# Política de privacidad
 ├── index.html			# Aplicación principal
 ├── JS
 │   └── script.js		# Lógica de la aplicación
@@ -287,7 +298,7 @@ generador-reportes-academicos/
 ### Dispositivos:
 - Desktop (óptimo)
 - Tablet
-- Móvil (funcional, pero tiene bugs visuales)
+- Móvil: diseño adaptado (menú desplegable y pestañas Editor / Vista previa)
 
 ---
 
@@ -410,7 +421,15 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ## Roadmap
 
-### Versión 2.1.0 (Actual)
+### Versión 2.2.0 (Actual)
+- [x] Asistente de bienvenida y perfil del usuario
+- [x] Matrícula por estudiante
+- [x] Lista de compañeros de clase
+- [x] Campos del encabezado configurables (mostrar/ocultar y renombrar)
+- [x] Cuatrimestre, semestre o año escolar
+- [x] Respaldo: exportar e importar toda la configuración en un .json
+
+### Versión 2.1.0
 - [x] Guardar y abrir proyectos en Google Drive
 - [x] Panel de Configuración (universidades, materias y profesores)
 - [x] Universidades personalizadas con colores y logos

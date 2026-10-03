@@ -10,6 +10,8 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 - Haz commit o push solo cuando el usuario lo pida.
 - Si el usuario pide un cambio "solo de diseño", no toques la lógica de `JS/script.js`: los estilos del rediseño viven en `CSS/redesign.css`.
 - Después de cambiar algo, pruébalo en Chrome sin interfaz (ver [Cómo probar](#cómo-probar)).
+- **Si cambia qué datos usa la app o con qué servicios se conecta** (nuevos recursos externos, analítica, otro permiso de Google...), actualiza `privacidad.html` (y `terminos.html` si aplica) junto con su fecha de "Última actualización".
+- **Si cambias `CSS/*.css` o `JS/script.js`, sube el número `?v=` de sus enlaces en `index.html`** (los tres llevan el mismo). GitHub Pages deja que el navegador guarde esos archivos hasta 10 minutos; sin cambiar el número, el navegador puede mezclar el HTML nuevo con CSS o JS viejos y la página se ve rota.
 
 ## Qué es
 
@@ -17,7 +19,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 
 - Autor original: Jorge Javier Pedrozo Romero. Modificado por: Argel Alberto Cano Morales.
 - Repositorio: `https://github.com/ArgelCM16/GeneradorDeReportes`.
-- Versión actual: **2.1.0** (aparece en los créditos de `index.html` y en la insignia del `README.md`).
+- Versión actual: **2.2.0** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
 
 ## Estructura
 
@@ -25,6 +27,9 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 index.html          Página única: barra lateral (<nav class="toolbox">), editor (.editor-pane) y vista previa (.preview-pane)
 CSS/style.css       Estilos base y temas de las universidades por defecto
 CSS/redesign.css    Rediseño visual (Google Stitch). Se carga DESPUÉS de style.css y lo sobrescribe
+CSS/legal.css       Estilos de las páginas legales
+terminos.html       Términos y condiciones (enlazado en los créditos de la barra lateral)
+privacidad.html     Política de privacidad (URL pública que pide Google para la pantalla de permisos de Drive)
 JS/script.js        Toda la lógica (un solo archivo, sin módulos ni dependencias)
 ASSETS/             Favicon e imágenes
 EXAMPLES/           PDF y TXT de ejemplo
@@ -53,14 +58,18 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 | Clave | Contenido |
 |---|---|
 | `reportData` | Los bloques del reporte |
-| `global_header_data` | Datos del encabezado: `{ names[], isTeam, group, subject, prof, career, term, date, includeLogo, coverMode, taskName }`. Los datos antiguos pueden traer `name` en lugar de `names` |
+| `global_header_data` | Datos del encabezado: `{ names[], studentIds[], isTeam, group, subject, prof, career, term, date, includeLogo, coverMode, taskName }` (`studentIds` va en paralelo a `names`). Los datos antiguos pueden traer `name` en lugar de `names` |
 | `selectedTheme` | id de la universidad seleccionada |
 | `list_universities` | Universidades: `{ id, name, builtin, color { primary, secondary, accent }, logoLeft, logoRight }` (logos en data URL) |
 | `list_subjects` / `list_profs` | Arreglos de texto con las materias y los profesores |
 | `subject_prof_map` | Vínculo `{ "materia": "profesor" }` |
+| `user_profile` | Perfil: `{ fullName, studentId, career, group, period, periodType, onboardingDone }`; `periodType` es `cuatrimestre`, `semestre` o `anio` |
+| `header_fields` | Campos del encabezado: `{ institution, career, subject, prof, studentId, group, term, date }`, cada uno `{ show, label }` (`label` vacío = nombre de siempre) |
+| `list_classmates` | Compañeros: `[{ name, studentId }]` |
 | `documentName` | Nombre del documento (vacío = "Reporte sin título") |
 | `autosaveEnabled` | `'0'` si el autoguardado está desactivado (por defecto activo) |
 | `previewWidth` | Ancho (px) elegido para la vista previa; sin valor = el del CSS (460 px) |
+| `previewHidden` | `'1'` si la vista previa está oculta (computadora) |
 | `citationStyle` | Formato de las referencias: `ieee` (por defecto) o `apa` |
 | `previewZoom` | Zoom de la vista previa: `fit` (ajustar al ancho, por defecto) o un nivel de 0.25 a 1.5; solo pantalla |
 
@@ -71,6 +80,18 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 - Cambios sin guardar: `markDocumentSaved()` guarda una "foto" del documento (`getDocumentSnapshot()`: bloques + encabezado + nombre); `hasUnsavedChanges()` la compara. Se marca como guardado al cargar la página, al guardar el JSON o en Drive, al cargar un proyecto y con "Nuevo". Sin autoguardado y con cambios, la pastilla dice "Cambios sin guardar" y el navegador avisa antes de cerrar (`beforeunload`).
 - Nombre del documento: `setDocumentName()` / `getDocumentName()` (input `#document-name` en la barra del editor). También es el título de la pestaña (`document.title`), que el navegador usa como nombre del PDF al imprimir. `getSafeFileName()` lo limpia para usarlo en los archivos JSON, TXT y Drive. Se guarda en el proyecto (`documentName`); al cargar un proyecto viejo se toma del nombre del archivo.
 - `newDocument()` (botón "Nuevo"): pide confirmación y borra bloques, encabezado, nombre y el archivo de Drive activo. Conserva universidades, materias, profesores y el tema.
+
+### Perfil, campos del encabezado y compañeros
+
+- **Asistente de bienvenida** (`openOnboarding()`): se abre solo si `user_profile.onboardingDone` no es `true`. Pasos: datos personales (nombre obligatorio), escuela (universidad = tema, carrera, grupo, periodo y tipo de periodo), campos del encabezado y, opcionales, materias/profesores y compañeros. Guarda el perfil en cada paso; al terminar da de alta las listas y, si no hay bloques, agrega el encabezado ya lleno. "Configurar después" solo marca `onboardingDone`. Se puede reabrir desde Configuración → Mi perfil.
+- **Perfil** (`getProfile` / `saveProfile`): `getHeaderDefaultsFromProfile()` llena el encabezado cuando no hay datos (documento nuevo). Cambiar el encabezado de un documento no cambia el perfil; `applyProfileToHeader()` ("Usar en el encabezado actual") los copia a mano.
+- **Tipo de periodo**: `getPeriodType()` / `getPeriodWord()`; `formatTerm()` usa esa palabra ("7" → "7° Semestre").
+- **Campos del encabezado**: `HEADER_FIELDS`, `getHeaderFieldConfig()`, `isHeaderFieldShown(key)`, `getHeaderFieldLabel(key, 'editor'|'preview')`. El editor oculta los campos apagados (`data-field`), y la vista previa, la portada y el TXT los omiten. `renderHeaderFieldsEditor(container)` es el editor de campos (pestaña "Encabezado" y paso 3 del asistente).
+- **Matrícula**: cada `.member-row` tiene `.student-name-input` y `.student-id-input` (`buildMemberRowHTML()`). `getHeaderPeople(headerData)` devuelve `[{ name, id }]` sin filas vacías.
+- **Compañeros**: `getClassmates`, `addClassmate`, `editClassmate`, `deleteClassmate`. En modo equipo, el `<select id="classmate-picker">` llama a `addClassmateToTeam()` (llena la primera fila vacía o agrega una; no repite).
+- **Configuración** tiene 7 pestañas: `profile`, `header_fields`, `universities`, `list_subjects`, `list_profs`, `classmates` y `backup` (se abre en `profile`).
+- **Respaldo** (pestaña `backup`): `buildBackupData(includeDocument)` / `exportBackup()` descargan un `.json` `{ app, type: 'backup', version, exportedAt, settings, document }`. `settings` lleva tal cual los valores del navegador de las claves de `BACKUP_KEYS`; `document` (opcional) lleva `documentName`, `reportData` y `headerData` tomados de la pantalla. `importBackupFromFile()` muestra un resumen (`describeBackup()`), pide confirmación y llama a `importBackupData()`, que **reemplaza** esas claves y, si lo trae, el documento. Si agregas una clave nueva de configuración en el navegador, agrégala a `BACKUP_KEYS`.
+- El proyecto guarda `classmates`, `headerFields` y `periodType` en `settings`; al cargarlo se añaden los compañeros que falten, y los campos y el tipo de periodo solo se aplican si aquí no se han configurado.
 
 ### Renderizado
 
@@ -126,6 +147,14 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 - Imágenes: al paginar, una imagen que no ha terminado de cargar mide 0 de alto. `previewImageSizes` guarda el tamaño de cada imagen ya cargada (se le pone `width`/`height` para reservar su alto) y, cuando carga una imagen nueva, se repagina una vez. Además, en la hoja se limitan a `max-height: 18cm`.
 - Ancho de la vista previa: el divisor `#pane-resizer` (entre `.editor-pane` y `#preview-pane`) se arrastra con eventos de puntero; también responde a las flechas y el doble clic lo regresa al tamaño normal. `setPreviewWidth(px | null)` limita el ancho a mínimo 320 px y deja al editor al menos 380 px. `togglePreviewExpanded()` (botón de la barra de la vista previa) alterna entre el 60% del espacio y el tamaño normal. Si el zoom está en `fit`, la hoja se reajusta al cambiar el ancho.
 
+### Ocultar la vista previa y diseño para celular
+
+- Computadora: `setPreviewHidden(true|false)` / `togglePreviewVisible()` (botón "Ocultar/Mostrar vista previa" de la barra del editor y la ✕ de la barra de la vista previa). Pone la clase `preview-is-hidden` en `<body>`.
+- Celular (`isMobileLayout()`, hasta 768 px): la barra lateral es un cajón (`toggleSidebar()`, botón ☰ `#mobile-menu-btn`, fondo `.sidebar-backdrop`) y abajo están las pestañas `.mobile-tabs` (`setMobileView('editor'|'preview')`, clase `mobile-view-preview` en `<body>`). Al usar un botón del menú en celular, el menú se cierra; si fue un bloque, vuelve al editor.
+- **La vista previa oculta nunca lleva `display: none`**: se saca de la pantalla (`position: fixed; left: -100000px; visibility: hidden`) para que se siga paginando y el índice tenga números correctos. En `@media print` se regresa a su lugar.
+- Clases de apoyo: `.mobile-only` y `.desktop-only`.
+- Al probar en Chrome sin interfaz, la ventana no baja de ~500 px de ancho: para el diseño de celular usa `--window-size=390,844` (queda en ~504 px, que sigue siendo celular) y toma capturas a 504 px de ancho.
+
 ### Exportación
 
 - PDF: `window.print()` más las reglas `@media print` (ocultan la barra lateral y el editor).
@@ -156,6 +185,7 @@ No hay pruebas en el repositorio. Lo que ha funcionado es Chrome sin interfaz:
 4. Para ver cómo se ve: `--screenshot=<png> --window-size=1440,900`.
 5. Para la impresión: `--print-to-pdf=<archivo>` y cuenta las páginas del PDF (`/Type /Page`); deben ser las mismas que `.preview-page` en la vista previa. **Oculta el `<pre id="TEST_RESULTS">`** antes de imprimir (`#TEST_RESULTS{display:none}`), o saldrá como una hoja extra.
 6. Proyecto de prueba completo: `EXAMPLES/PROYECTO-PRUEBA-COMPLETO.json` (se carga con "Cargar Proyecto").
+7. **El asistente de bienvenida se abre solo** en un navegador limpio: en las pruebas llama a `closeOnboarding()` y guarda `saveProfile({ onboardingDone: true })` antes de probar otras cosas (o úsalo a propósito para probar el asistente).
 
 Chrome está en `C:\Program Files\Google\Chrome\Application\chrome.exe`.
 
