@@ -1,0 +1,67 @@
+<!-- Prueba "diseno_computadora": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const rect = sel => $(sel).getBoundingClientRect();
+  const long = n => Array.from({ length: n }, (_, i) => `Oración ${i + 1} de un párrafo largo para probar la paginación.`).join(' ');
+  try {
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+    setPreviewHidden(false); setPreviewWidth(null);
+    reportData = [
+      { id: 1, type: 'toc', content: '' },
+      { id: 2, type: 'title', content: 'Uno' },
+      { id: 3, type: 'text', content: long(120) },
+      { id: 4, type: 'subtitle', content: 'Dos' }
+    ];
+    render();
+    ok('not mobile', !isMobileLayout() && getComputedStyle($('#mobile-menu-btn')).display === 'none' && getComputedStyle($('.mobile-tabs')).display === 'none');
+    ok('toggle button visible', $('#preview-toggle-btn').offsetParent !== null && $('#preview-toggle-label').textContent === 'Ocultar vista previa');
+    const editorW0 = rect('.editor-pane').width;
+
+    $('#preview-toggle-btn').click();
+    await wait(100);
+    ok('hidden class + saved', document.body.classList.contains('preview-is-hidden') && localStorage.getItem('previewHidden') === '1');
+    ok('preview off screen', rect('#preview-pane').right <= 0 && getComputedStyle($('#preview-pane')).visibility === 'hidden');
+    ok('resizer hidden', getComputedStyle($('#pane-resizer')).display === 'none');
+    ok('editor takes the space (' + Math.round(editorW0) + ' -> ' + Math.round(rect('.editor-pane').width) + ')', rect('.editor-pane').width > editorW0 + 400);
+    ok('button says Mostrar', $('#preview-toggle-label').textContent === 'Mostrar vista previa' && $('#preview-toggle-icon').textContent === 'visibility');
+
+    // Sigue paginando aunque esté oculta
+    updateContent(3, long(160));
+    const pages = Array.from(document.querySelectorAll('.preview-page'));
+    ok('still paginates while hidden (' + pages.length + ' pages)', pages.length >= 3);
+    ok('no overflow while hidden', pages.every(p => { const b = p.querySelector('.preview-page-body'); return b.scrollHeight <= b.clientHeight + 1; }));
+    const entries = Array.from(document.querySelectorAll('.p-toc-entry'));
+    ok('toc numbers right while hidden', entries.length === 2 && entries.every(e => e.querySelector('.p-toc-page').textContent === document.querySelector(`[data-toc-anchor="${e.dataset.tocRef}"]`).closest('.preview-page').dataset.page));
+
+    // Mostrar de nuevo
+    $('#preview-toggle-btn').click();
+    await wait(100);
+    ok('shown again', !document.body.classList.contains('preview-is-hidden') && Math.abs(rect('#preview-pane').width - 460) <= 2 && rect('#preview-pane').left > 0);
+
+    // La ✕ de la vista previa también la oculta
+    $('#preview-hide-btn').click();
+    ok('close button hides', isPreviewHidden() && document.body.classList.contains('preview-is-hidden'));
+
+    // Se recuerda al recargar
+    document.body.classList.remove('preview-is-hidden');
+    applyPreviewVisibility();
+    ok('remembered', document.body.classList.contains('preview-is-hidden'));
+    ok('in backup', buildBackupData(false).settings.previewHidden === '1');
+    setPreviewHidden(false);
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

@@ -1,0 +1,182 @@
+<!-- Prueba "parrafos": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const long = n => Array.from({ length: n }, (_, i) => `Oración ${i + 1} de un párrafo largo para probar la paginación.`).join(' ');
+  const norm = t => t.replace(/\s+/g, ' ').trim();
+  try {
+    const st = document.createElement('style'); st.textContent = '*{transition:none !important}'; document.head.appendChild(st);
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+
+    // ---------- Limpieza ----------
+    const S = sanitizeRichHtml;
+    ok('plain text -> p', S('hola') === '<p>hola</p>');
+    ok('script/img/attrs removed', S('<p onclick="x()">a<scr' + 'ipt>alert(1)</scr' + 'ipt><img src=x onerror="window.__xss=1">b</p>') === '<p>ab</p>');
+    ok('strong/em -> b/i', S('<p><strong>a</strong> <em>b</em> <u>c</u></p>') === '<p><b>a</b> <i>b</i> <u>c</u></p>');
+    ok('style bold/italic', S('<span style="font-weight:700">a</span><span style="font-style:italic">b</span>') === '<p><b>a</b><i>b</i></p>');
+    ok('google docs wrapper', S('<b style="font-weight:normal" id="docs-internal"><p>uno</p><p>dos</p></b>') === '<p>uno dos</p>' || S('<b style="font-weight:normal"><span>uno</span></b>') === '<p>uno</p>');
+    ok('divs -> paragraphs', S('uno<div>dos</div><div><br></div><div>tres</div>') === '<p>uno</p><p>dos</p><p>tres</p>');
+    ok('lists + nested flatten', S('<ul><li>a</li><li>b<ul><li>c</li></ul></li></ul>') === '<ul><li>a</li><li>b</li><li>c</li></ul>');
+    ok('ol kept', S('<ol><li><b>x</b></li></ol>') === '<ol><li><b>x</b></li></ol>');
+    ok('cite kept, digits only', S('<span data-cite="12abc" class="cite-chip">[1]</span>') === '<p><span data-cite="12"></span></p>');
+    ok('escapes text', S('a &lt;b&gt; &amp; c') === '<p>a &lt;b&gt; &amp; c</p>');
+    ok('idempotent', S(S('<p><b>a</b><br>b</p><ul><li>c</li></ul>')) === '<p><b>a</b><br>b</p><ul><li>c</li></ul>');
+
+    // ---------- Párrafos antiguos (texto plano) ----------
+    reportData = [{ id: 1, type: 'text', content: 'Línea 1\nLínea 2\n\nOtro <párrafo>' }];
+    render();
+    ok('plain migrated on render', reportData[0].format === 'html' && reportData[0].content === '<p>Línea 1<br>Línea 2</p><p>Otro &lt;párrafo&gt;</p>');
+    ok('preview 2 paragraphs', $$('#preview-container .p-text').length === 2 && $('#preview-container .p-text').innerHTML.includes('<br>'));
+    ok('plain text for txt', richHtmlToPlainText(reportData[0].content) === 'Línea 1\nLínea 2\nOtro <párrafo>');
+
+    // ---------- Editor ----------
+    reportData = []; render();
+    addBlock('text');
+    const editor = $('.rich-editor');
+    ok('editor present + empty state', !!editor && editor.isContentEditable && editor.classList.contains('is-empty'));
+    editor.focus();
+    editor.innerHTML = '<p>Hola mundo</p>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    ok('typing saves', reportData[0].content === '<p>Hola mundo</p>' && !editor.classList.contains('is-empty'));
+    // Seleccionar "mundo" y poner negritas
+    const textNode = editor.querySelector('p').firstChild;
+    const range = document.createRange(); range.setStart(textNode, 5); range.setEnd(textNode, 10);
+    const sel = getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+    richCommand($('.rich-btn[data-cmd="bold"]'), 'bold');
+    ok('bold via toolbar (' + reportData[0].content + ')', /<b>mundo<\/b>/.test(reportData[0].content));
+    ok('bold in preview', !!$('#preview-container .p-text b'));
+    // Lista
+    editor.innerHTML = '<p>Intro</p><ol><li>Uno</li><li>Dos</li></ol><ul><li>Viñeta</li></ul>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    ok('lists saved', reportData[0].content === '<p>Intro</p><ol><li>Uno</li><li>Dos</li></ol><ul><li>Viñeta</li></ul>');
+    ok('lists in preview', !!$('#preview-container ol.p-list') && !!$('#preview-container ul.p-list') && $$('#preview-container .p-list li').length === 3);
+    ok('list txt', richHtmlToPlainText(reportData[0].content) === 'Intro\n1. Uno\n2. Dos\n• Viñeta');
+    // Toolbar list command
+    editor.innerHTML = '<p>uno</p>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    const r2 = document.createRange(); r2.selectNodeContents(editor.querySelector('p')); sel.removeAllRanges(); sel.addRange(r2);
+    document.dispatchEvent(new Event('selectionchange'));
+    richCommand($('.rich-btn[data-cmd="insertUnorderedList"]'), 'insertUnorderedList');
+    ok('bullet list via toolbar (' + reportData[0].content + ')', reportData[0].content.includes('<ul><li>uno</li></ul>'));
+
+    // Pegar desde Word / Docs
+    editor.innerHTML = '<p>Antes&nbsp;</p>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    const r3 = document.createRange(); r3.selectNodeContents(editor.querySelector('p')); r3.collapse(false); sel.removeAllRanges(); sel.addRange(r3);
+    const dt = new DataTransfer();
+    dt.setData('text/html', '<meta charset="utf-8"><p style="color:red;font-family:Arial"><span style="font-weight:700">Pegado</span> con <a href="javascript:alert(1)">enlace</a><img src="x"></p>');
+    dt.setData('text/plain', 'Pegado con enlace');
+    editor.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+    ok('paste sanitized (' + reportData[0].content + ')', reportData[0].content === '<p>Antes <b>Pegado</b> con enlace</p>');
+
+    // ---------- Citas ----------
+    reportData = [
+      { id: 10, type: 'text', format: 'html', content: '<p>Según el autor <span data-cite="21"></span> y otros <span data-cite="22"></span>.</p>' },
+      { id: 21, type: 'ref', refType: 'book', refData: { author: 'Pérez, J.', title: 'Circuitos', source: 'Ed', year: '2020', url: '' }, content: '' },
+      { id: 22, type: 'ref', refType: 'web', refData: { author: 'López, A.; Ruiz, B.; Díaz, C.', title: 'Web', source: 'S', year: '', url: 'u' }, content: '' }
+    ];
+    localStorage.setItem('citationStyle', 'ieee');
+    render();
+    let cites = $$('#preview-container .p-cite').map(c => c.textContent);
+    ok('ieee cites ' + cites.join(','), cites.join(',') === '[1],[2]');
+    ok('chips in editor', $$('.cite-chip').map(c => c.textContent).join(',') === '[1],[2]');
+    setCitationStyle('apa');
+    cites = $$('#preview-container .p-cite').map(c => c.textContent);
+    ok('apa cites ' + cites.join(' | '), cites.join(' | ') === '(Pérez, 2020) | (López et al., s.f.)');
+    ok('apa 2 authors', getAPACitationAuthor({ author: 'Ana Gómez y Luis Mora' }) === 'Gómez y Mora');
+    ok('apa no author', getAPACitationAuthor({ author: '', title: 'Un título muy largo de prueba' }) === '"Un título muy largo..."');
+    setCitationStyle('ieee');
+    // Mover referencias cambia el número
+    moveBlockBy(22, -1);
+    cites = $$('#preview-container .p-cite').map(c => c.textContent);
+    ok('renumber after move ' + cites.join(','), cites.join(',') === '[2],[1]');
+    // Referencia borrada
+    deleteBlock(21);
+    ok('missing ref', $$('#preview-container .p-cite')[0].textContent === '[?]' && $$('.cite-chip')[0].classList.contains('is-missing'));
+    // Insertar cita con el menú
+    reportData = [
+      { id: 30, type: 'text', format: 'html', content: '<p>Texto</p>' },
+      { id: 31, type: 'ref', refType: 'book', refData: { author: 'Ruiz, A.', title: 'Libro', source: 'Ed', year: '2019', url: '' }, content: '' }
+    ];
+    render();
+    const ed = $('.rich-editor');
+    const r4 = document.createRange(); r4.selectNodeContents(ed.querySelector('p')); r4.collapse(false); sel.removeAllRanges(); sel.addRange(r4);
+    document.dispatchEvent(new Event('selectionchange'));
+    openCitationPicker($('.rich-btn-cite'), 30);
+    ok('picker lists refs', $$('#cite-picker button[data-ref]').length === 1);
+    $('#cite-picker button[data-ref]').click();
+    ok('citation inserted (' + reportData[0].content + ')', /<span data-cite="31"><\/span>/.test(reportData[0].content) && !$('#cite-picker'));
+    ok('preview cite', $('#preview-container .p-cite').textContent === '[1]');
+    // Sin referencias: ofrece agregar una
+    reportData = [{ id: 40, type: 'text', format: 'html', content: '' }]; render();
+    openCitationPicker($('.rich-btn-cite'), 40);
+    ok('picker empty offers add', !!$('#cite-picker [data-add-ref]'));
+    $('#cite-picker [data-add-ref]').click();
+    ok('add ref from picker', reportData.some(b => b.type === 'ref'));
+
+    // ---------- Seguridad: proyecto con HTML malicioso ----------
+    window.__xss = undefined;
+    applyProjectData({ reportData: [{ id: 50, type: 'text', format: 'html', content: '<p>ok<img src=x onerror="window.__xss=1"><scr' + 'ipt>window.__xss=2</scr' + 'ipt></p><iframe src="javascript:window.__xss=3"></iframe>' }] });
+    await wait(300);
+    ok('xss blocked', window.__xss === undefined && !$('#preview-container img') && !$('#editor-container img') && reportData[0].content === '<p>ok</p>');
+
+    // ---------- Paginación con formato ----------
+    const words = long(160).split(' ');
+    const richLong = '<p>' + words.map((w, i) => i % 7 === 0 ? `<b>${w}</b>` : (i % 11 === 0 ? `<i>${w}</i>` : w)).join(' ') + '</p>';
+    reportData = [{ id: 60, type: 'title', content: 'T' }, { id: 61, type: 'text', format: 'html', content: richLong }];
+    render();
+    const pages = $$('.preview-page');
+    ok('rich paragraph spans pages (' + pages.length + ')', pages.length >= 3);
+    ok('no overflow', pages.every(p => { const b = p.querySelector('.preview-page-body'); return b.scrollHeight <= b.clientHeight + 1; }));
+    const joined = norm($$('#preview-container .p-text').map(p => p.textContent).join(' '));
+    ok('all words kept', joined === norm(long(160)));
+    const boldCount = $$('#preview-container .p-text b').length;
+    ok('bold kept across split (' + boldCount + ')', boldCount >= Math.ceil(words.length / 7));
+    ok('split classes', !!$('#preview-container .p-split-start') && !!$('#preview-container .p-split-rest'));
+
+    // Lista numerada larga: la continuación sigue la numeración
+    const items = Array.from({ length: 70 }, (_, i) => `<li>Elemento número ${i + 1} de una lista larga</li>`).join('');
+    reportData = [{ id: 70, type: 'text', format: 'html', content: `<ol>${items}</ol>` }];
+    render();
+    const ols = $$('#preview-container ol.p-list');
+    const totalLi = ols.reduce((n, ol) => n + ol.children.length, 0);
+    ok('ol split across pages (' + ols.length + ')', ols.length >= 2 && totalLi === 70);
+    ok('ol continues numbering', ols[1] && Number(ols[1].getAttribute('start')) === ols[0].children.length + 1);
+
+    // ---------- Arrastrar ----------
+    reportData = [{ id: 80, type: 'text', format: 'html', content: '<p>a</p>' }, { id: 81, type: 'title', content: 'b' }]; render();
+    const cont = $('.block-card-container');
+    $('.rich-editor').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    ok('no drag when selecting text', cont.getAttribute('draggable') === 'false');
+    cont.querySelector('label').dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+    ok('drag from title', cont.getAttribute('draggable') === 'true');
+
+    // ---------- TXT ----------
+    reportData = [{ id: 90, type: 'text', format: 'html', content: '<p><b>Hola</b> <span data-cite="91"></span></p><ul><li>x</li></ul>' }, { id: 91, type: 'ref', refType: 'book', refData: { author: 'A', title: 'B', source: 'C', year: '1', url: '' }, content: '' }];
+    render();
+    let txt = '';
+    const origCreate = URL.createObjectURL;
+    URL.createObjectURL = blob => { blob.text().then(t => { txt = t; }); return 'blob:x'; };
+    const origClick = HTMLAnchorElement.prototype.click; HTMLAnchorElement.prototype.click = function () {};
+    exportTXT();
+    await wait(200);
+    URL.createObjectURL = origCreate; HTMLAnchorElement.prototype.click = origClick;
+    ok('txt has plain paragraph', txt.includes('Hola [1]\n• x'));
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

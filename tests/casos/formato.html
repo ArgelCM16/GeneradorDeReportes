@@ -1,0 +1,109 @@
+<!-- Prueba "formato": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const long = n => Array.from({ length: n }, (_, i) => `Oración ${i + 1} de un párrafo largo para probar la paginación.`).join(' ');
+  const noOverflow = () => $$('.preview-page').every(p => { const b = p.querySelector('.preview-page-body'); return b.scrollHeight <= b.clientHeight + 1; });
+  try {
+    const st = document.createElement('style'); st.textContent = '*{transition:none !important}'; document.head.appendChild(st);
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+    setDocumentFormat(null);
+    reportData = [{ id: 1, type: 'title', content: 'Título' }, { id: 2, type: 'text', content: long(160) }, { id: 3, type: 'subtitle', content: 'Sub' }];
+    render();
+    const page = () => $('.preview-page');
+    const cs = el => getComputedStyle(el);
+    ok('default letter 816px', Math.round(page().offsetWidth) === 816 && Math.round(page().offsetHeight) === 1056);
+    ok('default font georgia 16px', cs($('.p-text')).fontFamily.includes('Georgia') && cs($('.p-text')).fontSize === '16px');
+    const pagesDefault = $$('.preview-page').length;
+
+    // APA
+    setDocumentFormat(DOCUMENT_FORMAT_PRESETS.find(p => p.id === 'apa').format);
+    const t = cs($('.p-text'));
+    ok('apa font times', t.fontFamily.includes('Times New Roman'));
+    ok('apa double spacing (' + t.lineHeight + ')', t.lineHeight === '32px');
+    ok('apa left + indent (' + t.textIndent + ')', t.textAlign === 'left' && Math.round(parseFloat(t.textIndent)) === 48);
+    ok('apa margin 1in (' + cs(page()).paddingTop + ')', Math.round(parseFloat(cs(page()).paddingTop)) === 96);
+    const pagesApa = $$('.preview-page').length;
+    ok('apa more pages (' + pagesDefault + ' -> ' + pagesApa + ')', pagesApa > pagesDefault);
+    ok('apa no overflow', noOverflow());
+    ok('split rest without indent', $$('.p-text.p-split-rest').every(p => cs(p).textIndent === '0px'));
+
+    // Tamaño de letra
+    setDocumentFormat({ ...getDocumentFormat(), size: 14 });
+    ok('14pt font (' + cs($('.p-text')).fontSize + ')', Math.round(parseFloat(cs($('.p-text')).fontSize)) === 19);
+    ok('title scales', parseFloat(cs($('.p-title')).fontSize) > 40);
+
+    // Hoja oficio y A4
+    setDocumentFormat({ ...getDocumentFormat(), paper: 'legal', size: 12 });
+    ok('legal height 14in', Math.round(page().offsetHeight) === 1344);
+    ok('legal no overflow', noOverflow());
+    ok('print @page legal', $('#doc-page-style').textContent.includes('size: 8.5in 14in'));
+    ok('preview title says Oficio', $('#preview-title').textContent.includes('Oficio'));
+    setDocumentFormat({ ...getDocumentFormat(), paper: 'a4' });
+    ok('a4 width', Math.round(page().offsetWidth) === 794 && getPageWidthPx() === 794);
+
+    // Números de página
+    setDocumentFormat({ ...getDocumentFormat(), pageNumbers: false });
+    ok('page numbers hidden', cs($('.preview-page-number')).display === 'none');
+    setDocumentFormat({ ...getDocumentFormat(), pageNumbers: true });
+    ok('page numbers shown', cs($('.preview-page-number')).display !== 'none');
+
+    // Valores no válidos
+    setDocumentFormat({ font: 'comic', size: 99, lineHeight: 7, margin: -1, paper: 'x', align: 'center' });
+    ok('invalid -> defaults', JSON.stringify(getDocumentFormat()) === JSON.stringify(DEFAULT_DOCUMENT_FORMAT));
+
+    // Guardado, proyecto y deshacer
+    setDocumentFormat({ ...DEFAULT_DOCUMENT_FORMAT, font: 'arial' });
+    ok('saved in localStorage', JSON.parse(localStorage.getItem('documentFormat')).font === 'arial');
+    ok('in project', buildProjectData().documentFormat.font === 'arial');
+    await wait(500); recordHistory();
+    setDocumentFormat({ ...DEFAULT_DOCUMENT_FORMAT, font: 'times' });
+    await wait(500);
+    undo();
+    ok('undo format', getDocumentFormat().font === 'arial' && cs($('.p-text')).fontFamily.includes('Arial'));
+    await wait(800);
+    applyProjectData({ reportData: [{ id: 9, type: 'text', content: 'x' }], documentFormat: { font: 'calibri', paper: 'legal' } });
+    ok('project load applies format', getDocumentFormat().font === 'calibri' && getDocumentFormat().paper === 'legal');
+    applyProjectData({ reportData: [{ id: 9, type: 'text', content: 'x' }] });
+    ok('old project -> default format', getDocumentFormat().font === 'georgia');
+
+    // Ventana
+    openFormatModal();
+    ok('modal open with presets', $$('.format-preset').length === 3 && $('.format-preset.is-active').dataset.preset === 'default');
+    const fontSel = $('#format-modal-overlay select[data-field="font"]');
+    fontSel.value = 'times'; fontSel.dispatchEvent(new Event('change'));
+    ok('select changes format', getDocumentFormat().font === 'times' && !$('.format-preset.is-active'));
+    $('#format-modal-overlay [data-preset="formal"]').click();
+    ok('preset applies', getDocumentFormat().font === 'arial' && getDocumentFormat().lineHeight === 1.5 && $('.format-preset.is-active').dataset.preset === 'formal');
+    $('#format-modal-overlay input[data-field="indent"]').click();
+    ok('checkbox applies', getDocumentFormat().indent === true);
+    $('#format-modal-overlay [data-action="default"]').click();
+    ok('set as default', JSON.parse(localStorage.getItem('defaultDocumentFormat')).font === 'arial' && $('#format-message').textContent.includes('nuevos'));
+    $('#format-modal-overlay [data-action="close"]').click();
+    ok('modal closed', !$('#format-modal-overlay'));
+    newDocument();
+    ok('new doc uses default format', getDocumentFormat().font === 'arial' && getDocumentFormat().indent === true);
+    ok('default in backup', buildBackupData(false).settings.defaultDocumentFormat.includes('arial'));
+
+    // Zoom ajustado con hoja A4
+    setDocumentFormat({ ...getDocumentFormat(), paper: 'a4' });
+    setPreviewZoom('fit');
+    ok('fit zoom uses page width', Math.abs(getFitZoom() - Math.min(1.5, ($('.preview-scroll').clientWidth - parseFloat(cs($('.preview-scroll')).paddingLeft) - parseFloat(cs($('.preview-scroll')).paddingRight)) / 794)) < 0.01);
+    setDocumentFormat(null);
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

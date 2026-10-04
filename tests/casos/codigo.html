@@ -1,0 +1,108 @@
+<!-- Prueba "codigo": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  try {
+    const st = document.createElement('style'); st.textContent = '*{transition:none !important}'; document.head.appendChild(st);
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+
+    // ---------- Detección ----------
+    const samples = {
+      python: 'def suma(a, b):\n    return a + b\n\nprint(suma(1, 2))',
+      javascript: 'const x = 5;\nfunction f(a) {\n  return a * 2;\n}\nconsole.log(f(x));',
+      java: 'public class Hola {\n  public static void main(String[] args) {\n    System.out.println("Hola");\n  }\n}',
+      c: '#include <stdio.h>\nint main() {\n  printf("hola");\n  return 0;\n}',
+      cpp: '#include <iostream>\nint main() {\n  std::cout << "hola";\n}',
+      csharp: 'using System;\nclass P { static void Main() { Console.WriteLine("hola"); } }',
+      sql: 'SELECT nombre, edad\nFROM alumnos\nWHERE edad > 18;',
+      html: '<!DOCTYPE html>\n<html>\n<body><p class="x">Hola</p></body>\n</html>',
+      css: '.titulo {\n  color: #ff0000;\n  margin: 10px;\n}',
+      php: '<?php\n$nombre = "Ana";\necho $nombre;\n?>',
+      plain: 'Esto es solo texto normal sin código.'
+    };
+    Object.entries(samples).forEach(([lang, code]) => ok('detect ' + lang + ' -> ' + detectCodeLanguage(code), detectCodeLanguage(code) === lang));
+
+    // ---------- Piezas ----------
+    const py = tokenizeCode('def f(x):  # comentario\n    s = "hola"\n    return 3.5 + x', 'python');
+    const typeOf = v => (py.find(t => t.v.includes(v)) || {}).t;
+    ok('py keyword', typeOf('def') === 'kw' && typeOf('return') === 'kw');
+    ok('py function', py.some(t => t.t === 'fn' && t.v === 'f'));
+    ok('py comment', typeOf('# comentario') === 'com');
+    ok('py string', typeOf('"hola"') === 'str');
+    ok('py number', typeOf('3.5') === 'num');
+    ok('tokens keep text', py.map(t => t.v).join('') === 'def f(x):  # comentario\n    s = "hola"\n    return 3.5 + x');
+    const triple = codeTokenLines('x = """uno\ndos"""\ny = 1', 'python');
+    ok('triple string spans lines', triple.length === 3 && triple[1][0].t === 'str');
+    ok('sql case-insensitive', tokenizeCode('select * from t', 'sql').filter(t => t.t === 'kw').length >= 1);
+    const html = tokenizeCode('<a href="x">hola</a><!-- c -->', 'html');
+    ok('html tag/attr/str/com', ['tag', 'attr', 'str', 'com'].every(type => html.some(t => t.t === type)));
+    const css = tokenizeCode('a { color: #fff; width: 10px; }', 'css');
+    ok('css attr/num', css.some(t => t.t === 'attr' && t.v === 'color') && css.some(t => t.t === 'num' && t.v === '10px'));
+    ok('c preprocessor', tokenizeCode('#include <stdio.h>\nint x;', 'c')[0].t === 'pre');
+    ok('php variable', tokenizeCode('$a = 1;', 'php')[0].t === 'var');
+    ok('unknown -> plain', tokenizeCode('a < b', 'plain').length === 1);
+
+    // ---------- Vista previa ----------
+    reportData = [{ id: 1, type: 'code', content: samples.python, language: 'auto', lineNumbers: false }];
+    render();
+    ok('colored preview', $$('#preview-container .code-preview .tok-kw').length >= 2 && !!$('#preview-container .code-lang-python'));
+    ok('one span per line', $$('#preview-container .code-line').length === 4);
+    ok('detected label', $('[data-code-detected="1"]').textContent.includes('Python'));
+    $('.code-card select').value = 'java'; $('.code-card select').dispatchEvent(new Event('change'));
+    ok('language select', reportData[0].language === 'java' && !!$('#preview-container .code-lang-java') && $('[data-code-detected="1"]').textContent === '');
+    $('.code-card input[type="checkbox"]').click();
+    ok('line numbers', reportData[0].lineNumbers === true && !!$('#preview-container .has-line-numbers'));
+    const before = getComputedStyle($('#preview-container .code-line'), '::before').content;
+    ok('line number counter (' + before + ')', before.includes('counter') || /\d/.test(before));
+    updateContent(1, 'x = 1  # cambio');
+    ok('typing updates detected label', $('[data-code-detected="1"]').textContent === '' && $('#preview-container .code-lang-java'));
+
+    // Seguridad
+    reportData = [{ id: 2, type: 'code', content: '<scr' + 'ipt>window.__xss = 1</scr' + 'ipt><img src=x onerror="window.__xss=2">', language: 'html', lineNumbers: false }];
+    window.__xss = undefined;
+    render();
+    await wait(200);
+    ok('code is escaped', window.__xss === undefined && !$('#preview-container script') && !$('#preview-container img') && $('#preview-container .code-preview').textContent.includes('<img'));
+
+    // ---------- Paginación por líneas ----------
+    const longCode = Array.from({ length: 140 }, (_, i) => `    resultado_${i} = calcular(${i}, "texto")  # línea ${i + 1}`).join('\n');
+    reportData = [{ id: 3, type: 'title', content: 'T' }, { id: 4, type: 'code', content: 'def main():\n' + longCode, language: 'python', lineNumbers: true }];
+    render();
+    const pres = $$('#preview-container pre.code-preview');
+    ok('code split across pages (' + pres.length + ')', pres.length >= 2);
+    ok('no overflow', $$('.preview-page').every(p => { const b = p.querySelector('.preview-page-body'); return b.scrollHeight <= b.clientHeight + 1; }));
+    const totalLines = pres.reduce((n, p) => n + p.querySelectorAll('.code-line').length, 0);
+    ok('all lines kept (' + totalLines + ')', totalLines === 141);
+    const firstCount = pres[0].querySelectorAll('.code-line').length;
+    ok('numbering continues (' + pres[1].querySelector('code').style.counterReset + ')', pres[1].querySelector('code').style.counterReset === `code-line ${firstCount}`);
+    ok('colors kept after split', pres[1].querySelectorAll('.tok-com').length > 5);
+
+    // ---------- Word ----------
+    reportData = [{ id: 5, type: 'code', content: 'def f():\n    return "x"', language: 'auto', lineNumbers: true }];
+    render();
+    const blob = await buildDocx();
+    const raw = new TextDecoder('utf-8').decode(new Uint8Array(await blob.arrayBuffer()));
+    ok('word code colored', raw.includes('<w:color w:val="CF222E"/>') && raw.includes('<w:color w:val="0A3069"/>') && raw.includes('return'));
+    ok('word line numbers', raw.includes('>1  </w:t>') || raw.includes('1  '));
+
+    // Bloque nuevo y TXT
+    reportData = []; render(); addBlock('code');
+    ok('new code block defaults', reportData[0].language === 'auto' && reportData[0].lineNumbers === false && !!$('.code-options'));
+    ok('empty code warns', getDocumentIssues().some(i => i.message.includes('código vacío')));
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

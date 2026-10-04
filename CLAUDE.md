@@ -9,7 +9,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 - Rama de trabajo: **`test`**. La rama por defecto (la que muestra GitHub) es **`main`**; los cambios pasan a `main` cuando el usuario lo pide.
 - Haz commit o push solo cuando el usuario lo pida.
 - Si el usuario pide un cambio "solo de diseño", no toques la lógica de `JS/script.js`: los estilos del rediseño viven en `CSS/redesign.css`.
-- Después de cambiar algo, pruébalo en Chrome sin interfaz (ver [Cómo probar](#cómo-probar)).
+- Después de cambiar algo, corre las pruebas: `python tests/ejecutar.py` (ver [Cómo probar](#cómo-probar)). Si agregas una función, agrega su prueba en `tests/casos/`.
 - **Si cambia qué datos usa la app o con qué servicios se conecta** (nuevos recursos externos, analítica, otro permiso de Google...), actualiza `privacidad.html` (y `terminos.html` si aplica) junto con su fecha de "Última actualización".
 - **Si cambias `CSS/*.css` o `JS/script.js`, sube el número `?v=` de sus enlaces en `index.html`** (los tres llevan el mismo, y `legal.css` en `terminos.html` y `privacidad.html` también) **y pon el mismo número en `VERSION` de `sw.js`**. GitHub Pages deja que el navegador guarde esos archivos hasta 10 minutos y el service worker los guarda sin límite; sin cambiar los dos números, el navegador puede mezclar el HTML nuevo con CSS o JS viejos y la página se ve rota (o se queda con la versión vieja).
 
@@ -19,7 +19,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 
 - Autor original: Jorge Javier Pedrozo Romero. Modificado por: Argel Alberto Cano Morales.
 - Repositorio: `https://github.com/ArgelCM16/GeneradorDeReportes`.
-- Versión actual: **2.4.1** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
+- Versión actual: **2.5.0** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
 
 ## Estructura
 
@@ -36,11 +36,12 @@ sw.js               Service worker: guarda los archivos de la app para que funci
 ASSETS/             Logo "Generador CM": favicon, íconos de la app (icon-192, icon-512, icon-maskable-512 y apple-touch-icon) e imágenes
 EXAMPLES/           PDF y TXT de ejemplo
 SCREENSHOTS/        GIF/MP4 para el README
+tests/              Pruebas automáticas: ejecutar.py (corre todo), casos/*.html (una prueba por archivo), revisar_word.py
 README.md           Documentación para usuarios
 contexto.md         Estado actual, historial de decisiones y planes (colaboración en vivo)
 ```
 
-No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: Google Fonts (Plus Jakarta Sans y Material Symbols) y Google Identity Services (solo para Google Drive).
+No hay `package.json` ni npm. Las pruebas están en `tests/` (solo necesitan Python y Chrome). Recursos externos: Google Fonts (Plus Jakarta Sans y Material Symbols) y Google Identity Services (solo para Google Drive).
 
 ## Cómo funciona `JS/script.js`
 
@@ -49,6 +50,7 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 - `reportData` (arreglo global): los bloques del reporte, en orden. Se guarda en `localStorage` con `scheduleAutosave()` → `saveToLocalStorage()` (espera de 500 ms) y se restaura al cargar la página con `loadFromLocalStorage()`.
 - Cada bloque es un objeto `{ id, type, content, ... }`. El `id` lo da `newBlockId()` (un número único: `Date.now()` o uno más que el mayor que ya existe). Los bloques nuevos se crean con `createBlock(type)`, que pone todos los campos del tipo; `addBlock(type)` lo agrega y dibuja. Campos extra según el tipo:
   - `image`: `caption`; la imagen va en `content` como data URL (base64).
+  - `code`: `language` (`auto` o una clave de `CODE_LANGUAGES`) y `lineNumbers` (true/false).
   - `table`: `columns` (1-6), `tableData` (matriz; la fila 0 son los encabezados) y `caption`.
   - `ref`: `refType` (`web` | `book` | `article`) y `refData { author, title, source, year, url }`.
   - `ai`: `aiUsed` (`'no'` | `'yes'`) y `aiData { name, aiTool, date, purpose, prompt, attachments, rawResponse }`.
@@ -197,6 +199,12 @@ Además, **Mis documentos** vive en IndexedDB (base `generador-reportes`, almace
 - Respaldo: `exportBackup(includeDocument, includeLibrary)` agrega `library: [{ meta, data }]`; `importLibraryDocuments()` los restaura.
 - Ventana: `openLibraryModal()` (botón 📁 de la barra del editor y "Mis documentos" de la barra lateral). `showToast()` muestra avisos breves.
 
+### Código con colores
+
+- `CODE_LANGUAGES` (lenguajes con sus palabras clave), `detectCodeLanguage(code)`, `getCodeLanguage(block)` (el elegido o el detectado) y `tokenizeCode(code, lang)` → `[{ t, v }]` (`t`: `kw`, `str`, `com`, `num`, `fn`, `type`, `tag`, `attr`, `var`, `pre` o vacío). HTML y CSS tienen su propio tokenizador (`tokenizeMarkup`, `tokenizeCss`).
+- Hoja: `renderCodePreview(block)` → `<pre class="code-preview">` con un `<span class="code-line">` por línea y clases `.tok-*` (colores en `style.css`). La paginación lo parte por líneas (`splitCodeLines`) y, con números de línea, la continuación sigue la cuenta (`counter-reset`).
+- Word: `codeTokenLines()` + `CODE_TOKEN_COLORS`. El TXT sale sin colores.
+
 ### Tarjetas: subir, bajar y duplicar
 
 - `buildBlockToolsHTML(block, index)` arma la esquina de cada tarjeta: ↑ ↓ (`moveBlockBy(id, ±1)`), Duplicar (`duplicateBlock(id)`, copia profunda con id nuevo, justo debajo) y ×. Funcionan con el dedo (el arrastrar y soltar no funciona en pantallas táctiles).
@@ -251,18 +259,26 @@ Además, **Mis documentos** vive en IndexedDB (base `generador-reportes`, almace
 
 ## Cómo probar
 
-No hay pruebas en el repositorio. Lo que ha funcionado es Chrome sin interfaz:
+**Pruebas automáticas** (detalles en [tests/README.md](tests/README.md)):
 
-1. Copia `index.html` a una carpeta temporal cambiando las rutas `CSS/` y `JS/` por rutas absolutas `file:///...`.
-2. Antes de `</body>`, agrega un `<script>` que al cargar ejecute las acciones (`addBlock`, `openSettingsModal`, `dispatchEvent(new Event('input'))`...), revise los resultados y los escriba en un `<pre id="TEST_RESULTS">`. Sustituye `alert`, `confirm` y `prompt` por funciones falsas.
-3. Ejecuta `chrome.exe --headless=new --allow-file-access-from-files --user-data-dir=<temporal> --virtual-time-budget=6000 --dump-dom <archivo>` y lee el `<pre>`.
-4. Para ver cómo se ve: `--screenshot=<png> --window-size=1440,900`.
-5. Para la impresión: `--print-to-pdf=<archivo>` y cuenta las páginas del PDF (`/Type /Page`); deben ser las mismas que `.preview-page` en la vista previa. **Oculta el `<pre id="TEST_RESULTS">`** antes de imprimir (`#TEST_RESULTS{display:none}`), o saldrá como una hoja extra.
-6. Proyecto de prueba completo: `EXAMPLES/PROYECTO-PRUEBA-COMPLETO.json` (se carga con "Cargar Proyecto").
-7. **IndexedDB (Mis documentos) y service worker**: con `--virtual-time-budget`, Chrome adelanta el reloj cuando no hay temporizadores y **no espera a IndexedDB** (la prueba se queda "colgada" y no hay resultados). Para esas pruebas sirve la app por http y usa `--timeout`, reteniendo el evento `load` con una imagen que el servidor no responde hasta que la prueba avisa que terminó. Usa siempre un `--user-data-dir` con **ruta corta**.
-8. **Service worker (PWA)**: sirve una copia de la app con un servidor local (`python -m http.server`) y usa un `--user-data-dir` con **ruta corta** (por ejemplo `C:\Users\<usuario>\AppData\Local\Temp\prof`): con la ruta larga de la carpeta temporal de Claude, la caché de Chrome falla con "Unexpected internal error". `--virtual-time-budget` no deja que el service worker se instale; usa `--timeout` y retrasa el evento `load` (por ejemplo, con una imagen que el servidor tarda en responder). Para probar sin internet, apaga el servidor y vuelve a abrir la página con el mismo perfil.
-9. **El Word**: guarda el `.docx` desde la prueba (base64 en un `<pre>`) y revísalo con `python-docx` instalado en una carpeta temporal (`pip install --target`), no en el Python del sistema.
-10. **El asistente de bienvenida se abre solo** en un navegador limpio: en las pruebas llama a `closeOnboarding()` y guarda `saveProfile({ onboardingDone: true })` antes de probar otras cosas (o úsalo a propósito para probar el asistente).
+```bash
+python tests/ejecutar.py                 # todas (~30 s)
+python tests/ejecutar.py formato codigo  # solo algunas
+```
+
+- Cada prueba es un `tests/casos/<nombre>.html` con un `<script>` que se inyecta antes de `</body>` de `index.html`, hace acciones (`addBlock`, `render`, `dispatchEvent(new Event('input'))`...) y escribe `PASS`/`FAIL` en `<pre id="TEST_RESULTS">`. Sustituye `alert`, `confirm` y `prompt` por funciones falsas.
+- **El asistente de bienvenida se abre solo**: empieza con `closeOnboarding()` y `saveProfile({ onboardingDone: true })`.
+- Modo `archivo` (por defecto): `file://` con `--virtual-time-budget` (rápido). Las transiciones CSS no avanzan: desactívalas con `*{transition:none !important}` si mides algo animado. La ventana no baja de ~504 px de ancho (con `390,844` sigue siendo diseño de celular).
+- Modo `http`: para **IndexedDB (Mis documentos) y el service worker**, que el tiempo virtual no espera. `ejecutar.py` sirve una copia de la app y retiene el evento `load` con una imagen que el servidor no responde hasta que aparece `#TEST_RESULTS`.
+- Usa perfiles de Chrome con **ruta corta** (`ejecutar.py` lo hace): con rutas largas la caché de Chrome falla con "Unexpected internal error".
+- Esperas: en modo archivo el tiempo es virtual y una lectura de archivo (`FileReader`) puede tardar "más" que un `wait()` fijo; espera a que pase la condición (ver `waitFor` en `respaldo.html`).
+- **Word**: `revisar_word.py` revisa los .docx que entrega `casos/word.html` (base64 en `<pre id="DOCX_FILES">`); con `python-docx` instalado revisa más a fondo.
+
+**Ver e imprimir** (a mano, con Chrome sin interfaz):
+
+- Captura: `chrome --headless=new --screenshot=<png> --window-size=1440,900 <página>`.
+- Impresión: `--print-to-pdf=<archivo>` y cuenta las páginas (`/Type /Page`); deben ser las mismas que `.preview-page`. Oculta el `<pre id="TEST_RESULTS">` antes de imprimir.
+- Proyecto de prueba completo: `EXAMPLES/PROYECTO-PRUEBA-COMPLETO.json` (se carga con "Cargar Proyecto").
 
 Chrome está en `C:\Program Files\Google\Chrome\Application\chrome.exe`.
 

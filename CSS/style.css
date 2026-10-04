@@ -2247,3 +2247,46 @@ body.is-resizing-panes {
 .p-list.p-split-start {
     margin-bottom: 0;
 }
+
+
+/* ============================================================================
+   v2.5 · CÓDIGO CON COLORES (hoja e impresión)
+   ============================================================================ */
+.code-preview code {
+    display: block;
+    counter-reset: code-line;
+    tab-size: 4;
+    font-family: inherit;
+}
+
+.code-line {
+    display: block;
+    min-height: 1.6em;
+}
+
+.has-line-numbers .code-line {
+    position: relative;
+    padding-left: 3.2em;
+    counter-increment: code-line;
+}
+
+.has-line-numbers .code-line::before {
+    content: counter(code-line);
+    position: absolute;
+    left: 0;
+    width: 2.4em;
+    text-align: right;
+    color: #94a3b8;
+    user-select: none;
+}
+
+.tok-kw { color: #cf222e; }
+.tok-str { color: #0a3069; }
+.tok-com { color: #6e7781; font-style: italic; }
+.tok-num { color: #0550ae; }
+.tok-fn { color: #8250df; }
+.tok-type { color: #953800; }
+.tok-tag { color: #116329; }
+.tok-attr { color: #0550ae; }
+.tok-var { color: #953800; }
+.tok-pre { color: #cf222e; }

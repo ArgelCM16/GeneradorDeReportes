@@ -1,0 +1,79 @@
+<!-- Prueba "diseno_celular": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const rect = sel => $(sel).getBoundingClientRect();
+  const long = n => Array.from({ length: n }, (_, i) => `Oración ${i + 1} de un párrafo largo para probar la paginación.`).join(' ');
+  try {
+    const st=document.createElement('style'); st.textContent='*{transition:none !important}'; document.head.appendChild(st);
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true, fullName: 'Ana' });
+    addListItem('list_subjects', 'Cálculo');
+    reportData = []; render();
+    const W = window.innerWidth;
+    ok('mobile layout (' + W + 'px)', isMobileLayout() && W <= 768);
+    ok('hamburger visible', $('#mobile-menu-btn').offsetParent !== null);
+    ok('desktop-only hidden', getComputedStyle($('#preview-toggle-btn')).display === 'none' && getComputedStyle($('#pane-resizer')).display === 'none');
+    ok('tabs visible', getComputedStyle($('.mobile-tabs')).display === 'flex' && rect('.mobile-tabs').bottom <= window.innerHeight + 1);
+    ok('sidebar closed (off screen)', rect('.toolbox').right <= 0);
+    ok('editor full width', Math.abs(rect('.editor-pane').width - W) <= 2);
+    ok('preview off screen in editor view', rect('#preview-pane').right <= 0);
+
+    // Menú
+    $('#mobile-menu-btn').click();
+    await wait(500);
+    ok('sidebar opens', document.body.classList.contains('sidebar-open') && Math.round(rect('.toolbox').left) === 0);
+    ok('backdrop visible', getComputedStyle($('.sidebar-backdrop')).display === 'block');
+    $('.sidebar-backdrop').click();
+    await wait(500);
+    ok('backdrop closes', !document.body.classList.contains('sidebar-open') && rect('.toolbox').right <= 0);
+
+    // Agregar bloque desde el menú: se cierra y vuelve al editor
+    setMobileView('preview');
+    toggleSidebar(true);
+    await wait(400);
+    Array.from(document.querySelectorAll('.blocks-grid button')).find(b => b.textContent.includes('Encabez')).click();
+    await wait(400);
+    ok('block added from menu', reportData.length === 1 && reportData[0].type === 'header');
+    ok('menu closed + back to editor', !document.body.classList.contains('sidebar-open') && !document.body.classList.contains('mobile-view-preview'));
+
+    // Formulario en una columna
+    const g = $('#header-group').getBoundingClientRect(), s = $('#select-subject-main').getBoundingClientRect();
+    ok('header fields in one column', Math.abs(g.left - s.left) < 2 && s.top > g.top);
+    ok('no horizontal scroll', document.documentElement.scrollWidth <= W + 1 && $('.editor-pane').scrollWidth <= W + 1);
+
+    // Pestaña Vista previa
+    reportData.push({ id: 9, type: 'toc', content: '' }, { id: 10, type: 'title', content: 'Uno' }, { id: 11, type: 'text', content: long(150) }, { id: 12, type: 'subtitle', content: 'Dos' });
+    render();
+    const pagesInEditorView = document.querySelectorAll('.preview-page').length;
+    ok('paginates while in editor view (' + pagesInEditorView + ')', pagesInEditorView >= 3);
+    $('.mobile-tabs button[data-view="preview"]').click();
+    await wait(200);
+    ok('preview view: editor hidden', getComputedStyle($('.editor-pane')).display === 'none');
+    ok('preview view: preview full width', Math.abs(rect('#preview-pane').width - W) <= 2 && Math.round(rect('#preview-pane').left) === 0);
+    ok('active tab', $('.mobile-tabs button[data-view="preview"]').classList.contains('is-active'));
+    ok('page fits width (zoom ' + getEffectiveZoom().toFixed(2) + ')', rect('.preview-page').width <= W);
+    ok('same pages in preview view', document.querySelectorAll('.preview-page').length === pagesInEditorView);
+    $('.mobile-tabs button[data-view="editor"]').click();
+    ok('back to editor', getComputedStyle($('.editor-pane')).display !== 'none');
+
+    // Configuración como hoja desde abajo
+    openSettingsModal('profile');
+    const m = rect('.settings-modal');
+    ok('settings full width bottom sheet', Math.abs(m.width - W) <= 2 && Math.abs(m.bottom - window.innerHeight) <= 2);
+    closeSettingsModal();
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

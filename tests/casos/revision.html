@@ -1,0 +1,125 @@
+<!-- Prueba "revision": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+let printed = 0;
+window.print = () => { printed++; };
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  try {
+    const st = document.createElement('style'); st.textContent = '*{transition:none !important; animation-duration: 0s !important}'; document.head.appendChild(st);
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+
+    // ---------- Contador ----------
+    reportData = [
+      { id: 1, type: 'title', content: 'Hola mundo' },
+      { id: 2, type: 'text', format: 'html', content: '<p>Uno <b>dos</b> tres.</p><ul><li>cuatro cinco</li></ul>' },
+      { id: 3, type: 'code', content: 'no cuenta nada aquí' },
+      { id: 4, type: 'table', columns: 2, caption: 'seis', tableData: [['siete', 'ocho'], ['9', '']] },
+      { id: 5, type: 'ref', refType: 'book', refData: { author: 'No', title: 'Cuenta', source: 'x', year: '2020', url: '' }, content: '' }
+    ];
+    render();
+    updateDocumentStats();
+    ok('word count (' + countDocumentWords() + ')', countDocumentWords() === 2 + 5 + 4);
+    ok('stats text', /^11 palabras · \d+ página/.test($('#doc-stats').textContent));
+    ok('statusbar visible', $('.editor-statusbar').offsetParent !== null && $('.editor-statusbar').getBoundingClientRect().bottom <= innerHeight + 1);
+    reportData = [{ id: 1, type: 'title', content: 'Una' }]; render(); updateDocumentStats();
+    ok('singular', $('#doc-stats').textContent === '1 palabra · 1 página');
+
+    // ---------- Revisión: documento con detalles ----------
+    reportData = [];
+    render();
+    ok('empty doc is error', getDocumentIssues()[0].level === 'error');
+    addBlock('header');
+    applyTemplate('practica', 'append');
+    updateDocumentStats();
+    let issues = getDocumentIssues();
+    const msgs = issues.map(i => i.message);
+    ok('missing name', msgs.includes('Falta tu nombre en el encabezado.'));
+    ok('missing subject/prof/date', msgs.some(m => m.includes('materia')) && msgs.some(m => m.includes('profesor')) && msgs.some(m => m.includes('fecha')));
+    ok('unfilled paragraphs with hint', msgs.some(m => m.startsWith('Párrafo sin llenar: "Explica el tema')));
+    ok('empty table', msgs.some(m => m.includes('La tabla 1 está vacía')));
+    ok('incomplete ref', msgs.some(m => m.includes('A la referencia [1] le falta: autor, título, año, URL')));
+    ok('sorted by level', issues.map(i => i.level).join(',') === issues.map(i => i.level).sort((a, b) => ({ error: 0, warn: 1, info: 2 })[a] - ({ error: 0, warn: 1, info: 2 })[b]).join(','));
+    const pending = issues.filter(i => i.level !== 'info').length;
+    ok('badge count ' + $('#review-badge').textContent, $('#review-badge').textContent === String(pending));
+
+    // Imprimir con detalles: primero la revisión
+    printed = 0;
+    printDocument();
+    ok('print shows review first', printed === 0 && !!$('#review-modal-overlay') && !!$('#review-modal-overlay [data-action="print"]'));
+    ok('review lists items', $$('.review-item').length === issues.length && $$('.review-item.is-error').length >= 1);
+    $('#review-modal-overlay [data-action="print"]').click();
+    ok('print anyway', printed === 1 && !$('#review-modal-overlay'));
+
+    // Ctrl+P
+    document.activeElement && document.activeElement.blur();
+    const ev = new KeyboardEvent('keydown', { key: 'p', ctrlKey: true, bubbles: true, cancelable: true });
+    document.dispatchEvent(ev);
+    ok('ctrl+p opens review', ev.defaultPrevented && !!$('#review-modal-overlay') && printed === 1);
+    // Ir al bloque
+    const go = $$('.review-go').find(b => $$('.review-go').indexOf(b) >= 0 && issues[Number(b.dataset.index)].message.includes('tabla'));
+    go.click();
+    const tableIndex = reportData.findIndex(b => b.type === 'table');
+    ok('go highlights card', !$('#review-modal-overlay') && $$('#editor-container .block-card-container')[tableIndex].classList.contains('is-highlighted'));
+
+    // ---------- Citas ----------
+    reportData = [
+      { id: 10, type: 'text', format: 'html', content: '<p>Texto <span data-cite="99"></span> y <span data-cite="11"></span></p>' },
+      { id: 11, type: 'ref', refType: 'book', refData: { author: 'A', title: 'B', source: 'C', year: '2020', url: '' }, content: '' },
+      { id: 12, type: 'ref', refType: 'book', refData: { author: 'D', title: 'E', source: 'F', year: '2021', url: '' }, content: '' }
+    ];
+    render();
+    issues = getDocumentIssues();
+    ok('missing cited ref is error', issues.some(i => i.level === 'error' && i.message.includes('ya no existe')));
+    ok('uncited ref is info', issues.some(i => i.level === 'info' && i.message.includes('[2] no se cita')) && !issues.some(i => i.message.includes('[1] no se cita')));
+
+    // ---------- Documento completo: imprime directo ----------
+    localStorage.clear(); saveProfile({ onboardingDone: true });
+    addListItem('list_subjects', 'Física'); addListItem('list_profs', 'Mtro. Ruiz');
+    setHeaderData({ names: ['Ana López'], studentIds: ['2109045'], isTeam: false, subject: 'Física', prof: 'Mtro. Ruiz', date: '2026-10-04', group: 'A', term: '7', career: 'X', includeLogo: false, coverMode: false });
+    setDocumentName('Práctica 1');
+    reportData = [
+      { id: 20, type: 'header', content: '' },
+      { id: 21, type: 'title', content: 'Práctica' },
+      { id: 22, type: 'text', format: 'html', content: '<p>Contenido <span data-cite="23"></span></p>' },
+      { id: 23, type: 'ref', refType: 'book', refData: { author: 'A', title: 'B', source: 'C', year: '2020', url: '' }, content: '' },
+      { id: 24, type: 'ai', aiUsed: 'no', aiData: { name: '' }, content: '' }
+    ];
+    render();
+    updateDocumentStats();
+    issues = getDocumentIssues();
+    ok('complete doc has no issues (' + issues.map(i => i.message).join(' | ') + ')', issues.length === 0);
+    ok('badge ok', $('#review-badge').textContent === '✓' && $('#review-badge').classList.contains('is-ok'));
+    printed = 0;
+    printDocument();
+    ok('prints directly', printed === 1 && !$('#review-modal-overlay'));
+    openReviewModal();
+    ok('review says all good', $('#review-modal-overlay h3').textContent.includes('Todo listo'));
+    closeReviewModal();
+
+    // AI con datos faltantes y portada sin nombre
+    reportData[4] = { id: 24, type: 'ai', aiUsed: 'yes', aiData: { aiTool: '', purpose: '', prompt: '' }, content: '' };
+    setHeaderData({ ...getHeaderData(), coverMode: true, taskName: '' });
+    render();
+    issues = getDocumentIssues();
+    ok('ai missing fields', issues.some(i => i.message.includes('declaración de IA falta: qué IA usaste, el propósito, el prompt')));
+    ok('cover without task', issues.some(i => i.level === 'error' && i.message.includes('portada')));
+
+    // Botones de imprimir usan la revisión
+    ok('print buttons wired', $$('[onclick="printDocument()"]').length === 2 && !$('[onclick="window.print()"]'));
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

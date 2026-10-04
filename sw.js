@@ -8,7 +8,7 @@
  * IMPORTANTE: VERSION debe ser el mismo número que el ?v= de index.html.
  * Al cambiarlo se descarga todo de nuevo y se borra la versión anterior.
  */
-const VERSION = '2.4.1';
+const VERSION = '2.5.0';
 const CACHE_NAME = `reportes-${VERSION}`;
 
 const APP_FILES = [

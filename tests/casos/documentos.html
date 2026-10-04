@@ -1,0 +1,161 @@
+<!-- Prueba "documentos": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+let confirmCalls = 0;
+window.alert = () => {};
+window.confirm = () => { confirmCalls++; return true; };
+window.prompt = () => 'Nombre cambiado';
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const progress = document.createElement('pre'); progress.id = 'PROGRESS'; document.body.appendChild(progress);
+  const step = s => { progress.textContent += s + String.fromCharCode(10); };
+  const ok = (name, cond) => { out.push((cond ? 'PASS ' : 'FAIL ') + name); step((cond ? 'PASS ' : 'FAIL ') + name); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const waitFor = async cond => { for (let i = 0; i < 80 && !(await cond()); i++) await wait(100); };
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const long = n => Array.from({ length: n }, (_, i) => `Oración ${i + 1} de un párrafo largo para probar la compresión del documento.`).join(' ');
+  try {
+    const st = document.createElement('style'); st.textContent = '*{transition:none !important}'; document.head.appendChild(st);
+    closeOnboarding();
+    saveProfile({ onboardingDone: true });
+    ok('library available', isLibraryAvailable());
+    ok('current id at startup', /^doc-/.test(getCurrentDocumentId()));
+    // Empezar con la biblioteca vacía
+    step('listing');
+    const initial = await listLibraryDocuments();
+    step('listed ' + initial.length);
+    for (const d of initial) await deleteLibraryDocument(d.id);
+    step('cleared');
+
+    // ---------- Documento A ----------
+    reportData = [{ id: 1, type: 'title', content: 'Doc A' }, { id: 2, type: 'text', content: long(80) }];
+    setDocumentName('Documento A');
+    setDocumentFormat({ ...DEFAULT_DOCUMENT_FORMAT, font: 'times' });
+    render();
+    step('saving A');
+    const idA = await saveCurrentDocumentToLibrary();
+    step('saved A');
+    ok('saved A', idA === getCurrentDocumentId());
+    let docs = await listLibraryDocuments();
+    const metaA = docs.find(d => d.id === idA);
+    ok('meta A', docs.length === 1 && metaA.name === 'Documento A' && metaA.words > 500 && metaA.pages >= 1 && metaA.blocks === 2);
+    ok('compressed (' + metaA.size + ' of ' + metaA.rawSize + ')', metaA.size < metaA.rawSize / 3);
+    const recA = await libraryTransaction('readonly', (m, d) => idbRequest(d.get(idA)));
+    ok('stored gzip', recA.encoding === 'gzip' && recA.payload instanceof ArrayBuffer);
+    ok('summary', metaA.summary.startsWith('Oración 1'));
+    await wait(30);
+    await saveCurrentDocumentToLibrary();
+    ok('unchanged keeps date', (await listLibraryDocuments())[0].updatedAt === metaA.updatedAt);
+
+    // ---------- Nuevo: A se queda guardado ----------
+    confirmCalls = 0;
+    newDocument();
+    const idB = getCurrentDocumentId();
+    ok('new doc no confirm + new id', confirmCalls === 0 && idB !== idA && reportData.length === 0 && getDocumentName() === '');
+    ok('toast shown', $('#app-toast') && $('#app-toast').textContent.includes('Mis documentos'));
+    ok('undo reset on new', undoHistory.past.length === 0);
+
+    // ---------- Documento B ----------
+    reportData = [{ id: 10, type: 'title', content: 'Doc B' }];
+    setDocumentName('Documento B');
+    render();
+    await saveCurrentDocumentToLibrary();
+    docs = await listLibraryDocuments();
+    ok('two docs, newest first', docs.length === 2 && docs[0].id === idB && docs[1].id === idA);
+
+    // ---------- Abrir A ----------
+    reportData.push({ id: 11, type: 'subtitle', content: 'Cambio sin guardar en B' });
+    render();
+    await openLibraryDocument(idA);
+    ok('A opened', getCurrentDocumentId() === idA && reportData[0].content === 'Doc A' && getDocumentName() === 'Documento A' && $('#document-name').value === 'Documento A');
+    ok('A format restored', getDocumentFormat().font === 'times');
+    ok('A in localStorage', JSON.parse(localStorage.getItem('reportData'))[0].content === 'Doc A');
+    ok('undo reset on open', undoHistory.past.length === 0 && $('#undo-btn').disabled);
+    await openLibraryDocument(idB);
+    ok('B kept pending change', reportData.length === 2 && reportData[1].content === 'Cambio sin guardar en B');
+    ok('B default format', getDocumentFormat().font === 'georgia');
+
+    // ---------- Duplicar, renombrar, eliminar ----------
+    const idCopy = await duplicateLibraryDocument(idA);
+    docs = await listLibraryDocuments();
+    ok('duplicate', docs.length === 3 && docs.find(d => d.id === idCopy).name === 'Documento A (copia)');
+    await renameLibraryDocument(idA, 'A renombrado');
+    docs = await listLibraryDocuments();
+    ok('rename other', docs.find(d => d.id === idA).name === 'A renombrado');
+    ok('rename stored in data', (await loadLibraryRecord(idA)).data.documentName === 'A renombrado');
+    await renameLibraryDocument(idB, 'B renombrado');
+    ok('rename current', getDocumentName() === 'B renombrado');
+    await deleteLibraryDocument(idCopy);
+    ok('delete other', (await listLibraryDocuments()).length === 2 && getCurrentDocumentId() === idB);
+    await deleteLibraryDocument(idB);
+    ok('delete current -> blank', (await listLibraryDocuments()).length === 1 && getCurrentDocumentId() !== idB && reportData.length === 0);
+
+    // ---------- Ventana ----------
+    reportData = [{ id: 20, type: 'title', content: 'Doc C' }]; setDocumentName('Documento C'); render();
+    await openLibraryModal();
+    await waitFor(() => $$('.library-item').length === 2);
+    ok('modal lists docs', $$('.library-item').length === 2 && $('.library-item.is-current .library-badge').textContent === 'Abierto');
+    ok('current has no open button', !$('.library-item.is-current [data-action="open"]'));
+    const search = $('.library-search');
+    search.value = 'renombrado'; search.dispatchEvent(new Event('input'));
+    ok('search filters', $$('.library-item').length === 1 && $('.library-item .library-name').textContent.includes('A renombrado'));
+    $('.library-item [data-action="open"]').click();
+    await waitFor(() => getCurrentDocumentId() === idA && !$('#library-modal-overlay'));
+    ok('open from modal', getCurrentDocumentId() === idA && !$('#library-modal-overlay') && reportData[0].content === 'Doc A');
+
+    // ---------- Proyecto cargado = documento nuevo ----------
+    const before = getCurrentDocumentId();
+    applyProjectData({ reportData: [{ id: 30, type: 'title', content: 'Proyecto' }], documentName: 'Proyecto JSON' });
+    await saveCurrentDocumentToLibrary();
+    docs = await listLibraryDocuments();
+    ok('project opens as new doc', getCurrentDocumentId() !== before && docs.some(d => d.name === 'Proyecto JSON') && docs.some(d => d.id === before));
+
+    // ---------- Sin autoguardado ----------
+    setAutosaveEnabled(false);
+    reportData.push({ id: 31, type: 'subtitle', content: 'x' }); render();
+    ok('no autosave -> not saved', (await saveCurrentDocumentToLibrary()) === null);
+    confirmCalls = 0;
+    newDocument();
+    ok('no autosave -> new asks', confirmCalls === 1);
+    setAutosaveEnabled(true);
+
+    // ---------- Respaldo con todos los documentos ----------
+    reportData = [{ id: 40, type: 'title', content: 'Doc D' }]; setDocumentName('Documento D'); render();
+    let lastBlob = null;
+    const origCreate = URL.createObjectURL; const origClick = HTMLAnchorElement.prototype.click;
+    URL.createObjectURL = b => { lastBlob = b; return 'blob:x'; };
+    HTMLAnchorElement.prototype.click = function () {};
+    await exportBackup(true, true);
+    URL.createObjectURL = origCreate; HTMLAnchorElement.prototype.click = origClick;
+    const backup = JSON.parse(await lastBlob.text());
+    const countBefore = (await listLibraryDocuments()).length;
+    ok('backup has library (' + backup.library.length + ')', backup.library.length === countBefore && backup.library.every(d => Array.isArray(d.data.reportData)));
+    ok('backup summary mentions docs', describeBackup(backup).includes(`Mis documentos: ${countBefore}`));
+    for (const d of await listLibraryDocuments()) if (d.id !== getCurrentDocumentId()) await deleteLibraryDocument(d.id);
+    ok('library emptied', (await listLibraryDocuments()).length === 1);
+    const restored = await importLibraryDocuments(backup.library);
+    ok('library restored (' + restored + ')', (await listLibraryDocuments()).length === countBefore && restored === countBefore - 1);
+
+    // ---------- Autoguardado programado ----------
+    reportData.push({ id: 41, type: 'subtitle', content: 'Autoguardado' }); render();
+    await waitFor(async () => ((await loadLibraryRecord(getCurrentDocumentId())) || { data: { reportData: [] } }).data.reportData.length === 2);
+    ok('autosave reaches library', (await loadLibraryRecord(getCurrentDocumentId())).data.reportData.length === 2);
+
+    // ---------- Documento grande con imagen ----------
+    const canvas = document.createElement('canvas'); canvas.width = 1600; canvas.height = 1000;
+    const ctx = canvas.getContext('2d'); const g = ctx.createLinearGradient(0, 0, 1600, 1000); g.addColorStop(0, '#0ea5e9'); g.addColorStop(1, '#f97316'); ctx.fillStyle = g; ctx.fillRect(0, 0, 1600, 1000);
+    reportData = [{ id: 50, type: 'image', content: canvas.toDataURL('image/jpeg', 0.85), caption: 'Foto' }, { id: 51, type: 'text', content: long(400) }];
+    setDocumentName('Con imagen'); render();
+    await saveCurrentDocumentToLibrary();
+    const big = (await listLibraryDocuments()).find(d => d.id === getCurrentDocumentId());
+    out.push('INFO image doc ' + formatBytes(big.rawSize) + ' -> ' + formatBytes(big.size));
+    ok('image doc stored smaller', big.size < big.rawSize);
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

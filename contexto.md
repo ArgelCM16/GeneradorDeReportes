@@ -7,7 +7,14 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
 ---
 
-## Estado actual (versión 2.4.0)
+## Estado actual (versión 2.5.0)
+
+### Qué se hizo en la versión 2.5.0
+
+| Cambio | Detalle |
+|---|---|
+| Código con colores | Resaltado propio (sin librerías) para Python, JavaScript/TypeScript, Java, C, C++, C#, PHP, SQL, HTML/XML y CSS; el lenguaje se elige o se detecta solo; números de línea opcionales que siguen la cuenta entre hojas; los colores salen en el PDF y en el Word |
+| Pruebas en el repositorio | `tests/ejecutar.py` (solo Python y Chrome) corre las 15 pruebas de `tests/casos/` (~450 revisiones en ~30 s) |
 
 ### Qué se hizo en la versión 2.4.0
 

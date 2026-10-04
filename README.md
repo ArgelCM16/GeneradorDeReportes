@@ -2,7 +2,7 @@
 
 > Herramienta web profesional para crear reportes académicos con vista previa en tiempo real
 
-![Versión](https://img.shields.io/badge/versión-2.4.1-blue)
+![Versión](https://img.shields.io/badge/versión-2.5.0-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Estado](https://img.shields.io/badge/estado-activo-success)
 
@@ -43,6 +43,7 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 - **Citas en el texto**: Botón "Citar" en cada párrafo; la cita sale como [1] en IEEE o (Pérez, 2020) en APA y se actualiza sola
 - **Formato del documento**: Tipo y tamaño de letra, interlineado, márgenes, tamaño de hoja (carta, oficio o A4), alineación, sangría y números de página; con formatos listos (APA 7 y Formal)
 - **Exportar a Word (.docx)**: Con el mismo formato, imágenes, tablas, listas, índice y números de página
+- **Código con colores**: Python, JavaScript, Java, C, C++, C#, PHP, SQL, HTML y CSS (se detecta solo), con números de línea opcionales; los colores salen también en el PDF y en el Word
 - **Contador de palabras y páginas**: En la barra de abajo del editor
 - **Revisión antes de entregar**: Lista lo que falta (nombre, materia, párrafos vacíos, figuras sin descripción, referencias incompletas, citas rotas...) y se abre sola al imprimir si hay algo pendiente
 - **Plantillas**: Reporte de práctica, ensayo, trabajo de investigación y proyecto de programación, con la estructura lista y una pista de qué escribir en cada párrafo
@@ -272,6 +273,7 @@ generador-reportes-academicos/
 ├── EXAMPLES			# Carpeta con ejemplos de documentos generados
 │   ├── EJEMPLO.pdf
 │   └── EJEMPLO.txt
+├── tests			# Pruebas automáticas (python tests/ejecutar.py)
 ├── terminos.html		# Términos y condiciones
 ├── privacidad.html		# Política de privacidad
 ├── index.html			# Aplicación principal
@@ -304,6 +306,18 @@ generador-reportes-academicos/
 - Sin npm
 - Sin backend
 - Recursos externos: Google Fonts (Plus Jakarta Sans y Material Symbols) y Google Identity Services (solo para Google Drive)
+
+---
+
+## Pruebas
+
+Hay pruebas automáticas que abren la app en Chrome sin interfaz y revisan casi todo (bloques, paginación, formato, Word, Mis documentos, modo sin internet...). Solo necesitan Python 3 y Chrome:
+
+```bash
+python tests/ejecutar.py
+```
+
+Más detalles en [tests/README.md](tests/README.md).
 
 ---
 
@@ -447,7 +461,11 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ## Roadmap
 
-### Versión 2.4.0 (Actual)
+### Versión 2.5.0 (Actual)
+- [x] Código con colores y números de línea
+- [x] Pruebas automáticas en el repositorio (`tests/`)
+
+### Versión 2.4.0
 - [x] Mis documentos: varios documentos guardados y comprimidos en el navegador
 - [x] Párrafos con negritas, cursivas, subrayado y listas
 - [x] Citas en el texto (IEEE y APA)
