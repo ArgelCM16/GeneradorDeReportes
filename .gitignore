@@ -1,0 +1,3 @@
+# Caché de Python (pruebas)
+__pycache__/
+*.pyc

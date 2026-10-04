@@ -20,10 +20,10 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="CSS/style.css?v=2.5.0" />
+    <link rel="stylesheet" href="CSS/style.css?v=2.5.1" />
     <!-- Rediseño visual (Google Stitch). Quitar esta línea vuelve al diseño anterior. -->
-    <link rel="stylesheet" href="CSS/redesign.css?v=2.5.0" />
-    <link rel="icon" href="ASSETS/favicon.png?v=2.5.0" />
+    <link rel="stylesheet" href="CSS/redesign.css?v=2.5.1" />
+    <link rel="icon" href="ASSETS/favicon.png?v=2.5.1" />
     <!-- App instalable (PWA) -->
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#0f172a" />
@@ -49,7 +49,7 @@
         <div class="theme-selector">
           <label for="themeSelector">Institución / Tema</label>
           <select id="themeSelector" onchange="changeTheme(this.value)">
-            <!-- Las opciones se generan dinámicamente en JS/script.js -->
+            <!-- Las opciones se generan dinámicamente en JS/universidades.js -->
           </select>
         </div>
 
@@ -204,7 +204,7 @@
         <div class="credits">
           <p>Desarrollado por <strong>Jorge Javier Pedrozo Romero</strong></p>
           <p>Modificado por <strong>Argel Alberto Cano Morales</strong></p>
-          <p class="credits-version">v2.5.0 • Octubre 2026</p>
+          <p class="credits-version">v2.5.1 • Octubre 2026</p>
           <p class="credits-legal">
             <a href="terminos.html" target="_blank" rel="noopener">Términos y condiciones</a>
             ·
@@ -472,6 +472,35 @@
     </nav>
 
     <!-- ?v=...: súbelo cada vez que cambien el CSS o el JS, para que el navegador no use una copia vieja -->
-    <script src="JS/script.js?v=2.5.0"></script>
+    <!-- La lógica está repartida en varios archivos que comparten el ámbito global.
+         El orden importa: se cargan uno tras otro y los eventos de inicio
+         (DOMContentLoaded) corren en este mismo orden. -->
+    <script src="JS/nucleo.js?v=2.5.1"></script>
+    <script src="JS/editor.js?v=2.5.1"></script>
+    <script src="JS/portada-y-referencias.js?v=2.5.1"></script>
+    <script src="JS/paneles.js?v=2.5.1"></script>
+    <script src="JS/parrafos.js?v=2.5.1"></script>
+    <script src="JS/formato.js?v=2.5.1"></script>
+    <script src="JS/revision.js?v=2.5.1"></script>
+    <script src="JS/word.js?v=2.5.1"></script>
+    <script src="JS/documentos.js?v=2.5.1"></script>
+    <script src="JS/codigo.js?v=2.5.1"></script>
+    <script src="JS/bloques.js?v=2.5.1"></script>
+    <script src="JS/deshacer.js?v=2.5.1"></script>
+    <script src="JS/plantillas.js?v=2.5.1"></script>
+    <script src="JS/apariencia.js?v=2.5.1"></script>
+    <script src="JS/paginacion.js?v=2.5.1"></script>
+    <script src="JS/vista-previa.js?v=2.5.1"></script>
+    <script src="JS/exportar-txt.js?v=2.5.1"></script>
+    <script src="JS/guardado.js?v=2.5.1"></script>
+    <script src="JS/universidades.js?v=2.5.1"></script>
+    <script src="JS/configuracion.js?v=2.5.1"></script>
+    <script src="JS/perfil.js?v=2.5.1"></script>
+    <script src="JS/respaldo.js?v=2.5.1"></script>
+    <script src="JS/bienvenida.js?v=2.5.1"></script>
+    <script src="JS/documento.js?v=2.5.1"></script>
+    <script src="JS/proyecto.js?v=2.5.1"></script>
+    <script src="JS/drive.js?v=2.5.1"></script>
+    <script src="JS/arrastrar.js?v=2.5.1"></script>
   </body>
 </html>

@@ -8,10 +8,10 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 - **Responde siempre en español.** Los comentarios del código, los textos de la interfaz y los mensajes de commit también van en español.
 - Rama de trabajo: **`test`**. La rama por defecto (la que muestra GitHub) es **`main`**; los cambios pasan a `main` cuando el usuario lo pide.
 - Haz commit o push solo cuando el usuario lo pida.
-- Si el usuario pide un cambio "solo de diseño", no toques la lógica de `JS/script.js`: los estilos del rediseño viven en `CSS/redesign.css`.
+- Si el usuario pide un cambio "solo de diseño", no toques la lógica de `JS/`: los estilos del rediseño viven en `CSS/redesign.css`.
 - Después de cambiar algo, corre las pruebas: `python tests/ejecutar.py` (ver [Cómo probar](#cómo-probar)). Si agregas una función, agrega su prueba en `tests/casos/`.
 - **Si cambia qué datos usa la app o con qué servicios se conecta** (nuevos recursos externos, analítica, otro permiso de Google...), actualiza `privacidad.html` (y `terminos.html` si aplica) junto con su fecha de "Última actualización".
-- **Si cambias `CSS/*.css` o `JS/script.js`, sube el número `?v=` de sus enlaces en `index.html`** (los tres llevan el mismo, y `legal.css` en `terminos.html` y `privacidad.html` también) **y pon el mismo número en `VERSION` de `sw.js`**. GitHub Pages deja que el navegador guarde esos archivos hasta 10 minutos y el service worker los guarda sin límite; sin cambiar los dos números, el navegador puede mezclar el HTML nuevo con CSS o JS viejos y la página se ve rota (o se queda con la versión vieja).
+- **Si cambias `CSS/*.css` o `JS/*.js`, sube el número `?v=` de sus enlaces en `index.html`** (todos llevan el mismo, y `legal.css` en `terminos.html` y `privacidad.html` también) **y pon el mismo número en `VERSION` de `sw.js`**. GitHub Pages deja que el navegador guarde esos archivos hasta 10 minutos y el service worker los guarda sin límite; sin cambiar los dos números, el navegador puede mezclar el HTML nuevo con CSS o JS viejos y la página se ve rota (o se queda con la versión vieja).
 
 ## Qué es
 
@@ -19,7 +19,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 
 - Autor original: Jorge Javier Pedrozo Romero. Modificado por: Argel Alberto Cano Morales.
 - Repositorio: `https://github.com/ArgelCM16/GeneradorDeReportes`.
-- Versión actual: **2.5.0** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
+- Versión actual: **2.5.1** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
 
 ## Estructura
 
@@ -30,7 +30,7 @@ CSS/redesign.css    Rediseño visual (Google Stitch). Se carga DESPUÉS de style
 CSS/legal.css       Estilos de las páginas legales
 terminos.html       Términos y condiciones (enlazado en los créditos de la barra lateral)
 privacidad.html     Política de privacidad (URL pública que pide Google para la pantalla de permisos de Drive)
-JS/script.js        Toda la lógica (un solo archivo, sin módulos ni dependencias)
+JS/                 La lógica, en 27 archivos por tema (sin módulos ni dependencias; ver abajo)
 manifest.json       Manifiesto de la app instalable (PWA): nombre, colores e íconos
 sw.js               Service worker: guarda los archivos de la app para que funcione sin internet
 ASSETS/             Logo "Generador CM": favicon, íconos de la app (icon-192, icon-512, icon-maskable-512 y apple-touch-icon) e imágenes
@@ -43,7 +43,45 @@ contexto.md         Estado actual, historial de decisiones y planes (colaboraci�
 
 No hay `package.json` ni npm. Las pruebas están en `tests/` (solo necesitan Python y Chrome). Recursos externos: Google Fonts (Plus Jakarta Sans y Material Symbols) y Google Identity Services (solo para Google Drive).
 
-## Cómo funciona `JS/script.js`
+## Cómo funciona la lógica (`JS/`)
+
+La lógica está repartida en archivos normales (`<script>`, no módulos) que **comparten el ámbito global**: una función o variable de un archivo se usa desde cualquier otro. Se cargan en el orden de `index.html`, que es el orden en que estaban dentro del antiguo `script.js`:
+
+| Archivo | Contenido |
+|---|---|
+| `nucleo.js` | `reportData`, `escapeHtml`/`escapeAttr`, `addBlock`/`createBlock`, `deleteBlock`, `update*`, tablas |
+| `editor.js` | `render()`, `renderEditor()`, encabezado (`renderHeaderEditor`, `readHeaderFromDOM`...), materias, profesores y su vínculo |
+| `portada-y-referencias.js` | Portada (`renderCoverPreview`) y formato de citas (`getCitationStyle`, `formatAPAReference`) |
+| `paneles.js` | Zoom, ancho y ocultar la vista previa; diseño para celular |
+| `parrafos.js` | Párrafos con formato y citas |
+| `formato.js` | Formato del documento |
+| `revision.js` | Contador de palabras y revisión antes de entregar (`printDocument`) |
+| `word.js` | Exportar a Word |
+| `documentos.js` | Mis documentos (IndexedDB) |
+| `codigo.js` | Código con colores |
+| `bloques.js` | ids, subir/bajar/duplicar, imágenes más ligeras |
+| `deshacer.js` | Deshacer / rehacer |
+| `plantillas.js` | Plantillas |
+| `apariencia.js` | Modo oscuro y PWA |
+| `paginacion.js` | `paginatePreview()` |
+| `vista-previa.js` | Índice, `render<Tipo>Editor()` y `renderPreview()` |
+| `exportar-txt.js` | `exportTXT()` |
+| `guardado.js` | `formatIEEEReference`, `saveToLocalStorage`, `loadFromLocalStorage`, `scheduleAutosave` |
+| `universidades.js` | Universidades, temas y su ventana |
+| `configuracion.js` | Panel de Configuración |
+| `perfil.js` | Perfil, campos del encabezado y compañeros |
+| `respaldo.js` | Respaldo |
+| `bienvenida.js` | Asistente de bienvenida |
+| `documento.js` | Nombre, autoguardado y "Nuevo" (`getHeaderData`/`setHeaderData`) |
+| `proyecto.js` | Guardar y cargar proyecto |
+| `drive.js` | Google Drive |
+| `arrastrar.js` | Arrastrar y soltar |
+
+Reglas al tocar estos archivos:
+
+- **Agrega un archivo nuevo en `index.html`** (con el mismo `?v=`); el service worker lo toma de ahí solo.
+- El orden importa en dos cosas: el código que **se ejecuta al cargar** (fuera de funciones) solo puede usar lo que ya se cargó, y los `DOMContentLoaded` corren en el orden de los archivos. Las funciones se pueden llamar entre archivos sin importar el orden, siempre que sea después de la carga.
+- No repitas nombres globales en dos archivos (`const`/`let` repetidos rompen la carga).
 
 ### Estado
 

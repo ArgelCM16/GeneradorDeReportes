@@ -2,7 +2,7 @@
 
 > Herramienta web profesional para crear reportes académicos con vista previa en tiempo real
 
-![Versión](https://img.shields.io/badge/versión-2.5.0-blue)
+![Versión](https://img.shields.io/badge/versión-2.5.1-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Estado](https://img.shields.io/badge/estado-activo-success)
 
@@ -96,7 +96,7 @@ Además de descargar el archivo JSON, puedes guardar y abrir tus proyectos direc
 
 La app solo tiene acceso a los archivos que ella misma crea en tu Drive (permiso `drive.file`).
 
-> **Importante:** Google Drive solo funciona si la página se sirve por `http://` o `https://` (por ejemplo con GitHub Pages o con la extensión Live Server de VS Code). Abrir `index.html` con doble clic (`file://`) no funciona. Si usas tu propio despliegue, sigue las instrucciones del botón **?** junto a "Google Drive" o los comentarios de `GOOGLE_DRIVE_CLIENT_ID` en `JS/script.js`.
+> **Importante:** Google Drive solo funciona si la página se sirve por `http://` o `https://` (por ejemplo con GitHub Pages o con la extensión Live Server de VS Code). Abrir `index.html` con doble clic (`file://`) no funciona. Si usas tu propio despliegue, sigue las instrucciones del botón **?** junto a "Google Drive" o los comentarios de `GOOGLE_DRIVE_CLIENT_ID` en `JS/drive.js`.
 
 ---
 
@@ -279,7 +279,7 @@ generador-reportes-academicos/
 ├── index.html			# Aplicación principal
 ├── manifest.json		# App instalable (PWA)
 ├── JS
-│   └── script.js		# Lógica de la aplicación
+│   └── nucleo.js, editor.js...	# Lógica, repartida en 27 archivos por tema
 ├── LICENSE
 ├── README.md
 ├── sw.js			# Service worker: funciona sin internet
@@ -464,6 +464,7 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 ### Versión 2.5.0 (Actual)
 - [x] Código con colores y números de línea
 - [x] Pruebas automáticas en el repositorio (`tests/`)
+- [x] La lógica se dividió en 27 archivos por tema (antes era un solo `script.js`)
 
 ### Versión 2.4.0
 - [x] Mis documentos: varios documentos guardados y comprimidos en el navegador

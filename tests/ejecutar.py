@@ -268,6 +268,7 @@ def main():
 
 
 if __name__ == '__main__':
+    sys.dont_write_bytecode = True  # sin carpeta __pycache__
     sys.path.insert(0, TESTS_DIR)
     try:
         sys.stdout.reconfigure(encoding='utf-8')

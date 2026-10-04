@@ -7,8 +7,10 @@
  *
  * IMPORTANTE: VERSION debe ser el mismo número que el ?v= de index.html.
  * Al cambiarlo se descarga todo de nuevo y se borra la versión anterior.
+ * Los archivos de JS/ y CSS/ se leen de index.html al instalar (no hay que
+ * repetir aquí la lista).
  */
-const VERSION = '2.5.0';
+const VERSION = '2.5.1';
 const CACHE_NAME = `reportes-${VERSION}`;
 
 const APP_FILES = [
@@ -17,7 +19,6 @@ const APP_FILES = [
     `CSS/style.css?v=${VERSION}`,
     `CSS/redesign.css?v=${VERSION}`,
     `CSS/legal.css?v=${VERSION}`,
-    `JS/script.js?v=${VERSION}`,
     'terminos.html',
     'privacidad.html',
     'manifest.json',
@@ -30,13 +31,26 @@ const APP_FILES = [
 // Sitios externos que sí se guardan (fuentes e íconos)
 const CACHEABLE_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com'];
 
+/**
+ * Los <script src="JS/..."> y <link href="CSS/..."> de index.html.
+ */
+async function filesFromIndex() {
+    try {
+        const html = await (await fetch('index.html', { cache: 'no-store' })).text();
+        return Array.from(html.matchAll(/(?:src|href)="((?:JS|CSS)\/[^"]+)"/g), m => m[1]);
+    } catch (err) {
+        return [];
+    }
+}
+
 self.addEventListener('install', event => {
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            // Uno por uno: si falta un archivo, los demás se guardan igual
-            .then(cache => Promise.all(APP_FILES.map(url => cache.add(url).catch(() => {}))))
-            .then(() => self.skipWaiting())
-    );
+    event.waitUntil((async () => {
+        const cache = await caches.open(CACHE_NAME);
+        const files = Array.from(new Set([...APP_FILES, ...(await filesFromIndex())]));
+        // Uno por uno: si falta un archivo, los demás se guardan igual
+        await Promise.all(files.map(url => cache.add(url).catch(() => {})));
+        await self.skipWaiting();
+    })());
 });
 
 self.addEventListener('activate', event => {
