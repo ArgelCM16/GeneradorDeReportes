@@ -51,7 +51,7 @@ TESTS = {
     'diseno_computadora': {'modo': 'archivo'},
     'diseno_celular':     {'modo': 'archivo', 'ventana': '390,844'},
     'barra_celular':      {'modo': 'archivo', 'ventana': '390,844'},
-    'word':               {'modo': 'archivo', 'tiempo': 60000, 'word': True},
+    'word':               {'modo': 'http', 'word': True},  # lee imágenes y arma el ZIP: mejor en tiempo real
     'documentos':         {'modo': 'http'},
     'pwa':                {'modo': 'http'},
 }

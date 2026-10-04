@@ -46,7 +46,7 @@ Al final muestra cuántas revisiones salieron bien y mal; si alguna falla, el pr
 
 - Cada prueba es un archivo de `casos/` con un `<script>` que, al cargar la página, hace sus acciones y escribe los resultados en `<pre id="TEST_RESULTS">`, una línea por revisión: `PASS ...` o `FAIL ...`.
 - La mayoría se abren como archivo (`file://`) con el **tiempo virtual** de Chrome, que es rápido.
-- `documentos`, `pwa` y `rendimiento` se sirven por **http y en tiempo real**: el tiempo virtual no espera a IndexedDB ni al service worker. La página incluye una imagen que el servidor no responde hasta que la prueba termina, así Chrome espera.
+- `documentos`, `pwa`, `rendimiento` y `word` se sirven por **http y en tiempo real**: el tiempo virtual no espera a IndexedDB ni al service worker. La página incluye una imagen que el servidor no responde hasta que la prueba termina, así Chrome espera.
 - Cada prueba usa un perfil de Chrome nuevo y temporal (con ruta corta: con rutas muy largas la caché de Chrome falla).
 
 ## Agregar una prueba
