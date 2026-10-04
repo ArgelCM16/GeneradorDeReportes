@@ -53,7 +53,16 @@ function addBlock(type) {
         return;
     }
 
-    const id = Date.now();
+    reportData.push(createBlock(type));
+    render();
+}
+
+/**
+ * Crea un bloque nuevo con todos sus campos, sin agregarlo ni dibujar.
+ * @param {string} type - Tipo de bloque
+ */
+function createBlock(type) {
+    const id = newBlockId();
     let newBlock = { id, type, content: "" };
     
     // Inicialización específica según el tipo de bloque
@@ -107,8 +116,7 @@ function addBlock(type) {
         ];
     }
     
-    reportData.push(newBlock);
-    render();
+    return newBlock;
 }
 
 /**
@@ -202,15 +210,18 @@ function updateCaption(id, value) {
 function handleImage(id, input) {
     if (!input.files[0]) return;
     
+    const file = input.files[0];
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
+        // Se reduce para que no llene el almacenamiento del navegador
+        const content = await shrinkImageDataUrl(e.target.result, file.type, BLOCK_IMAGE_MAX_SIZE, true);
         const block = reportData.find(b => b.id === id);
         if (block) {
-            block.content = e.target.result;
-            renderPreview();
+            block.content = content;
+            render();
         }
     };
-    reader.readAsDataURL(input.files[0]);
+    reader.readAsDataURL(file);
 }
 
 /**
@@ -357,6 +368,8 @@ function render() {
     renderEditor();
     renderPreview();
 	initializeDragAndDrop();
+    // Agregar, mover, borrar o aplicar una plantilla es un paso propio para "Deshacer"
+    if (undoHistory.current !== null) recordHistory();
 }
 
 /**
@@ -375,11 +388,12 @@ function renderEditor() {
     }
 
 
-    reportData.forEach(block => {
+    reportData.forEach((block, index) => {
         const div = document.createElement('div');
         div.className = 'block-card-container';
         
-        const deleteBtn = `<button class="delete-btn" onclick="deleteBlock(${block.id})" title="Eliminar bloque">&times;</button>`;
+        // Herramientas de la tarjeta: subir, bajar, duplicar y eliminar
+        const deleteBtn = buildBlockToolsHTML(block, index);
         let blockHTML = "";
 
         switch(block.type) {
@@ -1419,6 +1433,497 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==========================================
+// IDS DE BLOQUE, MOVER Y DUPLICAR
+// ==========================================
+
+let lastBlockId = 0;
+
+/**
+ * id único para un bloque nuevo (antes era Date.now(), que se repetía si se
+ * creaban dos bloques en el mismo milisegundo).
+ */
+function newBlockId() {
+    const maxExisting = reportData.reduce((max, b) => Math.max(max, Number(b.id) || 0), 0);
+    lastBlockId = Math.max(Date.now(), lastBlockId + 1, maxExisting + 1);
+    return lastBlockId;
+}
+
+/**
+ * Botones de la esquina de cada tarjeta. Funcionan con el dedo (el arrastrar
+ * y soltar no funciona en pantallas táctiles).
+ */
+function buildBlockToolsHTML(block, index) {
+    const deleteButton = `<button class="delete-btn" onclick="deleteBlock(${block.id})" title="Eliminar bloque">&times;</button>`;
+    // El encabezado va siempre arriba y el índice se acomoda solo después de él
+    if (block.type === 'header' || block.type === 'toc') return deleteButton;
+
+    // No se puede subir por encima del encabezado ni del índice
+    const fixedBefore = reportData.slice(0, index).every(b => b.type === 'header' || b.type === 'toc');
+    const first = index === 0 || fixedBefore;
+    const last = index === reportData.length - 1;
+    const moveButtons = `
+        <button type="button" class="block-tool" onclick="moveBlockBy(${block.id}, -1)" title="Subir" ${first ? 'disabled' : ''}><span class="material-symbols-outlined">arrow_upward</span></button>
+        <button type="button" class="block-tool" onclick="moveBlockBy(${block.id}, 1)" title="Bajar" ${last ? 'disabled' : ''}><span class="material-symbols-outlined">arrow_downward</span></button>`;
+    const duplicateButton = `<button type="button" class="block-tool" onclick="duplicateBlock(${block.id})" title="Duplicar"><span class="material-symbols-outlined">content_copy</span></button>`;
+    return `
+        <div class="block-tools">
+            ${moveButtons}
+            ${duplicateButton}
+            ${deleteButton}
+        </div>`;
+}
+
+/**
+ * Mueve un bloque una posición arriba (-1) o abajo (+1).
+ */
+function moveBlockBy(id, direction) {
+    const from = reportData.findIndex(b => b.id === id);
+    const to = from + direction;
+    if (from === -1 || to < 0 || to >= reportData.length) return;
+    if (['header', 'toc'].includes(reportData[to].type) && reportData.slice(0, to + 1).every(b => b.type === 'header' || b.type === 'toc')) return;
+    const [block] = reportData.splice(from, 1);
+    reportData.splice(to, 0, block);
+    render();
+
+    // Mantener la tarjeta a la vista después de moverla
+    const cards = document.querySelectorAll('#editor-container .block-card-container');
+    const index = reportData.findIndex(b => b.id === id);
+    if (cards[index] && cards[index].scrollIntoView) cards[index].scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+}
+
+/**
+ * Inserta una copia del bloque justo debajo.
+ */
+function duplicateBlock(id) {
+    const index = reportData.findIndex(b => b.id === id);
+    const block = reportData[index];
+    if (!block || block.type === 'header' || block.type === 'toc') return;
+    const copy = JSON.parse(JSON.stringify(block));
+    copy.id = newBlockId();
+    reportData.splice(index + 1, 0, copy);
+    render();
+}
+
+// ==========================================
+// IMÁGENES MÁS LIGERAS
+// ==========================================
+
+const BLOCK_IMAGE_MAX_SIZE = 1600;
+
+/**
+ * Reduce una imagen a maxSize px por lado. Con preferJpeg, las imágenes sin
+ * transparencia (fotos, capturas) se guardan como JPEG, que pesa mucho menos.
+ * Siempre se queda con la versión más ligera; los SVG no se tocan.
+ */
+function shrinkImageDataUrl(dataUrl, mimeType, maxSize, preferJpeg = false) {
+    return new Promise(resolve => {
+        if (mimeType === 'image/svg+xml' || mimeType === 'image/gif') {
+            resolve(dataUrl);
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(img.width * scale));
+            canvas.height = Math.max(1, Math.round(img.height * scale));
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const hasTransparency = () => {
+                const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+                const step = Math.max(4, Math.floor(data.length / 40000) * 4);
+                for (let i = 3; i < data.length; i += step) {
+                    if (data[i] < 255) return true;
+                }
+                return false;
+            };
+
+            // Se prueban los formatos posibles y se queda el más ligero
+            const candidates = [];
+            if (mimeType === 'image/jpeg' || (preferJpeg && !hasTransparency())) {
+                candidates.push(canvas.toDataURL('image/jpeg', 0.85));
+            }
+            if (mimeType !== 'image/jpeg') candidates.push(canvas.toDataURL('image/png'));
+            const best = candidates.reduce((a, b) => (b.length < a.length ? b : a));
+            // Si ya era pequeña y pesa menos así, se deja la original
+            resolve(scale === 1 && dataUrl.length <= best.length ? dataUrl : best);
+        };
+        img.onerror = () => resolve(dataUrl);
+        img.src = dataUrl;
+    });
+}
+
+// ==========================================
+// DESHACER / REHACER
+// Se guarda una "foto" del documento (bloques, encabezado y nombre) cada vez
+// que cambia, agrupando lo que se escribe seguido. Ctrl+Z / Ctrl+Y fuera de
+// un campo de texto (dentro de un campo, el navegador deshace lo escrito).
+// ==========================================
+
+const HISTORY_LIMIT = 60;
+// Las "fotos" incluyen las imágenes: se limita el total para no gastar demasiada memoria
+const HISTORY_MAX_CHARS = 25000000;
+const undoHistory = { past: [], future: [], current: null, timer: null, ignoreUntil: 0 };
+
+function captureDocumentState() {
+    return JSON.stringify({ r: reportData, h: getHeaderData(), n: getDocumentName() });
+}
+
+function scheduleHistoryRecord() {
+    clearTimeout(undoHistory.timer);
+    undoHistory.timer = setTimeout(recordHistory, 400);
+}
+
+function recordHistory() {
+    clearTimeout(undoHistory.timer);
+    undoHistory.timer = null;
+    const state = captureDocumentState();
+    if (Date.now() < undoHistory.ignoreUntil || undoHistory.current === null) {
+        // Justo después de deshacer/rehacer (o al iniciar) solo se toma la referencia
+        undoHistory.current = state;
+        updateUndoButtons();
+        return;
+    }
+    if (state === undoHistory.current) return;
+    undoHistory.past.push(undoHistory.current);
+    if (undoHistory.past.length > HISTORY_LIMIT) undoHistory.past.shift();
+    let total = undoHistory.past.reduce((sum, snap) => sum + snap.length, 0);
+    while (undoHistory.past.length > 1 && total > HISTORY_MAX_CHARS) total -= undoHistory.past.shift().length;
+    undoHistory.current = state;
+    undoHistory.future = [];
+    updateUndoButtons();
+}
+
+function applyDocumentState(state) {
+    const data = JSON.parse(state);
+    undoHistory.ignoreUntil = Date.now() + 700;
+    reportData = data.r || [];
+    setHeaderData(data.h || null);
+    setDocumentName(data.n || '');
+    render();
+    undoHistory.current = state;
+    updateUndoButtons();
+}
+
+function undo() {
+    if (undoHistory.timer) recordHistory();
+    if (!undoHistory.past.length) return;
+    undoHistory.future.push(undoHistory.current);
+    applyDocumentState(undoHistory.past.pop());
+}
+
+function redo() {
+    if (undoHistory.timer) recordHistory();
+    if (!undoHistory.future.length) return;
+    undoHistory.past.push(undoHistory.current);
+    applyDocumentState(undoHistory.future.pop());
+}
+
+function updateUndoButtons() {
+    const undoBtn = document.getElementById('undo-btn');
+    const redoBtn = document.getElementById('redo-btn');
+    if (undoBtn) undoBtn.disabled = !undoHistory.past.length;
+    if (redoBtn) redoBtn.disabled = !undoHistory.future.length;
+}
+
+function isTextEditingTarget(el) {
+    if (!el) return false;
+    if (el.isContentEditable || el.tagName === 'TEXTAREA') return true;
+    if (el.tagName !== 'INPUT') return false;
+    return !['checkbox', 'radio', 'file', 'button', 'submit', 'color', 'range'].includes(el.type);
+}
+
+document.addEventListener('keydown', event => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+    const key = event.key.toLowerCase();
+    const isUndo = key === 'z' && !event.shiftKey;
+    const isRedo = key === 'y' || (key === 'z' && event.shiftKey);
+    if (!isUndo && !isRedo) return;
+    if (isTextEditingTarget(document.activeElement)) return; // deshacer del propio campo
+    if (document.querySelector('.university-modal-overlay')) return; // hay una ventana abierta
+    event.preventDefault();
+    if (isUndo) undo(); else redo();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    // La primera "foto" se toma cuando ya se cargó todo
+    setTimeout(recordHistory, 0);
+});
+
+// ==========================================
+// PLANTILLAS
+// ==========================================
+
+const TEMPLATES = [
+    {
+        id: 'practica',
+        name: 'Reporte de práctica',
+        icon: 'science',
+        description: 'Para prácticas de laboratorio o de taller.',
+        blocks: [
+            { type: 'toc' },
+            { type: 'title', content: 'Reporte de práctica' },
+            { type: 'subtitle', content: 'Introducción' },
+            { type: 'text', hint: 'Explica el tema de la práctica y por qué es importante.' },
+            { type: 'subtitle', content: 'Objetivo' },
+            { type: 'text', hint: '¿Qué se busca lograr con esta práctica?' },
+            { type: 'subtitle', content: 'Marco teórico' },
+            { type: 'text', hint: 'Conceptos y fundamentos necesarios para entender la práctica.' },
+            { type: 'subtitle', content: 'Materiales y equipo' },
+            { type: 'text', hint: 'Lista de materiales, herramientas, software y equipo utilizado.' },
+            { type: 'subtitle', content: 'Desarrollo' },
+            { type: 'text', hint: 'Describe paso a paso el procedimiento que seguiste.' },
+            { type: 'subtitle', content: 'Resultados' },
+            { type: 'table', caption: 'Resultados obtenidos' },
+            { type: 'text', hint: 'Analiza e interpreta los resultados.' },
+            { type: 'subtitle', content: 'Conclusiones' },
+            { type: 'text', hint: '¿Se cumplió el objetivo? ¿Qué aprendiste?' },
+            { type: 'subtitle', content: 'Referencias' },
+            { type: 'ref' },
+            { type: 'ai' }
+        ]
+    },
+    {
+        id: 'ensayo',
+        name: 'Ensayo',
+        icon: 'edit_note',
+        description: 'Texto argumentativo con introducción, desarrollo y conclusión.',
+        blocks: [
+            { type: 'title', content: 'Título del ensayo' },
+            { type: 'subtitle', content: 'Introducción' },
+            { type: 'text', hint: 'Presenta el tema y plantea tu tesis o postura.' },
+            { type: 'subtitle', content: 'Desarrollo' },
+            { type: 'text', hint: 'Primer argumento con su evidencia.' },
+            { type: 'text', hint: 'Segundo argumento con su evidencia.' },
+            { type: 'text', hint: 'Contraargumento y tu respuesta.' },
+            { type: 'subtitle', content: 'Conclusión' },
+            { type: 'text', hint: 'Retoma tu tesis y cierra con una reflexión.' },
+            { type: 'subtitle', content: 'Referencias' },
+            { type: 'ref' }
+        ]
+    },
+    {
+        id: 'investigacion',
+        name: 'Trabajo de investigación',
+        icon: 'travel_explore',
+        description: 'Estructura formal con planteamiento, metodología y resultados.',
+        blocks: [
+            { type: 'toc' },
+            { type: 'title', content: 'Título de la investigación' },
+            { type: 'subtitle', content: 'Resumen' },
+            { type: 'text', hint: 'Resume en un párrafo el problema, el método y los resultados.' },
+            { type: 'subtitle', content: 'Introducción' },
+            { type: 'text', hint: 'Contexto del tema.' },
+            { type: 'subtitle', content: 'Planteamiento del problema' },
+            { type: 'text', hint: '¿Qué problema se estudia y por qué?' },
+            { type: 'subtitle', content: 'Justificación' },
+            { type: 'text', hint: '¿Por qué es importante investigarlo?' },
+            { type: 'subtitle', content: 'Objetivos' },
+            { type: 'text', hint: 'Objetivo general y objetivos específicos.' },
+            { type: 'subtitle', content: 'Marco teórico' },
+            { type: 'text', hint: 'Teorías, conceptos y estudios previos.' },
+            { type: 'subtitle', content: 'Metodología' },
+            { type: 'text', hint: 'Tipo de investigación, población, instrumentos y procedimiento.' },
+            { type: 'subtitle', content: 'Resultados' },
+            { type: 'text', hint: 'Presenta lo que encontraste.' },
+            { type: 'subtitle', content: 'Conclusiones' },
+            { type: 'text', hint: 'Responde a los objetivos planteados.' },
+            { type: 'subtitle', content: 'Referencias' },
+            { type: 'ref' },
+            { type: 'ai' }
+        ]
+    },
+    {
+        id: 'proyecto',
+        name: 'Proyecto de programación',
+        icon: 'code',
+        description: 'Documentación de un programa o sistema, con código y pruebas.',
+        blocks: [
+            { type: 'toc' },
+            { type: 'title', content: 'Nombre del proyecto' },
+            { type: 'subtitle', content: 'Descripción' },
+            { type: 'text', hint: '¿Qué hace el programa y para quién es?' },
+            { type: 'subtitle', content: 'Requisitos' },
+            { type: 'text', hint: 'Requisitos funcionales y no funcionales.' },
+            { type: 'subtitle', content: 'Diseño' },
+            { type: 'text', hint: 'Arquitectura, diagramas y decisiones de diseño.' },
+            { type: 'image', caption: 'Diagrama del sistema' },
+            { type: 'subtitle', content: 'Implementación' },
+            { type: 'text', hint: 'Explica las partes principales del código.' },
+            { type: 'code' },
+            { type: 'subtitle', content: 'Pruebas' },
+            { type: 'table', caption: 'Casos de prueba' },
+            { type: 'subtitle', content: 'Conclusiones' },
+            { type: 'text', hint: 'Resultados, dificultades y mejoras posibles.' },
+            { type: 'subtitle', content: 'Referencias' },
+            { type: 'ref' },
+            { type: 'ai' }
+        ]
+    }
+];
+
+/**
+ * Crea un bloque completo a partir de la definición de la plantilla.
+ */
+function createBlockFromTemplate(def) {
+    const block = createBlock(def.type);
+    if (def.content !== undefined) block.content = def.content;
+    if (def.hint) block.hint = def.hint;
+    if (def.caption !== undefined) block.caption = def.caption;
+    return block;
+}
+
+/**
+ * Aplica una plantilla. Conserva el encabezado (y lo agrega si no hay).
+ * @param {'append'|'replace'} mode
+ */
+function applyTemplate(templateId, mode = 'append') {
+    const template = TEMPLATES.find(t => t.id === templateId);
+    if (!template) return;
+
+    let header = reportData.find(b => b.type === 'header');
+    const hasToc = reportData.some(b => b.type === 'toc');
+    let base = mode === 'replace' ? (header ? [header] : []) : [...reportData];
+    reportData = base;
+
+    if (!header) {
+        header = createBlockFromTemplate({ type: 'header' });
+        reportData.unshift(header);
+    }
+
+    template.blocks.forEach(def => {
+        if (def.type === 'toc' && (mode === 'append' && hasToc)) return;
+        reportData.push(createBlockFromTemplate(def));
+    });
+
+    closeTemplatesModal();
+    if (isMobileLayout()) setMobileView('editor');
+    render();
+    const editor = document.getElementById('editor-container');
+    if (editor) editor.scrollTop = 0;
+}
+
+function openTemplatesModal() {
+    closeTemplatesModal();
+    const hasContent = reportData.some(b => b.type !== 'header');
+    const overlay = document.createElement('div');
+    overlay.className = 'university-modal-overlay';
+    overlay.id = 'templates-modal-overlay';
+    overlay.innerHTML = `
+        <div class="university-modal templates-modal">
+            <h3>📋 Plantillas</h3>
+            <p class="settings-hint">Arma de un clic la estructura típica de un trabajo. Tu encabezado se conserva; solo tienes que llenar los párrafos (cada uno trae una pista de qué escribir).</p>
+            ${hasContent ? `
+                <div class="template-mode">
+                    <span>Ya tienes contenido:</span>
+                    <label><input type="radio" name="template-mode" value="append" checked> Agregar al final</label>
+                    <label><input type="radio" name="template-mode" value="replace"> Reemplazar el documento</label>
+                </div>` : ''}
+            <div class="template-grid">
+                ${TEMPLATES.map(t => `
+                    <button type="button" class="template-card" data-template="${t.id}">
+                        <span class="template-icon material-symbols-outlined">${t.icon}</span>
+                        <span class="template-name">${escapeHtml(t.name)}</span>
+                        <span class="template-desc">${escapeHtml(t.description)}</span>
+                        <span class="template-sections">${escapeHtml(t.blocks.filter(b => b.type === 'subtitle').map(b => b.content).join(' · '))}</span>
+                    </button>`).join('')}
+            </div>
+            <div class="university-modal-actions">
+                <button type="button" class="action-btn" onclick="closeTemplatesModal()">Cerrar</button>
+            </div>
+        </div>`;
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeTemplatesModal(); });
+    overlay.querySelectorAll('.template-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const modeInput = overlay.querySelector('input[name="template-mode"]:checked');
+            const mode = modeInput ? modeInput.value : 'append';
+            if (mode === 'replace' && !confirm('¿Reemplazar el contenido del documento por la plantilla? (Tu encabezado se conserva y puedes deshacerlo con Ctrl+Z.)')) return;
+            applyTemplate(card.dataset.template, mode);
+        });
+    });
+    document.body.appendChild(overlay);
+}
+
+function closeTemplatesModal() {
+    const overlay = document.getElementById('templates-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+// ==========================================
+// MODO OSCURO (solo la interfaz; las hojas del documento siguen blancas)
+// ==========================================
+
+function getColorScheme() {
+    const value = localStorage.getItem('colorScheme');
+    return value === 'dark' || value === 'light' ? value : 'auto';
+}
+
+function isDarkMode() {
+    const scheme = getColorScheme();
+    return scheme === 'dark' || (scheme === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+}
+
+function applyColorScheme() {
+    const dark = isDarkMode();
+    document.body.classList.toggle('theme-dark', dark);
+    const icon = document.getElementById('color-scheme-icon');
+    if (icon) icon.textContent = dark ? 'light_mode' : 'dark_mode';
+    const btn = document.getElementById('color-scheme-btn');
+    if (btn) btn.title = dark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro';
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', dark ? '#0b1120' : '#0f172a');
+}
+
+function toggleColorScheme() {
+    localStorage.setItem('colorScheme', isDarkMode() ? 'light' : 'dark');
+    applyColorScheme();
+}
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+    if (getColorScheme() === 'auto') applyColorScheme();
+});
+
+document.addEventListener('DOMContentLoaded', applyColorScheme);
+
+// ==========================================
+// APP INSTALABLE (PWA) Y SIN INTERNET
+// ==========================================
+
+let deferredInstallPrompt = null;
+
+function registerServiceWorker() {
+    // El service worker solo funciona sirviendo la página por http(s)
+    if (!('serviceWorker' in navigator) || !/^https?:$/.test(location.protocol)) return;
+    navigator.serviceWorker.register('sw.js').catch(err => console.warn('No se pudo registrar el service worker:', err));
+}
+
+window.addEventListener('beforeinstallprompt', event => {
+    event.preventDefault();
+    deferredInstallPrompt = event;
+    const btn = document.getElementById('install-app-btn');
+    if (btn) btn.style.display = '';
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredInstallPrompt = null;
+    const btn = document.getElementById('install-app-btn');
+    if (btn) btn.style.display = 'none';
+});
+
+function installApp() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.finally(() => {
+        deferredInstallPrompt = null;
+        const btn = document.getElementById('install-app-btn');
+        if (btn) btn.style.display = 'none';
+    });
+}
+
+window.addEventListener('load', registerServiceWorker);
+
+// ==========================================
 // VISTA PREVIA EN PÁGINAS REALES
 // El documento se reparte en hojas tamaño carta (8.5 x 11 in, márgenes de
 // 2 cm) y se imprime exactamente así: lo que se ve es lo que sale en el PDF.
@@ -1769,7 +2274,7 @@ function renderTextEditor(block, deleteBtn) {
             ${deleteBtn}
             <label>Párrafo</label>
             <span class="field-label">Contenido del párrafo</span>
-            <textarea class="editor-input" placeholder="Escribe tu texto aquí..." oninput="updateContent(${block.id}, this.value)">${escapeHtml(block.content)}</textarea>
+            <textarea class="editor-input" placeholder="${escapeAttr(block.hint || 'Escribe tu texto aquí...')}" oninput="updateContent(${block.id}, this.value)">${escapeHtml(block.content)}</textarea>
         </div>`;
 }
 
@@ -2488,6 +2993,7 @@ function loadFromLocalStorage() {
 let autosaveTimer = null;
 
 function scheduleAutosave() {
+    scheduleHistoryRecord();
     clearTimeout(autosaveTimer);
     autosaveTimer = setTimeout(() => {
         saveToLocalStorage();
@@ -3450,7 +3956,7 @@ function renderProfileTab(content) {
 const BACKUP_KEYS = [
     'user_profile', 'header_fields', 'list_universities', 'list_subjects', 'list_profs',
     'subject_prof_map', 'list_classmates', 'selectedTheme', 'citationStyle',
-    'autosaveEnabled', 'previewZoom', 'previewWidth', 'previewHidden'
+    'autosaveEnabled', 'previewZoom', 'previewWidth', 'previewHidden', 'colorScheme'
 ];
 
 /**

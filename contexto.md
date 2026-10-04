@@ -3,11 +3,24 @@
 Estado actual, decisiones tomadas y planes del **Generador de Reportes Académicos**.
 La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
-Última actualización: 24 de septiembre de 2026.
+Última actualización: 3 de octubre de 2026.
 
 ---
 
-## Estado actual (versión 2.2.0)
+## Estado actual (versión 2.3.0)
+
+### Qué se hizo en la versión 2.3.0
+
+| Cambio | Detalle |
+|---|---|
+| Subir, bajar y duplicar | Botones ↑ ↓ y Duplicar en la esquina de cada tarjeta; funcionan en celular, donde no se puede arrastrar. El encabezado y el índice no se mueven ni se duplican |
+| ids únicos | Los bloques ya no repiten id aunque se creen en el mismo milisegundo (`newBlockId()`) |
+| Imágenes ligeras | Al subirlas se reducen a 1600 px y se guardan como JPEG si no tienen transparencia (una foto de 5 MB queda en ~400 KB) |
+| Deshacer / rehacer | Botones en la barra del editor y Ctrl+Z / Ctrl+Y fuera de los campos de texto; deshace bloques, encabezado y nombre del documento |
+| Plantillas | Reporte de práctica, ensayo, trabajo de investigación y proyecto de programación; los párrafos traen una pista de qué escribir. Agregar al final o reemplazar (el encabezado se conserva) |
+| App instalable (PWA) | `manifest.json`, íconos y `sw.js`: se instala y funciona sin internet (salvo Drive). Botón "Instalar la app" cuando el navegador lo permite |
+| Modo oscuro | Botón 🌙/☀️; por defecto sigue al sistema. Solo la interfaz: las hojas y la impresión no cambian |
+| Barra del editor angosta | Con la vista previa abierta, los botones quedan solo con su ícono para que se lea el nombre del documento |
 
 ### Qué se hizo en la versión 2.2.0
 
@@ -58,7 +71,8 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
 - Crear el Pull Request de `test` a `main`.
 - Cambiar la API key de Google Stitch (quedó escrita en una conversación).
-- Los ids de bloque usan `Date.now()`; convendría cambiarlos por `crypto.randomUUID()` (obligatorio antes de la colaboración en vivo).
+- Los ids de bloque ya son únicos en el documento (`newBlockId()`), pero siguen siendo números locales: antes de la colaboración en vivo conviene cambiarlos por `crypto.randomUUID()`.
+- Al publicar una versión nueva hay que subir el `?v=` **y** `VERSION` en `sw.js` (si no, quien instaló la app se queda con la copia vieja).
 - En móvil funciona, pero con detalles visuales.
 
 ---

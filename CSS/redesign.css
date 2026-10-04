@@ -2374,3 +2374,450 @@ body.preview-is-hidden #editor-container > * {
 .settings-tabs::-webkit-scrollbar {
     display: none;
 }
+
+/* ============================================================================
+   v2.3 · HERRAMIENTAS DE CADA TARJETA (subir, bajar, duplicar, eliminar)
+   Funcionan con el dedo, porque el arrastrar y soltar no sirve en celular.
+   ============================================================================ */
+.block-tools {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.block-tools .delete-btn {
+    position: static;
+}
+
+.block-tool {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--ui-slate-400);
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+}
+
+.block-tool .material-symbols-outlined {
+    font-size: 17px;
+}
+
+.block-tool:hover:not(:disabled) {
+    background: var(--ui-slate-100);
+    color: var(--ui-slate-700);
+}
+
+.block-tool:disabled {
+    opacity: 0.3;
+    cursor: default;
+}
+
+/* Deja espacio a la derecha del título de la tarjeta para los botones */
+.block-card:has(> .block-tools) > label {
+    padding-right: 128px;
+}
+
+@media screen and (min-width: 769px) {
+    /* Referencia: el selector de formato se recorre a la izquierda de los botones */
+    .block-card:has(> .block-tools) > .block-tag {
+        right: 150px;
+    }
+
+    .ref-card:has(> .block-tools) > label {
+        padding-right: 300px;
+    }
+}
+
+/* El formato de las referencias es una etiqueta pequeña, no un campo */
+.ref-card select.block-tag {
+    padding: 3px 24px 3px 10px !important;
+    border-radius: 999px !important;
+    background-position: right 8px center;
+    background-size: 11px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ui-slate-500);
+}
+
+/* ============================================================================
+   v2.3 · BARRA DEL EDITOR: deshacer / rehacer y modo oscuro
+   ============================================================================ */
+.editor-toolbar .toolbar-icon-btn:not(.mobile-only) {
+    display: inline-flex;
+}
+
+.editor-toolbar .toolbar-icon-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.editor-toolbar .toolbar-icon-btn .material-symbols-outlined {
+    font-size: 19px;
+}
+
+.editor-toolbar .toolbar-icon-btn:hover:not(:disabled) {
+    border-color: var(--ui-slate-400);
+    background: var(--ui-slate-50);
+}
+
+.editor-toolbar .toolbar-icon-btn:disabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.toolbar-group {
+    display: inline-flex;
+    flex-shrink: 0;
+    gap: 4px;
+}
+
+/* ============================================================================
+   v2.3 · PLANTILLAS E INSTALAR LA APP (barra lateral)
+   ============================================================================ */
+.toolbox .btn-templates {
+    margin-top: 6px;
+    border: 1px dashed var(--ui-slate-700);
+    background: transparent;
+}
+
+.toolbox .btn-templates .material-symbols-outlined {
+    color: var(--ui-accent);
+}
+
+.toolbox .btn-templates:hover {
+    border-color: var(--ui-accent);
+}
+
+.toolbox .btn-install {
+    margin: 8px 0 0;
+    justify-content: center;
+    border: 1px solid color-mix(in srgb, var(--ui-accent) 50%, transparent);
+    background: color-mix(in srgb, var(--ui-accent) 15%, transparent);
+    color: #fff;
+    font-weight: 600;
+}
+
+.toolbox .btn-install .material-symbols-outlined {
+    color: inherit;
+}
+
+/* Ventana de plantillas */
+.university-modal.templates-modal {
+    width: 720px;
+}
+
+.template-mode {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 16px;
+    margin: 4px 0 14px;
+    padding: 10px 14px;
+    border-radius: 12px;
+    background: var(--ui-slate-50);
+    border: 1px solid var(--ui-slate-200);
+    font-size: 13px;
+    color: var(--ui-slate-600);
+}
+
+.template-mode span {
+    font-weight: 700;
+}
+
+.university-modal .template-mode label {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 500;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--ui-slate-700);
+    cursor: pointer;
+}
+
+.template-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.template-card {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding: 16px;
+    border: 1px solid var(--ui-slate-200);
+    border-radius: 16px;
+    background: var(--ui-slate-50);
+    color: var(--ui-slate-800);
+    font-family: var(--ui-font);
+    text-align: left;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.template-card:hover {
+    border-color: var(--ui-accent);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--ui-accent) 18%, transparent);
+    transform: translateY(-1px);
+}
+
+.template-icon.material-symbols-outlined {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: var(--ui-accent-soft);
+    color: var(--ui-accent);
+    font-size: 22px;
+}
+
+.template-name {
+    font-size: 15px;
+    font-weight: 800;
+}
+
+.template-desc {
+    font-size: 12.5px;
+    color: var(--ui-slate-600);
+}
+
+.template-sections {
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--ui-slate-500);
+}
+
+@media screen and (max-width: 768px) {
+    .editor-toolbar {
+        gap: 6px;
+    }
+
+    .editor-toolbar .toolbar-icon-btn {
+        width: 32px;
+        height: 32px;
+    }
+
+    .toolbar-group {
+        gap: 2px;
+    }
+
+    .block-tools {
+        top: 10px;
+        right: 8px;
+        gap: 0;
+    }
+
+    .block-tool,
+    .block-tools .delete-btn {
+        width: 30px;
+        height: 30px;
+    }
+
+    .template-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ============================================================================
+   v2.3 · MODO OSCURO
+   Solo cambia la interfaz: las hojas de la vista previa siguen blancas y la
+   impresión no cambia. Se invierte la escala de grises (--ui-slate-*) en todo
+   lo que no es la barra lateral (que ya es oscura) ni la hoja del documento.
+   ============================================================================ */
+body.theme-dark {
+    color-scheme: dark;
+    --ui-slate-50: #131d31;
+    --ui-slate-100: #1b263b;
+    --ui-slate-200: #2a3850;
+    --ui-slate-300: #3a4a64;
+    --ui-slate-400: #7c8ba1;
+    --ui-slate-500: #94a3b8;
+    --ui-slate-600: #b6c2d2;
+    --ui-slate-700: #d5dde8;
+    --ui-slate-800: #e8edf4;
+    --ui-slate-900: #f8fafc;
+    --ui-canvas: #0b1120;
+    --ui-preview-bg: #070b14;
+    --ui-surface: #111a2c;
+    --ui-field: #0d1526;
+}
+
+/* La barra lateral y la hoja conservan su paleta original */
+body.theme-dark .toolbox,
+body.theme-dark .mobile-tabs,
+body.theme-dark #preview-container,
+body.theme-dark .preview-page {
+    --ui-slate-50: #f8fafc;
+    --ui-slate-100: #f1f5f9;
+    --ui-slate-200: #e2e8f0;
+    --ui-slate-300: #cbd5e1;
+    --ui-slate-400: #94a3b8;
+    --ui-slate-500: #64748b;
+    --ui-slate-600: #475569;
+    --ui-slate-700: #334155;
+    --ui-slate-800: #1e293b;
+    --ui-slate-900: #0f172a;
+}
+
+body.theme-dark .preview-page {
+    color: #1e293b;
+    color-scheme: light;
+}
+
+/* Superficies */
+body.theme-dark .editor-toolbar,
+body.theme-dark .preview-toolbar,
+body.theme-dark .preview-footer {
+    background: var(--ui-surface);
+    border-color: var(--ui-slate-200);
+    color: var(--ui-slate-700);
+}
+
+body.theme-dark .preview-scroll {
+    background: var(--ui-preview-bg);
+}
+
+body.theme-dark #editor-container {
+    background: var(--ui-canvas);
+}
+
+body.theme-dark .welcome-message,
+body.theme-dark .block-card,
+body.theme-dark .header-card,
+body.theme-dark .ai-card,
+body.theme-dark .university-modal {
+    background: var(--ui-surface);
+    border-color: var(--ui-slate-200);
+    color: var(--ui-slate-800);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+body.theme-dark .university-modal h3,
+body.theme-dark .university-modal label,
+body.theme-dark .university-modal p,
+body.theme-dark .university-modal li {
+    color: var(--ui-slate-700);
+}
+
+/* Campos */
+body.theme-dark :is(#editor-container, .university-modal) :is(input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not([type="file"]), select:not(.block-tag), textarea) {
+    background-color: var(--ui-field) !important;
+    border-color: var(--ui-slate-300) !important;
+    color: var(--ui-slate-800) !important;
+}
+
+/* Nombre del documento: sin recuadro hasta que se edita, como en modo claro */
+body.theme-dark .document-name-input {
+    color: var(--ui-slate-900);
+}
+
+body.theme-dark .document-name-input:hover {
+    background: var(--ui-slate-100);
+}
+
+body.theme-dark .document-name-input:focus {
+    background: var(--ui-field);
+    border-color: var(--ui-accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-accent) 25%, transparent);
+}
+
+body.theme-dark :is(.editor-pane, .university-modal) :is(input, textarea)::placeholder {
+    color: var(--ui-slate-400);
+}
+
+body.theme-dark :is(.editor-pane, .university-modal) :is(input, select, textarea):focus {
+    border-color: var(--ui-accent) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--ui-accent) 25%, transparent) !important;
+}
+
+body.theme-dark .table-grid input.table-header-cell {
+    background-color: var(--ui-slate-100) !important;
+}
+
+body.theme-dark select option {
+    background: var(--ui-surface);
+    color: var(--ui-slate-800);
+}
+
+/* Botones claros */
+body.theme-dark :is(.toolbar-btn, .toolbar-icon-btn, .action-btn:not(.save-btn), .icon-btn, .preview-zoom button, .preview-expand-btn, .classmate-picker, .table-controls button, .settings-tabs button.active),
+body.theme-dark .image-card input[type="file"]::file-selector-button {
+    background: var(--ui-slate-100) !important;
+    border-color: var(--ui-slate-300) !important;
+    color: var(--ui-slate-700) !important;
+}
+
+body.theme-dark :is(.toolbar-btn, .action-btn:not(.save-btn), .icon-btn, .preview-zoom button, .preview-expand-btn):hover:not(:disabled) {
+    background: var(--ui-slate-200) !important;
+    color: var(--ui-slate-900) !important;
+}
+
+body.theme-dark .settings-tabs button.active {
+    color: color-mix(in srgb, var(--ui-accent) 50%, #fff) !important;
+}
+
+body.theme-dark .settings-list li:hover,
+body.theme-dark .drive-file-item:hover {
+    background: var(--ui-slate-100);
+}
+
+body.theme-dark .pane-resizer {
+    background: var(--ui-slate-100);
+}
+
+body.theme-dark #editor-container::-webkit-scrollbar-thumb {
+    background: var(--ui-slate-300);
+}
+
+/* Institución (solo lectura) */
+body.theme-dark #header-inst-display {
+    background-color: var(--ui-slate-100) !important;
+    color: var(--ui-slate-600) !important;
+}
+
+/* ============================================================================
+   v2.3 · BARRA DEL EDITOR ANGOSTA
+   Con la vista previa abierta el editor puede quedar angosto: los botones se
+   quedan solo con su ícono para que el nombre del documento siga legible.
+   ============================================================================ */
+.editor-pane {
+    container-type: inline-size;
+}
+
+@container (max-width: 980px) {
+    .editor-toolbar .toolbar-btn {
+        padding: 6px 10px;
+    }
+
+    .editor-toolbar .toolbar-btn span:not(.material-symbols-outlined) {
+        display: none;
+    }
+
+    .editor-toolbar #autosave-toggle {
+        padding: 4px 8px;
+        font-size: 0 !important;
+        gap: 0;
+    }
+
+    .editor-toolbar #autosave-toggle::before {
+        font-size: 13px;
+    }
+}

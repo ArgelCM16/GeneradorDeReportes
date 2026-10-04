@@ -2,7 +2,7 @@
 
 > Herramienta web profesional para crear reportes académicos con vista previa en tiempo real
 
-![Versión](https://img.shields.io/badge/versión-2.2.0-blue)
+![Versión](https://img.shields.io/badge/versión-2.3.0-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Estado](https://img.shields.io/badge/estado-activo-success)
 
@@ -38,6 +38,12 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 - **Vista previa más grande**: Arrastra el divisor entre el editor y la vista previa, o usa el botón de agrandar
 - **Ocultar la vista previa**: El editor ocupa todo el ancho; la puedes volver a mostrar con un clic
 - **Celular**: Menú lateral desplegable (☰) y pestañas para cambiar entre el editor y la vista previa
+- **Plantillas**: Reporte de práctica, ensayo, trabajo de investigación y proyecto de programación, con la estructura lista y una pista de qué escribir en cada párrafo
+- **Deshacer y rehacer**: Botones en la barra del editor, o Ctrl+Z / Ctrl+Y
+- **Subir, bajar y duplicar bloques**: Botones en cada tarjeta (también funcionan en celular, donde no se puede arrastrar)
+- **Imágenes ligeras**: Las fotos se reducen solas al subirlas para no llenar el almacenamiento del navegador
+- **Modo oscuro**: Botón 🌙 en la barra del editor; por defecto sigue al sistema. Las hojas del documento siguen blancas
+- **App instalable y sin internet**: Se puede instalar en la computadora o el celular y funciona sin conexión (salvo Google Drive)
 - **Tablas Profesionales**: Grid visual de 1-6 columnas con diseño académico
 - **Declaración de IA**: Sistema completo para documentar uso de herramientas de IA
 - **Exportación Triple**: PDF (impresión), TXT y JSON (proyecto completo)
@@ -179,12 +185,18 @@ Click en los botones de la barra lateral:
 - **Referencia** - Bibliografía IEEE
 - **Declaración IA** - Declaración de uso de IA
 
-### 4. Exportar
+### 4. O usar una plantilla
+Botón **Usar una plantilla** en la barra lateral: arma de un clic la estructura completa del trabajo. Solo llena los párrafos (cada uno trae una pista).
+
+### 5. Exportar
 - **Imprimir PDF** - Ctrl+P
 - **Guardar TXT** - Botón "Guardar TXT"
 - **Guardar Proyecto** - Botón "Guardar Proyecto" (JSON)
 - **Cargar Proyecto** - Botón "Cargar Proyecto" (JSON)
 - **Guardar en Drive / Abrir desde Drive** - Sección "Google Drive" de la barra lateral
+
+### Instalar la app
+Abre la página en Chrome o Edge y usa el botón **Instalar la app** de la barra lateral (o el ícono de instalar de la barra de direcciones). En el celular: menú del navegador → **Agregar a la pantalla de inicio**. Una vez abierta, funciona sin internet.
 
 ---
 
@@ -241,6 +253,7 @@ Sistema completo para cumplir con políticas de integridad académica.
 generador-reportes-academicos/
 ├── ASSETS
 │   ├── favicon.png
+│   ├── icon-192.png, icon-512.png, icon-maskable-512.png
 │   └── img
 ├── CLAUDE.md			# Guía técnica del proyecto (para Claude Code y desarrolladores)
 ├── contexto.md			# Estado actual, decisiones y planes
@@ -254,10 +267,12 @@ generador-reportes-academicos/
 ├── terminos.html		# Términos y condiciones
 ├── privacidad.html		# Política de privacidad
 ├── index.html			# Aplicación principal
+├── manifest.json		# App instalable (PWA)
 ├── JS
 │   └── script.js		# Lógica de la aplicación
 ├── LICENSE
 ├── README.md
+├── sw.js			# Service worker: funciona sin internet
 └── SCREENSHOTS			# Capturas y demos animadas
     ├── Drag-Drop-Feature.gif
     └── Save-Load-Feature.gif
@@ -271,6 +286,7 @@ generador-reportes-academicos/
 - **CSS3** - Estilos (Variables CSS, Grid, Flexbox)
 - **JavaScript (ES6+)** - Lógica
 - **LocalStorage** - Persistencia del tema, el encabezado, las universidades, materias y profesores
+- **Service Worker y Web App Manifest** - App instalable que funciona sin internet
 - **Google Drive API** - Guardar y abrir proyectos en la nube (opcional)
 
 ### Sin Frameworks
@@ -421,7 +437,15 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ## Roadmap
 
-### Versión 2.2.0 (Actual)
+### Versión 2.3.0 (Actual)
+- [x] Subir, bajar y duplicar bloques con botones (también en celular)
+- [x] Imágenes reducidas al subirlas
+- [x] Deshacer y rehacer (Ctrl+Z / Ctrl+Y)
+- [x] Plantillas: práctica, ensayo, investigación y proyecto de programación
+- [x] App instalable (PWA) que funciona sin internet
+- [x] Modo oscuro
+
+### Versión 2.2.0
 - [x] Asistente de bienvenida y perfil del usuario
 - [x] Matrícula por estudiante
 - [x] Lista de compañeros de clase

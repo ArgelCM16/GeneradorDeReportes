@@ -11,7 +11,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 - Si el usuario pide un cambio "solo de diseño", no toques la lógica de `JS/script.js`: los estilos del rediseño viven en `CSS/redesign.css`.
 - Después de cambiar algo, pruébalo en Chrome sin interfaz (ver [Cómo probar](#cómo-probar)).
 - **Si cambia qué datos usa la app o con qué servicios se conecta** (nuevos recursos externos, analítica, otro permiso de Google...), actualiza `privacidad.html` (y `terminos.html` si aplica) junto con su fecha de "Última actualización".
-- **Si cambias `CSS/*.css` o `JS/script.js`, sube el número `?v=` de sus enlaces en `index.html`** (los tres llevan el mismo). GitHub Pages deja que el navegador guarde esos archivos hasta 10 minutos; sin cambiar el número, el navegador puede mezclar el HTML nuevo con CSS o JS viejos y la página se ve rota.
+- **Si cambias `CSS/*.css` o `JS/script.js`, sube el número `?v=` de sus enlaces en `index.html`** (los tres llevan el mismo, y `legal.css` en `terminos.html` y `privacidad.html` también) **y pon el mismo número en `VERSION` de `sw.js`**. GitHub Pages deja que el navegador guarde esos archivos hasta 10 minutos y el service worker los guarda sin límite; sin cambiar los dos números, el navegador puede mezclar el HTML nuevo con CSS o JS viejos y la página se ve rota (o se queda con la versión vieja).
 
 ## Qué es
 
@@ -19,7 +19,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 
 - Autor original: Jorge Javier Pedrozo Romero. Modificado por: Argel Alberto Cano Morales.
 - Repositorio: `https://github.com/ArgelCM16/GeneradorDeReportes`.
-- Versión actual: **2.2.0** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
+- Versión actual: **2.3.0** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
 
 ## Estructura
 
@@ -31,7 +31,9 @@ CSS/legal.css       Estilos de las páginas legales
 terminos.html       Términos y condiciones (enlazado en los créditos de la barra lateral)
 privacidad.html     Política de privacidad (URL pública que pide Google para la pantalla de permisos de Drive)
 JS/script.js        Toda la lógica (un solo archivo, sin módulos ni dependencias)
-ASSETS/             Favicon e imágenes
+manifest.json       Manifiesto de la app instalable (PWA): nombre, colores e íconos
+sw.js               Service worker: guarda los archivos de la app para que funcione sin internet
+ASSETS/             Favicon, íconos de la app (icon-192, icon-512 e icon-maskable-512) e imágenes
 EXAMPLES/           PDF y TXT de ejemplo
 SCREENSHOTS/        GIF/MP4 para el README
 README.md           Documentación para usuarios
@@ -45,12 +47,13 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 ### Estado
 
 - `reportData` (arreglo global): los bloques del reporte, en orden. Se guarda en `localStorage` con `scheduleAutosave()` → `saveToLocalStorage()` (espera de 500 ms) y se restaura al cargar la página con `loadFromLocalStorage()`.
-- Cada bloque es un objeto `{ id, type, content, ... }`. El `id` es `Date.now()` (ver [Cuidados](#cuidados-y-trampas-conocidas)). Campos extra según el tipo:
+- Cada bloque es un objeto `{ id, type, content, ... }`. El `id` lo da `newBlockId()` (un número único: `Date.now()` o uno más que el mayor que ya existe). Los bloques nuevos se crean con `createBlock(type)`, que pone todos los campos del tipo; `addBlock(type)` lo agrega y dibuja. Campos extra según el tipo:
   - `image`: `caption`; la imagen va en `content` como data URL (base64).
   - `table`: `columns` (1-6), `tableData` (matriz; la fila 0 son los encabezados) y `caption`.
   - `ref`: `refType` (`web` | `book` | `article`) y `refData { author, title, source, year, url }`.
   - `ai`: `aiUsed` (`'no'` | `'yes'`) y `aiData { name, aiTool, date, purpose, prompt, attachments, rawResponse }`.
   - `toc` (índice): `content` = título del índice (vacío = "Índice"). Lista los bloques `title` y `subtitle` con texto, con su número de página. Solo puede haber uno, y `placeTocAfterHeader()` (al inicio de `render()`) lo coloca siempre justo después del encabezado (o al principio si no hay encabezado), aunque se arrastre a otro lado.
+  - `text`: `hint` opcional (lo ponen las plantillas): es el texto de ayuda del párrafo vacío.
   - `header`: tiene un `hData` heredado que **ya no se usa**. Los datos reales del encabezado viven en `localStorage` (`global_header_data`).
 
 ### Claves de `localStorage`
@@ -72,6 +75,7 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 | `previewHidden` | `'1'` si la vista previa está oculta (computadora) |
 | `citationStyle` | Formato de las referencias: `ieee` (por defecto) o `apa` |
 | `previewZoom` | Zoom de la vista previa: `fit` (ajustar al ancho, por defecto) o un nivel de 0.25 a 1.5; solo pantalla |
+| `colorScheme` | Modo de la interfaz: `light`, `dark` o sin valor (`auto`, sigue al sistema) |
 
 ### Documento: nombre, autoguardado y "Nuevo"
 
@@ -155,6 +159,38 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 - Clases de apoyo: `.mobile-only` y `.desktop-only`.
 - Al probar en Chrome sin interfaz, la ventana no baja de ~500 px de ancho: para el diseño de celular usa `--window-size=390,844` (queda en ~504 px, que sigue siendo celular) y toma capturas a 504 px de ancho.
 
+### Tarjetas: subir, bajar y duplicar
+
+- `buildBlockToolsHTML(block, index)` arma la esquina de cada tarjeta: ↑ ↓ (`moveBlockBy(id, ±1)`), Duplicar (`duplicateBlock(id)`, copia profunda con id nuevo, justo debajo) y ×. Funcionan con el dedo (el arrastrar y soltar no funciona en pantallas táctiles).
+- El encabezado y el índice solo llevan la ×: no se mueven (el índice lo acomoda `placeTocAfterHeader()`) ni se duplican, y ningún bloque se puede subir por encima de ellos.
+
+### Imágenes
+
+- `handleImage()` reduce cada imagen con `shrinkImageDataUrl(dataUrl, mime, BLOCK_IMAGE_MAX_SIZE = 1600, preferJpeg)`: la deja en 1600 px como máximo y prueba JPEG (calidad 0.85, solo si no tiene transparencia) y PNG; se queda con la más ligera. Los SVG y GIF no se tocan. Una foto de 5 MB queda en unos 400 KB, así el `localStorage` (≈5 MB) alcanza para varias.
+
+### Deshacer / rehacer
+
+- `undoHistory { past, future, current }` guarda "fotos" del documento (`captureDocumentState()`: bloques, encabezado y nombre, en JSON). Máximo 60 y unos 25 millones de caracteres en total (las fotos incluyen las imágenes).
+- Lo que se escribe se agrupa: `scheduleAutosave()` llama a `scheduleHistoryRecord()` (espera de 400 ms). Cada `render()` (agregar, mover, borrar, plantilla...) guarda su paso de inmediato con `recordHistory()`.
+- `undo()` / `redo()` restauran con `applyDocumentState()`; durante 700 ms no se registra nada para no guardar la restauración como un cambio nuevo. Botones `#undo-btn` / `#redo-btn` en la barra del editor (`updateUndoButtons()`).
+- Teclado: Ctrl/⌘+Z, Ctrl+Y y Ctrl+Shift+Z, **solo fuera de un campo de texto** (dentro de un campo deshace el navegador lo escrito) y sin ventanas abiertas.
+
+### Plantillas
+
+- `TEMPLATES` (práctica, ensayo, investigación, proyecto de programación): cada una es una lista de `{ type, content?, hint?, caption? }`. `openTemplatesModal()` muestra las tarjetas (botón "Usar una plantilla" de la barra lateral); si el documento ya tiene contenido, pregunta si agregar al final o reemplazar.
+- `applyTemplate(id, 'append'|'replace')` conserva el encabezado (lo agrega si no hay) y no repite el índice. Se puede deshacer con Ctrl+Z.
+
+### Modo oscuro
+
+- `getColorScheme()` / `isDarkMode()` / `applyColorScheme()` / `toggleColorScheme()` (botón 🌙/☀️ `#color-scheme-btn` de la barra del editor). Pone la clase `theme-dark` en `<body>` y cambia el `meta theme-color`.
+- Solo cambia la interfaz: en `redesign.css` invierte la escala `--ui-slate-*` y define `--ui-surface` y `--ui-field`. La barra lateral, las pestañas del celular y las hojas de la vista previa conservan la paleta original, así **las hojas siguen blancas y la impresión no cambia**.
+
+### App instalable (PWA) y sin internet
+
+- `manifest.json` + `sw.js`. `registerServiceWorker()` lo registra al cargar, **solo por http(s)** (con `file://` no hace nada).
+- `sw.js` guarda los archivos de la app al instalarse (lista `APP_FILES`, con el `?v=`), responde las páginas primero de internet (y sin conexión, de la copia) y los demás archivos y las fuentes de Google al instante desde la copia, actualizándolos por detrás. Nunca guarda llamadas a Google Drive ni datos del usuario. Al cambiar `VERSION` se descarga todo de nuevo y se borra la copia vieja.
+- El botón "Instalar la app" (`#install-app-btn`) aparece solo cuando el navegador lanza `beforeinstallprompt` (`installApp()`).
+
 ### Exportación
 
 - PDF: `window.print()` más las reglas `@media print` (ocultan la barra lateral y el editor).
@@ -166,7 +202,7 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 - `redesign.css` reproduce la pantalla "Rediseño Completo" de Stitch. Define `--ui-accent` **sobre `body`** (no sobre `:root`) para que siga al tema; con el tema `generic` usa el naranja `#f97316`. Usa `color-mix()` y `:has()`.
 - Estructura de `index.html` (solo presentación; las funciones siguen buscando los mismos ids):
   - Barra lateral `.toolbox`: `.sidebar-scroll` (marca, selector de tema, `.blocks-grid` en 2 columnas, Declaración de IA, Almacenamiento/Drive, proyecto JSON y créditos) y `.sidebar-footer` fijo (TXT, Configuración e Imprimir).
-  - Editor: `.editor-pane` = `.editor-toolbar` (título, `#editor-uni-label` y pastilla de guardado) + `#editor-container`.
+  - Editor: `.editor-pane` = `.editor-toolbar` (nombre del documento, `#editor-uni-label`, deshacer/rehacer, Nuevo, ocultar vista previa, pastilla de guardado y modo oscuro) + `#editor-container`. `.editor-pane` es un contenedor (`container-type: inline-size`): si mide menos de 980 px, los botones de la barra se quedan solo con su ícono.
   - Vista previa: `.preview-pane` = `.preview-toolbar` + `.preview-scroll` (dentro, la hoja `#preview-container`) + `.preview-footer`.
 - `changeTheme()` también actualiza `#header-uni-badge` (insignia de la tarjeta del encabezado, con `getUniShortName()`) y `#editor-uni-label`.
 - En `index.html` las hojas de Google Fonts (Material Symbols) se cargan **antes** que `style.css` y `redesign.css`; si van después, pisan el tamaño y el `display` de los íconos (así se descentraba el logo).
@@ -185,13 +221,15 @@ No hay pruebas en el repositorio. Lo que ha funcionado es Chrome sin interfaz:
 4. Para ver cómo se ve: `--screenshot=<png> --window-size=1440,900`.
 5. Para la impresión: `--print-to-pdf=<archivo>` y cuenta las páginas del PDF (`/Type /Page`); deben ser las mismas que `.preview-page` en la vista previa. **Oculta el `<pre id="TEST_RESULTS">`** antes de imprimir (`#TEST_RESULTS{display:none}`), o saldrá como una hoja extra.
 6. Proyecto de prueba completo: `EXAMPLES/PROYECTO-PRUEBA-COMPLETO.json` (se carga con "Cargar Proyecto").
-7. **El asistente de bienvenida se abre solo** en un navegador limpio: en las pruebas llama a `closeOnboarding()` y guarda `saveProfile({ onboardingDone: true })` antes de probar otras cosas (o úsalo a propósito para probar el asistente).
+7. **Service worker (PWA)**: sirve una copia de la app con un servidor local (`python -m http.server`) y usa un `--user-data-dir` con **ruta corta** (por ejemplo `C:\Users\<usuario>\AppData\Local\Temp\prof`): con la ruta larga de la carpeta temporal de Claude, la caché de Chrome falla con "Unexpected internal error". `--virtual-time-budget` no deja que el service worker se instale; usa `--timeout` y retrasa el evento `load` (por ejemplo, con una imagen que el servidor tarda en responder). Para probar sin internet, apaga el servidor y vuelve a abrir la página con el mismo perfil.
+8. **El asistente de bienvenida se abre solo** en un navegador limpio: en las pruebas llama a `closeOnboarding()` y guarda `saveProfile({ onboardingDone: true })` antes de probar otras cosas (o úsalo a propósito para probar el asistente).
 
 Chrome está en `C:\Program Files\Google\Chrome\Application\chrome.exe`.
 
 ## Cuidados y trampas conocidas
 
-- **ids con `Date.now()`**: si se crean dos bloques en el mismo milisegundo (solo pasa en pruebas automáticas), comparten id. En las pruebas, asigna ids únicos a mano.
+- **ids de bloque**: crea los bloques con `createBlock()` / `addBlock()` (usan `newBlockId()`); si armas bloques a mano en una prueba, ponles ids distintos.
+- **`render()` guarda un paso de deshacer**: si una función dibuja todo varias veces seguidas, cada `render()` será un paso. Para cambios que deben deshacerse juntos, modifica `reportData` y llama a `render()` una sola vez.
 - **`.block-card > label`** (hijo directo) es el título de cada tarjeta; `redesign.css` lo pone en mayúsculas.
 - Los finales de línea de la copia de trabajo son LF (git los convierte). Al editar con scripts, escribe en UTF-8 con `\n`.
 - **README**: el árbol de carpetas usa espacios duros (`│` + dos U+00A0 + espacio). Ya hubo una corrupción con texto UTF-16 pegado al final del README que hacía que GitHub lo mostrara como texto plano; si GitHub lo muestra así otra vez, busca bytes nulos.

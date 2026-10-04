@@ -20,10 +20,14 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="CSS/style.css?v=2.2.4" />
+    <link rel="stylesheet" href="CSS/style.css?v=2.3.0" />
     <!-- Rediseño visual (Google Stitch). Quitar esta línea vuelve al diseño anterior. -->
-    <link rel="stylesheet" href="CSS/redesign.css?v=2.2.4" />
+    <link rel="stylesheet" href="CSS/redesign.css?v=2.3.0" />
     <link rel="icon" href="ASSETS/favicon.png" />
+    <!-- App instalable (PWA) -->
+    <link rel="manifest" href="manifest.json" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="apple-touch-icon" href="ASSETS/icon-192.png" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -36,7 +40,7 @@
           <div class="sidebar-brand-text">
             <div class="sidebar-brand-title">Generador de Reportes</div>
             <div class="sidebar-brand-subtitle">
-              Reportes académicos <span class="sidebar-brand-version">v2.2</span>
+              Reportes académicos <span class="sidebar-brand-version">v2.3</span>
             </div>
           </div>
         </div>
@@ -107,6 +111,11 @@
           <span class="btn-ai-badge">IA</span>
         </button>
 
+        <button type="button" onclick="openTemplatesModal()" class="btn-templates" title="Arma la estructura de un trabajo de un clic">
+          <span class="material-symbols-outlined">auto_awesome_mosaic</span>
+          <span>Usar una plantilla</span>
+        </button>
+
         <hr />
 
         <!-- Google Drive -->
@@ -175,11 +184,17 @@
           />
         </div>
 
+        <!-- Aparece solo cuando el navegador permite instalar la app -->
+        <button type="button" id="install-app-btn" class="btn-install" onclick="installApp()" style="display: none">
+          <span class="material-symbols-outlined">install_desktop</span>
+          <span>Instalar la app</span>
+        </button>
+
         <!-- Créditos -->
         <div class="credits">
           <p>Desarrollado por <strong>Jorge Javier Pedrozo Romero</strong></p>
           <p>Modificado por <strong>Argel Alberto Cano Morales</strong></p>
-          <p class="credits-version">v2.2.0 • Octubre 2026</p>
+          <p class="credits-version">v2.3.0 • Octubre 2026</p>
           <p class="credits-legal">
             <a href="terminos.html" target="_blank" rel="noopener">Términos y condiciones</a>
             ·
@@ -250,6 +265,32 @@
             <span id="editor-uni-label"></span>
           </div>
 
+          <!-- Deshacer / rehacer (Ctrl+Z / Ctrl+Y) -->
+          <div class="toolbar-group">
+            <button
+              type="button"
+              class="toolbar-icon-btn"
+              id="undo-btn"
+              onclick="undo()"
+              title="Deshacer (Ctrl+Z)"
+              aria-label="Deshacer"
+              disabled
+            >
+              <span class="material-symbols-outlined">undo</span>
+            </button>
+            <button
+              type="button"
+              class="toolbar-icon-btn"
+              id="redo-btn"
+              onclick="redo()"
+              title="Rehacer (Ctrl+Y)"
+              aria-label="Rehacer"
+              disabled
+            >
+              <span class="material-symbols-outlined">redo</span>
+            </button>
+          </div>
+
           <button
             type="button"
             class="toolbar-btn"
@@ -281,6 +322,18 @@
             aria-pressed="true"
           >
             Guardado automáticamente
+          </button>
+
+          <!-- Modo claro / oscuro -->
+          <button
+            type="button"
+            class="toolbar-icon-btn"
+            id="color-scheme-btn"
+            onclick="toggleColorScheme()"
+            title="Cambiar a modo oscuro"
+            aria-label="Cambiar entre modo claro y oscuro"
+          >
+            <span class="material-symbols-outlined" id="color-scheme-icon">dark_mode</span>
           </button>
         </div>
 
@@ -370,6 +423,6 @@
     </nav>
 
     <!-- ?v=...: súbelo cada vez que cambien el CSS o el JS, para que el navegador no use una copia vieja -->
-    <script src="JS/script.js?v=2.2.4"></script>
+    <script src="JS/script.js?v=2.3.0"></script>
   </body>
 </html>
