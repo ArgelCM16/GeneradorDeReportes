@@ -59,7 +59,7 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
 ## Estado de la versión 2.1.0
 
-- Rama de trabajo: `test`. La rama `main` todavía **no** tiene los cambios de la 2.1.0 (falta el Pull Request de `test` a `main`).
+- Rama de trabajo: `test`. `main` recibió todo hasta la 2.5.2 con el Pull Request #1 (4 de octubre de 2026).
 - Todo funciona sin servidor. Google Drive es opcional y requiere servir la página por http(s).
 
 ### Qué se hizo en la versión 2.1.0
@@ -91,10 +91,9 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
 ### Pendientes conocidos
 
-- Crear el Pull Request de `test` a `main`.
 - Cambiar la API key de Google Stitch (quedó escrita en una conversación).
 - Los ids de bloque ya son únicos en el documento (`newBlockId()`), pero siguen siendo números locales: antes de la colaboración en vivo conviene cambiarlos por `crypto.randomUUID()`. Ojo: las citas guardan el id de la referencia (`data-cite`), así que un cambio de ids tendría que actualizarlas.
-- El Word se validó con python-docx (estructura, estilos, imágenes, listas), pero no se ha abierto en Microsoft Word real: conviene probarlo.
+- El Word se validó con python-docx y en Microsoft Word real (por automatización): abre sin reparar, reconoce títulos, imágenes, tabla e índice, y al actualizar el índice da los mismos números de página que la app.
 - Al publicar una versión nueva hay que subir el `?v=` **y** `VERSION` en `sw.js` (si no, quien instaló la app se queda con la copia vieja).
 - En móvil funciona, pero con detalles visuales.
 
