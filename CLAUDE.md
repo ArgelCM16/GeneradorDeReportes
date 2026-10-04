@@ -19,7 +19,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 
 - Autor original: Jorge Javier Pedrozo Romero. Modificado por: Argel Alberto Cano Morales.
 - Repositorio: `https://github.com/ArgelCM16/GeneradorDeReportes`.
-- Versión actual: **2.3.0** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
+- Versión actual: **2.4.1** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
 
 ## Estructura
 
@@ -33,7 +33,7 @@ privacidad.html     Política de privacidad (URL pública que pide Google para l
 JS/script.js        Toda la lógica (un solo archivo, sin módulos ni dependencias)
 manifest.json       Manifiesto de la app instalable (PWA): nombre, colores e íconos
 sw.js               Service worker: guarda los archivos de la app para que funcione sin internet
-ASSETS/             Favicon, íconos de la app (icon-192, icon-512 e icon-maskable-512) e imágenes
+ASSETS/             Logo "Generador CM": favicon, íconos de la app (icon-192, icon-512, icon-maskable-512 y apple-touch-icon) e imágenes
 EXAMPLES/           PDF y TXT de ejemplo
 SCREENSHOTS/        GIF/MP4 para el README
 README.md           Documentación para usuarios
@@ -53,7 +53,7 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
   - `ref`: `refType` (`web` | `book` | `article`) y `refData { author, title, source, year, url }`.
   - `ai`: `aiUsed` (`'no'` | `'yes'`) y `aiData { name, aiTool, date, purpose, prompt, attachments, rawResponse }`.
   - `toc` (índice): `content` = título del índice (vacío = "Índice"). Lista los bloques `title` y `subtitle` con texto, con su número de página. Solo puede haber uno, y `placeTocAfterHeader()` (al inicio de `render()`) lo coloca siempre justo después del encabezado (o al principio si no hay encabezado), aunque se arrastre a otro lado.
-  - `text`: `hint` opcional (lo ponen las plantillas): es el texto de ayuda del párrafo vacío.
+  - `text`: `format: 'html'` y `content` con HTML limpio (ver [Párrafos con formato](#párrafos-con-formato-y-citas)); sin `format`, `content` es texto plano antiguo y se convierte al dibujar. `hint` opcional (lo ponen las plantillas): es el texto de ayuda del párrafo vacío.
   - `header`: tiene un `hData` heredado que **ya no se usa**. Los datos reales del encabezado viven en `localStorage` (`global_header_data`).
 
 ### Claves de `localStorage`
@@ -76,6 +76,11 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 | `citationStyle` | Formato de las referencias: `ieee` (por defecto) o `apa` |
 | `previewZoom` | Zoom de la vista previa: `fit` (ajustar al ancho, por defecto) o un nivel de 0.25 a 1.5; solo pantalla |
 | `colorScheme` | Modo de la interfaz: `light`, `dark` o sin valor (`auto`, sigue al sistema) |
+| `documentFormat` | Formato del documento abierto: `{ font, size, lineHeight, margin, paper, align, indent, pageNumbers }` |
+| `defaultDocumentFormat` | Formato para los documentos nuevos (botón "Usar en mis documentos nuevos") |
+| `currentDocumentId` | id del documento abierto en Mis documentos (`doc-...`) |
+
+Además, **Mis documentos** vive en IndexedDB (base `generador-reportes`, almacenes `meta` y `data`), no en localStorage.
 
 ### Documento: nombre, autoguardado y "Nuevo"
 
@@ -159,6 +164,39 @@ No hay `package.json`, ni npm, ni pruebas en el repositorio. Recursos externos: 
 - Clases de apoyo: `.mobile-only` y `.desktop-only`.
 - Al probar en Chrome sin interfaz, la ventana no baja de ~500 px de ancho: para el diseño de celular usa `--window-size=390,844` (queda en ~504 px, que sigue siendo celular) y toma capturas a 504 px de ancho.
 
+### Párrafos con formato y citas
+
+- El contenido de un párrafo es HTML limpio: solo `<p>`, `<ul>`/`<ol>`/`<li>`, `<b>`, `<i>`, `<u>`, `<br>` y `<span data-cite="id">`. **Todo lo que entra pasa por `sanitizeRichHtml()`** (lo escrito, lo pegado y los proyectos cargados); `normalizeTextBlocks()` (al inicio de `render()`) limpia todos los párrafos y convierte los de texto plano (`plainToRichHtml()`). `getRichHtml(block)` devuelve el HTML limpio (con memoria `richSanitizeCache`).
+- Editor: `renderTextEditor()` dibuja la barra (`richCommand(btn, cmd)` con `document.execCommand`) y un `contenteditable` `.rich-editor` (`data-block-id`); `oninput` → `updateRichText(editor)`. Al pegar se limpia (evento `paste`). `richSavedRanges` guarda dónde estaba el cursor para los botones. `updateContent()` en un párrafo recibe texto plano (quita `format`).
+- Salidas: `richHtmlForPreview()` (clases `.p-text`, `.p-list` con `data-split="children"` y `.p-cite`), `richHtmlForEditor()` (citas como `.cite-chip` no editables), `richHtmlToPlainText()` (TXT, contador, revisión) y `docxRunsFromHtml()` (Word).
+- Citas: `getReferenceBlocks()` (el número IEEE es la posición del bloque de referencia), `getCitationText(id)` ([1] o (Pérez, 2020) con `getAPACitationAuthor()`), `openCitationPicker(button, blockId)` / `insertCitation()`. `refreshCitationChips()` (al final de `renderPreview()`) actualiza las etiquetas del editor.
+- Paginación: los `.p-text` (con o sin formato) se parten con `splitInline()` usando `Range.cloneContents()` (conserva negritas y no parte las citas); una `<ol>` partida sigue la numeración con `start`.
+
+### Formato del documento
+
+- `getDocumentFormat()` / `setDocumentFormat(format, redraw)` / `normalizeDocumentFormat()`; opciones en `DOC_FONTS`, `PAPER_SIZES`, `DOC_FONT_SIZES`, `DOC_LINE_HEIGHTS`, `DOC_MARGINS`, y `DOCUMENT_FORMAT_PRESETS` (predeterminado, APA 7, Formal). Es del documento (como el nombre: en memoria y, con autoguardado, en `documentFormat`), va en el proyecto, el respaldo, Mis documentos y el deshacer.
+- `applyDocumentFormat()` pone variables CSS en `#preview-container` (`--doc-font`, `--doc-size`, `--doc-line`, `--doc-margin`, `--doc-page-w`, `--doc-page-h`, `--doc-align`, `--doc-indent`...) y el `@page` de la impresión en `<style id="doc-page-style">`. `getPageWidthPx()` lo usa el zoom "ajustar".
+- Ventana: `openFormatModal()` (botón de la barra lateral y "Aa" de la vista previa).
+
+### Contador de palabras y revisión
+
+- `countDocumentWords()` (títulos, párrafos, tablas y descripciones; no cuenta encabezado, índice, código, referencias ni declaración de IA) y `updateDocumentStats()` (barra `.editor-statusbar`, con espera de 250 ms desde `renderPreview()`).
+- `getDocumentIssues()` devuelve `{ level: 'error'|'warn'|'info', message, blockId }`; `openReviewModal(forPrint)` los lista y "Ir" usa `goToBlock()`. **Para imprimir usa `printDocument()`** (no `window.print()`): si hay errores o avisos, primero muestra la revisión. Ctrl+P también pasa por ahí.
+
+### Exportar a Word
+
+- `exportDOCX()` → `buildDocx()`: arma el `.docx` sin librerías. `zipFiles()` (ZIP sin compresión con `crc32()`), y XML con `docxParagraph()`, `docxRun()`, `docxRunsFromHtml()`. Imágenes con `loadImageForDocx()` (SVG/WebP → PNG; un logo de otro sitio que no permite leerlo se omite).
+- Estilos de Word: `Heading1` (título) y `Heading2` (subtítulo), para que el índice sea un campo TOC de Word (trae los números de la vista previa y `updateFields` hace que Word ofrezca actualizarlo), `Caption`, `Codigo`, `TOC1`/`TOC2` y `Footer` (número de página).
+- Si cambias cómo se ve un bloque en la hoja, revisa también `buildDocx()` y `exportTXT()`.
+
+### Mis documentos
+
+- IndexedDB (`openLibraryDb()`, `libraryTransaction(mode, fn)`): `meta` (lo que muestra la lista) y `data` (`{ id, encoding: 'gzip'|'none', payload }`, comprimido con `CompressionStream`).
+- `saveCurrentDocumentToLibrary()` toma la "foto" (`buildLibraryPayload()`) en el momento y la escribe en cola; no reescribe si no cambió (`libraryLastSaved`). Se llama desde el autoguardado (`scheduleLibrarySave()`, 1.5 s) y antes de cambiar de documento. Solo guarda con el autoguardado activo (o con `{ force: true }`).
+- `startNewLibraryDocument()` guarda el actual y da un id nuevo: lo usan `newDocument()`, `applyProjectData()` (cargar proyecto o Drive) e `importBackupData()` con documento. `applyLibraryDocument()` / `openLibraryDocument()`, `duplicateLibraryDocument()`, `renameLibraryDocument()`, `deleteLibraryDocument()`, `downloadLibraryDocument()`. Al cambiar de documento se reinicia el deshacer (`resetUndoHistory()`).
+- Respaldo: `exportBackup(includeDocument, includeLibrary)` agrega `library: [{ meta, data }]`; `importLibraryDocuments()` los restaura.
+- Ventana: `openLibraryModal()` (botón 📁 de la barra del editor y "Mis documentos" de la barra lateral). `showToast()` muestra avisos breves.
+
 ### Tarjetas: subir, bajar y duplicar
 
 - `buildBlockToolsHTML(block, index)` arma la esquina de cada tarjeta: ↑ ↓ (`moveBlockBy(id, ±1)`), Duplicar (`duplicateBlock(id)`, copia profunda con id nuevo, justo debajo) y ×. Funcionan con el dedo (el arrastrar y soltar no funciona en pantallas táctiles).
@@ -221,8 +259,10 @@ No hay pruebas en el repositorio. Lo que ha funcionado es Chrome sin interfaz:
 4. Para ver cómo se ve: `--screenshot=<png> --window-size=1440,900`.
 5. Para la impresión: `--print-to-pdf=<archivo>` y cuenta las páginas del PDF (`/Type /Page`); deben ser las mismas que `.preview-page` en la vista previa. **Oculta el `<pre id="TEST_RESULTS">`** antes de imprimir (`#TEST_RESULTS{display:none}`), o saldrá como una hoja extra.
 6. Proyecto de prueba completo: `EXAMPLES/PROYECTO-PRUEBA-COMPLETO.json` (se carga con "Cargar Proyecto").
-7. **Service worker (PWA)**: sirve una copia de la app con un servidor local (`python -m http.server`) y usa un `--user-data-dir` con **ruta corta** (por ejemplo `C:\Users\<usuario>\AppData\Local\Temp\prof`): con la ruta larga de la carpeta temporal de Claude, la caché de Chrome falla con "Unexpected internal error". `--virtual-time-budget` no deja que el service worker se instale; usa `--timeout` y retrasa el evento `load` (por ejemplo, con una imagen que el servidor tarda en responder). Para probar sin internet, apaga el servidor y vuelve a abrir la página con el mismo perfil.
-8. **El asistente de bienvenida se abre solo** en un navegador limpio: en las pruebas llama a `closeOnboarding()` y guarda `saveProfile({ onboardingDone: true })` antes de probar otras cosas (o úsalo a propósito para probar el asistente).
+7. **IndexedDB (Mis documentos) y service worker**: con `--virtual-time-budget`, Chrome adelanta el reloj cuando no hay temporizadores y **no espera a IndexedDB** (la prueba se queda "colgada" y no hay resultados). Para esas pruebas sirve la app por http y usa `--timeout`, reteniendo el evento `load` con una imagen que el servidor no responde hasta que la prueba avisa que terminó. Usa siempre un `--user-data-dir` con **ruta corta**.
+8. **Service worker (PWA)**: sirve una copia de la app con un servidor local (`python -m http.server`) y usa un `--user-data-dir` con **ruta corta** (por ejemplo `C:\Users\<usuario>\AppData\Local\Temp\prof`): con la ruta larga de la carpeta temporal de Claude, la caché de Chrome falla con "Unexpected internal error". `--virtual-time-budget` no deja que el service worker se instale; usa `--timeout` y retrasa el evento `load` (por ejemplo, con una imagen que el servidor tarda en responder). Para probar sin internet, apaga el servidor y vuelve a abrir la página con el mismo perfil.
+9. **El Word**: guarda el `.docx` desde la prueba (base64 en un `<pre>`) y revísalo con `python-docx` instalado en una carpeta temporal (`pip install --target`), no en el Python del sistema.
+10. **El asistente de bienvenida se abre solo** en un navegador limpio: en las pruebas llama a `closeOnboarding()` y guarda `saveProfile({ onboardingDone: true })` antes de probar otras cosas (o úsalo a propósito para probar el asistente).
 
 Chrome está en `C:\Program Files\Google\Chrome\Application\chrome.exe`.
 

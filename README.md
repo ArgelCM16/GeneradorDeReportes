@@ -2,7 +2,7 @@
 
 > Herramienta web profesional para crear reportes académicos con vista previa en tiempo real
 
-![Versión](https://img.shields.io/badge/versión-2.3.0-blue)
+![Versión](https://img.shields.io/badge/versión-2.4.1-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Estado](https://img.shields.io/badge/estado-activo-success)
 
@@ -38,6 +38,13 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 - **Vista previa más grande**: Arrastra el divisor entre el editor y la vista previa, o usa el botón de agrandar
 - **Ocultar la vista previa**: El editor ocupa todo el ancho; la puedes volver a mostrar con un clic
 - **Celular**: Menú lateral desplegable (☰) y pestañas para cambiar entre el editor y la vista previa
+- **Mis documentos**: Guarda varios documentos en el navegador (comprimidos, para que ocupen poco); ábrelos, duplícalos, renómbralos o elimínalos. "Nuevo" y "Cargar Proyecto" ya no borran el documento anterior
+- **Párrafos con formato**: Negritas, cursivas, subrayado y listas con viñetas o numeradas; al pegar desde Word o Google Docs se conserva el formato básico
+- **Citas en el texto**: Botón "Citar" en cada párrafo; la cita sale como [1] en IEEE o (Pérez, 2020) en APA y se actualiza sola
+- **Formato del documento**: Tipo y tamaño de letra, interlineado, márgenes, tamaño de hoja (carta, oficio o A4), alineación, sangría y números de página; con formatos listos (APA 7 y Formal)
+- **Exportar a Word (.docx)**: Con el mismo formato, imágenes, tablas, listas, índice y números de página
+- **Contador de palabras y páginas**: En la barra de abajo del editor
+- **Revisión antes de entregar**: Lista lo que falta (nombre, materia, párrafos vacíos, figuras sin descripción, referencias incompletas, citas rotas...) y se abre sola al imprimir si hay algo pendiente
 - **Plantillas**: Reporte de práctica, ensayo, trabajo de investigación y proyecto de programación, con la estructura lista y una pista de qué escribir en cada párrafo
 - **Deshacer y rehacer**: Botones en la barra del editor, o Ctrl+Z / Ctrl+Y
 - **Subir, bajar y duplicar bloques**: Botones en cada tarjeta (también funcionan en celular, donde no se puede arrastrar)
@@ -46,7 +53,7 @@ Aplicación web 100% cliente para generar documentos académicos profesionales c
 - **App instalable y sin internet**: Se puede instalar en la computadora o el celular y funciona sin conexión (salvo Google Drive)
 - **Tablas Profesionales**: Grid visual de 1-6 columnas con diseño académico
 - **Declaración de IA**: Sistema completo para documentar uso de herramientas de IA
-- **Exportación Triple**: PDF (impresión), TXT y JSON (proyecto completo)
+- **Exportación**: PDF (impresión), Word (.docx), TXT y JSON (proyecto completo)
 - **Seguro**: Protección XSS completa
 - **Responsive**: Funciona en desktop, tablet y móvil
 - **Sin Backend**: Todo en el navegador, sin servidor
@@ -189,7 +196,8 @@ Click en los botones de la barra lateral:
 Botón **Usar una plantilla** en la barra lateral: arma de un clic la estructura completa del trabajo. Solo llena los párrafos (cada uno trae una pista).
 
 ### 5. Exportar
-- **Imprimir PDF** - Ctrl+P
+- **Imprimir PDF** - Ctrl+P (antes se muestra la revisión si falta algo)
+- **Word** - Botón "Word" junto a Imprimir (archivo .docx)
 - **Guardar TXT** - Botón "Guardar TXT"
 - **Guardar Proyecto** - Botón "Guardar Proyecto" (JSON)
 - **Cargar Proyecto** - Botón "Cargar Proyecto" (JSON)
@@ -287,6 +295,8 @@ generador-reportes-academicos/
 - **JavaScript (ES6+)** - Lógica
 - **LocalStorage** - Persistencia del tema, el encabezado, las universidades, materias y profesores
 - **Service Worker y Web App Manifest** - App instalable que funciona sin internet
+- **IndexedDB y CompressionStream** - Mis documentos, comprimidos con gzip
+- **Office Open XML** - El .docx se arma en el navegador, sin librerías
 - **Google Drive API** - Guardar y abrir proyectos en la nube (opcional)
 
 ### Sin Frameworks
@@ -437,7 +447,16 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ## Roadmap
 
-### Versión 2.3.0 (Actual)
+### Versión 2.4.0 (Actual)
+- [x] Mis documentos: varios documentos guardados y comprimidos en el navegador
+- [x] Párrafos con negritas, cursivas, subrayado y listas
+- [x] Citas en el texto (IEEE y APA)
+- [x] Formato del documento (letra, interlineado, márgenes, hoja, sangría, números de página)
+- [x] Exportar a Word (.docx)
+- [x] Contador de palabras y páginas
+- [x] Revisión antes de entregar
+
+### Versión 2.3.0
 - [x] Subir, bajar y duplicar bloques con botones (también en celular)
 - [x] Imágenes reducidas al subirlas
 - [x] Deshacer y rehacer (Ctrl+Z / Ctrl+Y)

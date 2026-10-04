@@ -953,8 +953,9 @@ textarea.editor-input {
     border-radius: 5px;
 }
 
-.preview-paper { 
-    font-family: 'Georgia', 'Times New Roman', serif; 
+.preview-paper {
+    font-family: var(--doc-font, 'Georgia', 'Times New Roman', serif);
+    font-size: var(--doc-size, 12pt);
     line-height: 1.7;
     color: #2c3e50;
     max-width: 800px;
@@ -1003,10 +1004,11 @@ textarea.editor-input {
     font-weight: 600;
 }
 
-.p-text { 
-    text-align: justify; 
+.p-text {
+    text-align: var(--doc-align, justify);
+    text-indent: var(--doc-indent, 0);
     margin-bottom: 16px;
-    line-height: 1.8;
+    line-height: var(--doc-line, 1.8);
 }
 
 /* ============================================================================
@@ -1708,9 +1710,9 @@ textarea.editor-input {
 
 .preview-page {
     position: relative;
-    width: 8.5in;
-    height: 11in;
-    padding: 2cm;
+    width: var(--doc-page-w, 8.5in);
+    height: var(--doc-page-h, 11in);
+    padding: var(--doc-margin, 2cm);
     box-sizing: border-box;
     margin: 0 auto 24px;
     background: #fff;
@@ -1742,7 +1744,17 @@ textarea.editor-input {
 /* Solo los párrafos: en el código cada línea termina en salto de línea y
    se estiraría toda a lo ancho */
 .p-text.p-split-start {
-    text-align-last: justify;
+    text-align-last: var(--doc-align-last, justify);
+}
+
+/* La continuación de un párrafo partido no lleva sangría */
+.p-text.p-split-rest {
+    text-indent: 0;
+}
+
+/* Sin números de página (formato del documento) */
+.no-page-numbers .preview-page-number {
+    display: none;
 }
 
 pre.p-split-start,
@@ -2181,4 +2193,57 @@ body.is-resizing-panes {
         width: auto !important;
         visibility: visible !important;
     }
+}
+
+
+/* ============================================================================
+   v2.4 · PÁRRAFOS CON FORMATO (editor y hoja)
+   ============================================================================ */
+.rich-editor {
+    position: relative;
+    min-height: 110px;
+    max-height: 60vh;
+    overflow-y: auto;
+    line-height: 1.6;
+    white-space: normal;
+    word-wrap: break-word;
+    cursor: text;
+}
+
+.rich-editor p {
+    margin: 0 0 0.6em;
+}
+
+.rich-editor p:last-child {
+    margin-bottom: 0;
+}
+
+.rich-editor ul,
+.rich-editor ol {
+    margin: 0 0 0.6em;
+    padding-left: 1.5em;
+}
+
+/* Texto de ayuda del párrafo vacío */
+.rich-editor.is-empty::before {
+    content: attr(data-placeholder);
+    position: absolute;
+    pointer-events: none;
+    color: #94a3b8;
+}
+
+/* En la hoja */
+.p-list {
+    margin: 0 0 16px;
+    padding-left: 1.6em;
+    text-align: var(--doc-align, justify);
+    line-height: var(--doc-line, 1.8);
+}
+
+.p-list li {
+    margin-bottom: 4px;
+}
+
+.p-list.p-split-start {
+    margin-bottom: 0;
 }

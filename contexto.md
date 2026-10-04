@@ -3,11 +3,23 @@
 Estado actual, decisiones tomadas y planes del **Generador de Reportes Académicos**.
 La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
-Última actualización: 3 de octubre de 2026.
+Última actualización: 4 de octubre de 2026.
 
 ---
 
-## Estado actual (versión 2.3.0)
+## Estado actual (versión 2.4.0)
+
+### Qué se hizo en la versión 2.4.0
+
+| Cambio | Detalle |
+|---|---|
+| Mis documentos | Varios documentos en IndexedDB, comprimidos con gzip (una foto de 5 MB ya reducida + texto ocupa poco). La lista solo lee un resumen ('meta'); el documento completo se lee al abrirlo. Abrir, duplicar, renombrar, descargar y eliminar. "Nuevo", "Cargar Proyecto" y el respaldo con documento ya no borran el actual: queda en la lista. El respaldo puede incluir todos los documentos |
+| Párrafos con formato | Editor con negritas, cursivas, subrayado y listas; al pegar se conserva solo ese formato. Los párrafos viejos (texto plano) se convierten solos |
+| Citas en el texto | Botón "Citar": [1] en IEEE o (Pérez, 2020) en APA; cambian solas si se mueven o editan las referencias; una cita a una referencia borrada sale como [?] |
+| Formato del documento | Letra (Georgia, Times New Roman, Arial, Calibri), tamaño, interlineado, márgenes, hoja (carta, oficio, A4), alineación, sangría y números de página; formatos APA 7 y Formal; se puede guardar como predeterminado |
+| Word (.docx) | Se arma en el navegador sin librerías, con el formato del documento, estilos de Word (títulos para el índice), listas, imágenes, tablas, citas, referencias y números de página |
+| Logo (2.4.1) | Nuevo logo "Generador CM" (birrete naranja): favicon, íconos de la app instalable, ícono de iPhone y marca de la barra lateral |
+| Contador y revisión | Barra abajo del editor con palabras y páginas, y botón "Revisar" con lo que falta; al imprimir (botón o Ctrl+P) se muestra primero si hay pendientes |
 
 ### Qué se hizo en la versión 2.3.0
 
@@ -71,7 +83,8 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 
 - Crear el Pull Request de `test` a `main`.
 - Cambiar la API key de Google Stitch (quedó escrita en una conversación).
-- Los ids de bloque ya son únicos en el documento (`newBlockId()`), pero siguen siendo números locales: antes de la colaboración en vivo conviene cambiarlos por `crypto.randomUUID()`.
+- Los ids de bloque ya son únicos en el documento (`newBlockId()`), pero siguen siendo números locales: antes de la colaboración en vivo conviene cambiarlos por `crypto.randomUUID()`. Ojo: las citas guardan el id de la referencia (`data-cite`), así que un cambio de ids tendría que actualizarlas.
+- El Word se validó con python-docx (estructura, estilos, imágenes, listas), pero no se ha abierto en Microsoft Word real: conviene probarlo.
 - Al publicar una versión nueva hay que subir el `?v=` **y** `VERSION` en `sw.js` (si no, quien instaló la app se queda con la copia vieja).
 - En móvil funciona, pero con detalles visuales.
 

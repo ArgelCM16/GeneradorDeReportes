@@ -8,7 +8,7 @@
  * IMPORTANTE: VERSION debe ser el mismo número que el ?v= de index.html.
  * Al cambiarlo se descarga todo de nuevo y se borra la versión anterior.
  */
-const VERSION = '2.3.0';
+const VERSION = '2.4.1';
 const CACHE_NAME = `reportes-${VERSION}`;
 
 const APP_FILES = [
@@ -21,9 +21,10 @@ const APP_FILES = [
     'terminos.html',
     'privacidad.html',
     'manifest.json',
-    'ASSETS/favicon.png',
+    `ASSETS/favicon.png?v=${VERSION}`,
     'ASSETS/icon-192.png',
-    'ASSETS/icon-512.png'
+    'ASSETS/icon-512.png',
+    'ASSETS/apple-touch-icon.png'
 ];
 
 // Sitios externos que sí se guardan (fuentes e íconos)

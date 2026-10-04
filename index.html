@@ -20,14 +20,14 @@
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="CSS/style.css?v=2.3.0" />
+    <link rel="stylesheet" href="CSS/style.css?v=2.4.1" />
     <!-- Rediseño visual (Google Stitch). Quitar esta línea vuelve al diseño anterior. -->
-    <link rel="stylesheet" href="CSS/redesign.css?v=2.3.0" />
-    <link rel="icon" href="ASSETS/favicon.png" />
+    <link rel="stylesheet" href="CSS/redesign.css?v=2.4.1" />
+    <link rel="icon" href="ASSETS/favicon.png?v=2.4.1" />
     <!-- App instalable (PWA) -->
     <link rel="manifest" href="manifest.json" />
     <meta name="theme-color" content="#0f172a" />
-    <link rel="apple-touch-icon" href="ASSETS/icon-192.png" />
+    <link rel="apple-touch-icon" href="ASSETS/apple-touch-icon.png" />
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>
@@ -36,11 +36,11 @@
       <div class="sidebar-scroll">
         <!-- Marca -->
         <div class="sidebar-brand">
-          <span class="sidebar-brand-icon material-symbols-outlined">school</span>
+          <img class="sidebar-brand-logo" src="ASSETS/icon-192.png" alt="Logo de Generador CM" width="40" height="40" />
           <div class="sidebar-brand-text">
             <div class="sidebar-brand-title">Generador de Reportes</div>
             <div class="sidebar-brand-subtitle">
-              Reportes académicos <span class="sidebar-brand-version">v2.3</span>
+              Reportes académicos <span class="sidebar-brand-version">v2.4</span>
             </div>
           </div>
         </div>
@@ -116,6 +116,11 @@
           <span>Usar una plantilla</span>
         </button>
 
+        <button type="button" onclick="openFormatModal()" class="btn-templates btn-format" title="Letra, interlineado, márgenes y tamaño de hoja">
+          <span class="material-symbols-outlined">text_format</span>
+          <span>Formato del documento</span>
+        </button>
+
         <hr />
 
         <!-- Google Drive -->
@@ -131,6 +136,11 @@
               ?
             </button>
           </div>
+
+          <button class="btn-json btn-library" onclick="openLibraryModal()">
+            <span class="material-symbols-outlined">folder_open</span>
+            <span>Mis documentos</span>
+          </button>
           <p id="drive-status">No conectado</p>
 
           <button class="btn-json" id="btn-drive-connect" onclick="connectGoogleDrive()">
@@ -194,7 +204,7 @@
         <div class="credits">
           <p>Desarrollado por <strong>Jorge Javier Pedrozo Romero</strong></p>
           <p>Modificado por <strong>Argel Alberto Cano Morales</strong></p>
-          <p class="credits-version">v2.3.0 • Octubre 2026</p>
+          <p class="credits-version">v2.4.1 • Octubre 2026</p>
           <p class="credits-legal">
             <a href="terminos.html" target="_blank" rel="noopener">Términos y condiciones</a>
             ·
@@ -223,10 +233,17 @@
           </button>
         </div>
 
-        <button class="btn-print" onclick="window.print()">
-          <span class="material-symbols-outlined">print</span>
-          <span>Imprimir / Exportar PDF</span>
-        </button>
+        <!-- Exportar: PDF (imprimir) y Word -->
+        <div class="export-row">
+          <button class="btn-print" onclick="printDocument()" title="Imprimir o guardar como PDF (Ctrl+P)">
+            <span class="material-symbols-outlined">print</span>
+            <span>Imprimir PDF</span>
+          </button>
+          <button class="btn-word" onclick="exportDOCX()" title="Descargar en Word (.docx)">
+            <span class="material-symbols-outlined">article</span>
+            <span>Word</span>
+          </button>
+        </div>
       </div>
     </nav>
 
@@ -244,6 +261,18 @@
             title="Menú"
           >
             <span class="material-symbols-outlined">menu</span>
+          </button>
+
+          <!-- Mis documentos -->
+          <button
+            type="button"
+            class="toolbar-icon-btn"
+            id="library-btn"
+            onclick="openLibraryModal()"
+            title="Mis documentos"
+            aria-label="Mis documentos"
+          >
+            <span class="material-symbols-outlined">folder_open</span>
           </button>
 
           <div class="editor-toolbar-title">
@@ -347,6 +376,16 @@
             </p>
           </div>
         </section>
+
+        <!-- Palabras, páginas y revisión antes de entregar -->
+        <div class="editor-statusbar">
+          <span id="doc-stats" title="Sin contar el encabezado, el índice, el código, las referencias ni la declaración de IA">0 palabras · 1 página</span>
+          <button type="button" class="review-btn" id="review-btn" onclick="openReviewModal()">
+            <span class="material-symbols-outlined">fact_check</span>
+            <span>Revisar</span>
+            <span class="review-badge" id="review-badge"></span>
+          </button>
+        </div>
       </section>
 
       <!-- Divisor: se arrastra para cambiar el ancho de la vista previa -->
@@ -364,7 +403,17 @@
       <section class="preview-pane" id="preview-pane">
         <div class="preview-toolbar">
           <span class="material-symbols-outlined">visibility</span>
-          <span>Vista Previa (Hoja Carta)</span>
+          <span id="preview-title">Vista previa (Hoja Carta)</span>
+
+          <!-- Formato del documento (letra, márgenes, hoja...) -->
+          <button
+            type="button"
+            class="preview-expand-btn"
+            onclick="openFormatModal()"
+            title="Formato del documento"
+          >
+            <span class="material-symbols-outlined">text_format</span>
+          </button>
 
           <!-- Zoom de la vista previa (solo pantalla; no cambia la impresión) -->
           <div class="preview-zoom">
@@ -402,7 +451,7 @@
 
         <div class="preview-footer">
           <span class="preview-ready">Listo para imprimir</span>
-          <button type="button" class="preview-print-link" onclick="window.print()">Descargar .PDF</button>
+          <span class="preview-downloads"><button type="button" class="preview-print-link" onclick="printDocument()">Descargar .PDF</button><button type="button" class="preview-print-link preview-docx-link" onclick="exportDOCX()" title="Descargar en Word">.DOCX</button></span>
         </div>
       </section>
     </main>
@@ -423,6 +472,6 @@
     </nav>
 
     <!-- ?v=...: súbelo cada vez que cambien el CSS o el JS, para que el navegador no use una copia vieja -->
-    <script src="JS/script.js?v=2.3.0"></script>
+    <script src="JS/script.js?v=2.4.1"></script>
   </body>
 </html>

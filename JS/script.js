@@ -64,6 +64,9 @@ function addBlock(type) {
 function createBlock(type) {
     const id = newBlockId();
     let newBlock = { id, type, content: "" };
+
+    // Los párrafos guardan HTML limpio (negritas, listas, citas...)
+    if (type === 'text') newBlock.format = 'html';
     
     // Inicialización específica según el tipo de bloque
     if (type === 'header') {
@@ -141,6 +144,8 @@ function updateContent(id, value) {
     const block = reportData.find(b => b.id === id);
     if (block) {
         block.content = value;
+        // En un párrafo, updateContent recibe texto plano (no HTML)
+        if (block.type === 'text') delete block.format;
         renderPreview();
     }
 }
@@ -364,6 +369,7 @@ function updateTableCaption(id, value) {
  * Renderiza todo el editor y la vista previa
  */
 function render() {
+    normalizeTextBlocks();
     placeTocAfterHeader();
     renderEditor();
     renderPreview();
@@ -1168,7 +1174,7 @@ function getFitZoom() {
     if (!scroller || !scroller.clientWidth) return 0.5;
     const style = getComputedStyle(scroller);
     const available = scroller.clientWidth - parseFloat(style.paddingLeft) - parseFloat(style.paddingRight);
-    return Math.max(0.2, Math.min(1.5, available / PAGE_WIDTH_PX));
+    return Math.max(0.2, Math.min(1.5, available / getPageWidthPx()));
 }
 
 function getEffectiveZoom() {
@@ -1433,6 +1439,2120 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==========================================
+// PÁRRAFOS CON FORMATO Y CITAS
+// El contenido de un párrafo (format: 'html') es HTML limpio: solo <p>,
+// <ul>/<ol>/<li>, <b>, <i>, <u>, <br> y <span data-cite="id"> (cita a un
+// bloque de referencia). Todo lo que entra, escrito o pegado, pasa por
+// sanitizeRichHtml(); los párrafos antiguos (texto plano) se convierten al
+// dibujar con normalizeTextBlocks().
+// ==========================================
+
+const RICH_INLINE_TAGS = { B: 'b', STRONG: 'b', I: 'i', EM: 'i', U: 'u', INS: 'u' };
+const RICH_SKIP_TAGS = new Set(['SCRIPT', 'STYLE', 'TEMPLATE', 'NOSCRIPT', 'IFRAME', 'OBJECT', 'EMBED', 'SVG', 'MATH',
+    'HEAD', 'TITLE', 'META', 'LINK', 'IMG', 'PICTURE', 'VIDEO', 'AUDIO', 'CANVAS', 'INPUT', 'BUTTON', 'SELECT', 'TEXTAREA', 'OPTION']);
+const RICH_BLOCK_TAGS = new Set(['P', 'DIV', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'BLOCKQUOTE', 'SECTION', 'ARTICLE',
+    'HEADER', 'FOOTER', 'PRE', 'TABLE', 'THEAD', 'TBODY', 'TFOOT', 'TR', 'TD', 'TH', 'CAPTION', 'FIGURE', 'FIGCAPTION',
+    'MAIN', 'ASIDE', 'NAV', 'DL', 'DT', 'DD', 'ADDRESS', 'CENTER', 'LI', 'HR']);
+
+function isRichText(block) {
+    return !!block && block.format === 'html';
+}
+
+/**
+ * Texto plano -> HTML de párrafo. Una línea en blanco separa párrafos; un
+ * salto de línea sencillo queda como salto de línea.
+ */
+function plainToRichHtml(text) {
+    return String(text || '')
+        .replace(/\r\n?/g, '\n')
+        .split(/\n[ \t]*\n/)
+        .map(chunk => chunk.trim())
+        .filter(Boolean)
+        .map(chunk => `<p>${escapeHtml(chunk).replace(/\n/g, '<br>')}</p>`)
+        .join('');
+}
+
+function escapeRichText(text) {
+    return String(text)
+        .replace(/[\u00a0\t\r\n]/g, ' ')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+/**
+ * Deja solo el formato permitido. Sirve igual para lo que se escribe en el
+ * editor, para lo que se pega (Word, Google Docs, páginas web) y para los
+ * proyectos que se cargan.
+ */
+function sanitizeRichHtml(html) {
+    const doc = document.implementation.createHTMLDocument('');
+    const root = doc.createElement('div');
+    root.innerHTML = html || '';
+
+    const hasContent = fragment => !!fragment.replace(/<br>/g, '').replace(/<[^>]+>/g, '').trim() || fragment.includes('data-cite');
+    const trimBreaks = fragment => fragment.replace(/^(\s*<br>)+/, '').replace(/(<br>\s*)+$/, '').trim();
+
+    const inline = node => {
+        if (node.nodeType === 3) return escapeRichText(node.nodeValue);
+        if (node.nodeType !== 1 || RICH_SKIP_TAGS.has(node.tagName)) return '';
+        if (node.tagName === 'BR') return '<br>';
+        if (node.hasAttribute('data-cite')) {
+            const id = String(node.getAttribute('data-cite')).replace(/[^0-9]/g, '');
+            return id ? `<span data-cite="${id}"></span>` : '';
+        }
+        const inner = Array.from(node.childNodes).map(inline).join('');
+        if (!inner) return '';
+        const style = node.getAttribute('style') || '';
+        const wraps = [];
+        const tag = RICH_INLINE_TAGS[node.tagName];
+        // Google Docs envuelve todo en <b style="font-weight:normal">
+        const notBold = /font-weight\s*:\s*(normal|[1-4]00)\b/i.test(style);
+        if (tag && !(tag === 'b' && notBold)) wraps.push(tag);
+        if (/font-weight\s*:\s*(bold|[6-9]00)\b/i.test(style) && !wraps.includes('b')) wraps.push('b');
+        if (/font-style\s*:\s*italic/i.test(style) && !wraps.includes('i')) wraps.push('i');
+        if (/text-decoration[^;]*underline/i.test(style) && !wraps.includes('u')) wraps.push('u');
+        return wraps.reduceRight((acc, t) => `<${t}>${acc}</${t}>`, inner);
+    };
+
+    const listItems = list => {
+        const items = [];
+        Array.from(list.childNodes).forEach(child => {
+            if (child.nodeType === 1 && (child.tagName === 'UL' || child.tagName === 'OL')) {
+                items.push(...listItems(child));
+                return;
+            }
+            if (child.nodeType === 1 && child.tagName === 'LI') {
+                let text = '';
+                const nested = [];
+                Array.from(child.childNodes).forEach(n => {
+                    if (n.nodeType === 1 && (n.tagName === 'UL' || n.tagName === 'OL')) {
+                        nested.push(...listItems(n));
+                    } else if (n.nodeType === 1 && RICH_BLOCK_TAGS.has(n.tagName)) {
+                        const t = inline(n);
+                        if (hasContent(t)) text += (hasContent(text) ? '<br>' : '') + t;
+                    } else {
+                        text += inline(n);
+                    }
+                });
+                text = trimBreaks(text);
+                if (hasContent(text)) items.push(text);
+                items.push(...nested);
+                return;
+            }
+            const t = trimBreaks(inline(child));
+            if (hasContent(t)) items.push(t);
+        });
+        return items;
+    };
+
+    const out = [];
+    let line = '';
+    const flush = () => {
+        const cleaned = trimBreaks(line);
+        if (hasContent(cleaned)) out.push(`<p>${cleaned}</p>`);
+        line = '';
+    };
+    const walk = parent => {
+        Array.from(parent.childNodes).forEach(node => {
+            if (node.nodeType === 3) { line += escapeRichText(node.nodeValue); return; }
+            if (node.nodeType !== 1 || RICH_SKIP_TAGS.has(node.tagName)) return;
+            const tag = node.tagName;
+            if (tag === 'UL' || tag === 'OL') {
+                flush();
+                const items = listItems(node);
+                const name = tag.toLowerCase();
+                if (items.length) out.push(`<${name}>${items.map(item => `<li>${item}</li>`).join('')}</${name}>`);
+                return;
+            }
+            if (tag === 'BR') { line += '<br>'; return; }
+            if (RICH_BLOCK_TAGS.has(tag) && !node.hasAttribute('data-cite')) {
+                flush();
+                walk(node);
+                flush();
+                return;
+            }
+            line += inline(node);
+        });
+    };
+    walk(root);
+    flush();
+    return out.join('').replace(/ {2,}/g, ' ');
+}
+
+// Se limpia de nuevo al dibujar; esta memoria evita repetir el trabajo
+const richSanitizeCache = new Map();
+
+function cachedSanitizeRichHtml(html) {
+    const key = html || '';
+    if (richSanitizeCache.has(key)) return richSanitizeCache.get(key);
+    const clean = sanitizeRichHtml(key);
+    if (richSanitizeCache.size > 400) richSanitizeCache.clear();
+    richSanitizeCache.set(key, clean);
+    richSanitizeCache.set(clean, clean);
+    return clean;
+}
+
+/**
+ * HTML limpio de un párrafo (convierte los antiguos de texto plano).
+ */
+function getRichHtml(block) {
+    if (!block) return '';
+    return isRichText(block) ? cachedSanitizeRichHtml(block.content) : plainToRichHtml(block.content);
+}
+
+/**
+ * Todos los párrafos quedan en formato HTML limpio.
+ */
+function normalizeTextBlocks() {
+    reportData.forEach(block => {
+        if (block.type !== 'text') return;
+        block.content = getRichHtml(block);
+        block.format = 'html';
+    });
+}
+
+/**
+ * Texto plano de un párrafo (TXT, contador de palabras, revisión).
+ */
+function richHtmlToPlainText(html) {
+    const doc = document.implementation.createHTMLDocument('');
+    const root = doc.createElement('div');
+    root.innerHTML = html || '';
+    const text = node => Array.from(node.childNodes).map(n => {
+        if (n.nodeType === 3) return n.nodeValue;
+        if (n.nodeType !== 1) return '';
+        if (n.tagName === 'BR') return '\n';
+        if (n.hasAttribute('data-cite')) return getCitationText(n.getAttribute('data-cite'));
+        return text(n);
+    }).join('');
+    const lines = [];
+    Array.from(root.children).forEach(el => {
+        if (el.tagName === 'UL' || el.tagName === 'OL') {
+            Array.from(el.children).forEach((li, i) => lines.push(`${el.tagName === 'OL' ? `${i + 1}.` : '•'} ${text(li).trim()}`));
+        } else {
+            lines.push(text(el).trim());
+        }
+    });
+    return lines.join('\n');
+}
+
+/**
+ * Para la vista previa: clases de la hoja y el texto de cada cita.
+ */
+function richHtmlForPreview(html) {
+    return (html || '')
+        .replace(/<p>/g, '<p class="p-text">')
+        .replace(/<ul>/g, '<ul class="p-list" data-split="children">')
+        .replace(/<ol>/g, '<ol class="p-list" data-split="children">')
+        .replace(/<span data-cite="(\d+)"><\/span>/g, (m, id) =>
+            `<span class="p-cite" data-cite="${id}">${escapeHtml(getCitationText(id))}</span>`);
+}
+
+/**
+ * Para el editor: las citas se ven como etiquetas que no se pueden editar.
+ */
+function richHtmlForEditor(html) {
+    return (html || '').replace(/<span data-cite="(\d+)"><\/span>/g, (m, id) => citationChipHTML(id));
+}
+
+function citationChipHTML(refId) {
+    return `<span class="cite-chip" contenteditable="false" data-cite="${refId}">${escapeHtml(getCitationText(refId))}</span>`;
+}
+
+function updateRichEmptyState(editor) {
+    const empty = !editor.textContent.trim() && !editor.querySelector('li, .cite-chip');
+    editor.classList.toggle('is-empty', empty);
+}
+
+/**
+ * Lo escrito en el editor de un párrafo.
+ */
+function updateRichText(editor) {
+    const block = reportData.find(b => String(b.id) === editor.dataset.blockId);
+    if (!block) return;
+    block.content = sanitizeRichHtml(editor.innerHTML);
+    block.format = 'html';
+    updateRichEmptyState(editor);
+    renderPreview();
+}
+
+// Última selección de cada editor, para que los botones y "Citar" actúen
+// donde estaba el cursor aunque el clic le quite el foco.
+const richSavedRanges = new Map();
+
+function getRichEditorFor(element) {
+    const card = element && element.closest('.block-card');
+    return card ? card.querySelector('.rich-editor') : null;
+}
+
+function focusRichEditor(editor) {
+    editor.focus();
+    const saved = richSavedRanges.get(editor.dataset.blockId);
+    const selection = window.getSelection();
+    if (saved && editor.contains(saved.startContainer)) {
+        selection.removeAllRanges();
+        selection.addRange(saved);
+    } else if (!editor.contains(selection.anchorNode)) {
+        const range = document.createRange();
+        range.selectNodeContents(editor);
+        range.collapse(false);
+        selection.removeAllRanges();
+        selection.addRange(range);
+    }
+}
+
+function richCommand(button, command) {
+    const editor = getRichEditorFor(button);
+    if (!editor) return;
+    focusRichEditor(editor);
+    document.execCommand(command, false, null);
+    updateRichText(editor);
+    updateRichToolbarState(editor);
+}
+
+function updateRichToolbarState(editor) {
+    const card = editor && editor.closest('.block-card');
+    if (!card) return;
+    card.querySelectorAll('.rich-btn[data-cmd]').forEach(btn => {
+        let active = false;
+        try { active = document.queryCommandState(btn.dataset.cmd); } catch (e) { active = false; }
+        btn.classList.toggle('is-active', !!active);
+    });
+}
+
+document.addEventListener('selectionchange', () => {
+    const selection = window.getSelection();
+    if (!selection || !selection.rangeCount) return;
+    const anchor = selection.anchorNode;
+    const element = anchor && (anchor.nodeType === 1 ? anchor : anchor.parentElement);
+    const editor = element && element.closest('.rich-editor');
+    if (!editor) return;
+    richSavedRanges.set(editor.dataset.blockId, selection.getRangeAt(0).cloneRange());
+    updateRichToolbarState(editor);
+});
+
+// Pegar: se conserva el formato básico (negritas, cursivas, listas) y se
+// quita todo lo demás (colores, tipos de letra, imágenes...).
+document.addEventListener('paste', event => {
+    const editor = event.target && event.target.closest && event.target.closest('.rich-editor');
+    if (!editor) return;
+    event.preventDefault();
+    const data = event.clipboardData;
+    const html = data.getData('text/html');
+    let clean = html ? sanitizeRichHtml(html) : plainToRichHtml(data.getData('text/plain'));
+    // Un solo párrafo se pega dentro del párrafo donde está el cursor
+    const single = clean.match(/^<p>([\s\S]*)<\/p>$/);
+    if (single && !single[1].includes('<p>')) clean = single[1];
+    document.execCommand('insertHTML', false, richHtmlForEditor(clean));
+    updateRichText(editor);
+});
+
+// No se pueden soltar imágenes ni archivos dentro de un párrafo
+document.addEventListener('drop', event => {
+    const editor = event.target && event.target.closest && event.target.closest('.rich-editor');
+    if (editor && event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files.length) event.preventDefault();
+}, true);
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Enter crea <p> (no <div>) en los editores de párrafo
+    try { document.execCommand('defaultParagraphSeparator', false, 'p'); } catch (e) { /* navegador antiguo */ }
+});
+
+// ---------- Citas ----------
+
+/**
+ * Bloques de referencia en orden (el número IEEE es su posición).
+ */
+function getReferenceBlocks() {
+    return reportData.filter(b => b.type === 'ref' && b.refData);
+}
+
+/**
+ * Apellido(s) para una cita APA: (Pérez, 2020), (Pérez y López, 2020) o
+ * (Pérez et al., 2020). Sin autor se usa el título.
+ */
+function getAPACitationAuthor(refData) {
+    const raw = String(refData.author || '').trim();
+    if (!raw) {
+        const title = String(refData.title || '').trim();
+        if (!title) return 'Sin autor';
+        const words = title.split(/\s+/);
+        return `"${words.slice(0, 4).join(' ')}${words.length > 4 ? '...' : ''}"`;
+    }
+    let authors = raw.split(/\s*;\s*|\s+(?:y|and|&)\s+/i).map(a => a.trim()).filter(Boolean);
+    // "Pérez, J., López, M., Ruiz, A." (lista con comas)
+    if (authors.length === 1 && (authors[0].match(/,/g) || []).length >= 3) {
+        authors = authors[0].split(/(?<=\.)\s*,\s*/).filter(Boolean);
+    }
+    const surname = author => author.includes(',') ? author.split(',')[0].trim() : author.split(/\s+/).pop();
+    if (authors.length === 1) return surname(authors[0]);
+    if (authors.length === 2) return `${surname(authors[0])} y ${surname(authors[1])}`;
+    return `${surname(authors[0])} et al.`;
+}
+
+/**
+ * Texto de una cita según el formato del documento: [1] o (Pérez, 2020).
+ */
+function getCitationText(refId) {
+    const refs = getReferenceBlocks();
+    const index = refs.findIndex(r => String(r.id) === String(refId));
+    const apa = getCitationStyle() === 'apa';
+    if (index === -1) return apa ? '(referencia eliminada)' : '[?]';
+    if (apa) {
+        const r = refs[index].refData;
+        return `(${getAPACitationAuthor(r)}, ${String(r.year || '').trim() || 's.f.'})`;
+    }
+    return `[${index + 1}]`;
+}
+
+function describeReference(block) {
+    const r = block.refData || {};
+    const parts = [r.author, r.title].map(t => String(t || '').trim()).filter(Boolean);
+    return (parts.join(' — ') || 'Referencia sin datos') + (r.year ? ` (${r.year})` : '');
+}
+
+/**
+ * Las etiquetas de las citas en el editor siguen a las referencias (número,
+ * autor o año) sin tener que volver a dibujar todo.
+ */
+function refreshCitationChips() {
+    document.querySelectorAll('#editor-container .cite-chip').forEach(chip => {
+        const text = getCitationText(chip.dataset.cite);
+        if (chip.textContent !== text) chip.textContent = text;
+        chip.classList.toggle('is-missing', getReferenceBlocks().every(r => String(r.id) !== chip.dataset.cite));
+    });
+}
+
+function closeCitationPicker() {
+    const picker = document.getElementById('cite-picker');
+    if (picker) picker.remove();
+}
+
+/**
+ * Menú para elegir qué referencia citar en el párrafo.
+ */
+function openCitationPicker(button, blockId) {
+    const wasOpen = document.getElementById('cite-picker');
+    closeCitationPicker();
+    if (wasOpen && wasOpen.dataset.blockId === String(blockId)) return;
+
+    const refs = getReferenceBlocks();
+    const picker = document.createElement('div');
+    picker.className = 'cite-picker';
+    picker.id = 'cite-picker';
+    picker.dataset.blockId = String(blockId);
+    picker.innerHTML = refs.length
+        ? `<div class="cite-picker-title">Citar una referencia</div>` + refs.map(r => `
+            <button type="button" data-ref="${escapeAttr(String(r.id))}">
+                <span class="cite-picker-label">${escapeHtml(getCitationText(r.id))}</span>
+                <span class="cite-picker-desc">${escapeHtml(describeReference(r))}</span>
+            </button>`).join('')
+        : `<p class="cite-picker-empty">Todavía no tienes referencias. Agrega un bloque de <strong>Referencia</strong> y después cítalo aquí.</p>
+           <button type="button" class="cite-picker-add" data-add-ref="1">➕ Agregar una referencia</button>`;
+
+    picker.addEventListener('mousedown', e => e.preventDefault());
+    picker.addEventListener('click', e => {
+        const option = e.target.closest('button');
+        if (!option) return;
+        closeCitationPicker();
+        if (option.dataset.addRef) {
+            addBlock('ref');
+            const cards = document.querySelectorAll('#editor-container .ref-card');
+            const last = cards[cards.length - 1];
+            if (last && last.scrollIntoView) last.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            return;
+        }
+        insertCitation(blockId, option.dataset.ref);
+    });
+
+    document.body.appendChild(picker);
+    const rect = button.getBoundingClientRect();
+    const width = picker.offsetWidth;
+    const left = Math.max(8, Math.min(rect.left, window.innerWidth - width - 8));
+    let top = rect.bottom + 6;
+    if (top + picker.offsetHeight > window.innerHeight - 8) top = Math.max(8, rect.top - picker.offsetHeight - 6);
+    picker.style.left = left + 'px';
+    picker.style.top = top + 'px';
+}
+
+/**
+ * Inserta la cita donde estaba el cursor.
+ */
+function insertCitation(blockId, refId) {
+    const editor = document.querySelector(`.rich-editor[data-block-id="${String(blockId)}"]`);
+    if (!editor) return;
+    focusRichEditor(editor);
+    document.execCommand('insertHTML', false, citationChipHTML(String(refId).replace(/[^0-9]/g, '')) + '&nbsp;');
+    updateRichText(editor);
+}
+
+document.addEventListener('mousedown', event => {
+    const picker = document.getElementById('cite-picker');
+    if (picker && !picker.contains(event.target) && !event.target.closest('.rich-btn-cite')) closeCitationPicker();
+});
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') closeCitationPicker();
+});
+
+// ==========================================
+// FORMATO DEL DOCUMENTO
+// Tipo y tamaño de letra, interlineado, márgenes, tamaño de hoja, alineación,
+// sangría y números de página. Es de cada documento (se guarda con él) y se
+// aplica a la vista previa con variables CSS (--doc-*); la impresión y el
+// Word usan los mismos valores.
+// ==========================================
+
+const DOC_FONTS = {
+    georgia: { label: 'Georgia', css: "Georgia, 'Times New Roman', serif", word: 'Georgia' },
+    times: { label: 'Times New Roman', css: "'Times New Roman', Times, serif", word: 'Times New Roman' },
+    arial: { label: 'Arial', css: 'Arial, Helvetica, sans-serif', word: 'Arial' },
+    calibri: { label: 'Calibri', css: "Calibri, Carlito, 'Segoe UI', sans-serif", word: 'Calibri' }
+};
+
+// Medidas en pulgadas
+const PAPER_SIZES = {
+    letter: { label: 'Carta', detail: '21.6 × 27.9 cm', w: 8.5, h: 11 },
+    legal: { label: 'Oficio', detail: '21.6 × 35.6 cm', w: 8.5, h: 14 },
+    a4: { label: 'A4', detail: '21 × 29.7 cm', w: 8.27, h: 11.69 }
+};
+
+const DOC_FONT_SIZES = [10, 11, 12, 13, 14];
+const DOC_LINE_HEIGHTS = [
+    { value: 1, label: 'Sencillo (1.0)' },
+    { value: 1.15, label: '1.15' },
+    { value: 1.5, label: '1.5' },
+    { value: 1.8, label: 'Amplio (1.8)' },
+    { value: 2, label: 'Doble (2.0)' }
+];
+const DOC_MARGINS = [
+    { value: 1.5, label: 'Angostos (1.5 cm)' },
+    { value: 2, label: 'Normales (2 cm)' },
+    { value: 2.5, label: 'Amplios (2.5 cm)' },
+    { value: 2.54, label: '1 pulgada (2.54 cm)' },
+    { value: 3, label: 'Muy amplios (3 cm)' }
+];
+
+const DEFAULT_DOCUMENT_FORMAT = {
+    font: 'georgia', size: 12, lineHeight: 1.8, margin: 2, paper: 'letter',
+    align: 'justify', indent: false, pageNumbers: true
+};
+
+const DOCUMENT_FORMAT_PRESETS = [
+    { id: 'default', name: 'Predeterminado', description: 'Georgia 12, interlineado amplio, márgenes de 2 cm', format: { ...DEFAULT_DOCUMENT_FORMAT } },
+    { id: 'apa', name: 'APA 7', description: 'Times New Roman 12, doble espacio, 2.54 cm, sangría y alineado a la izquierda',
+        format: { font: 'times', size: 12, lineHeight: 2, margin: 2.54, paper: 'letter', align: 'left', indent: true, pageNumbers: true } },
+    { id: 'formal', name: 'Formal', description: 'Arial 12, interlineado 1.5, márgenes de 2.5 cm, justificado',
+        format: { font: 'arial', size: 12, lineHeight: 1.5, margin: 2.5, paper: 'letter', align: 'justify', indent: false, pageNumbers: true } }
+];
+
+let documentFormatMemory = { ...DEFAULT_DOCUMENT_FORMAT };
+
+/**
+ * Completa y valida un formato (lo que falte o no sea válido toma el valor predeterminado).
+ */
+function normalizeDocumentFormat(format) {
+    const f = { ...DEFAULT_DOCUMENT_FORMAT, ...(format && typeof format === 'object' ? format : {}) };
+    if (!DOC_FONTS[f.font]) f.font = DEFAULT_DOCUMENT_FORMAT.font;
+    if (!PAPER_SIZES[f.paper]) f.paper = DEFAULT_DOCUMENT_FORMAT.paper;
+    f.size = DOC_FONT_SIZES.includes(Number(f.size)) ? Number(f.size) : DEFAULT_DOCUMENT_FORMAT.size;
+    f.lineHeight = DOC_LINE_HEIGHTS.some(l => l.value === Number(f.lineHeight)) ? Number(f.lineHeight) : DEFAULT_DOCUMENT_FORMAT.lineHeight;
+    f.margin = DOC_MARGINS.some(m => m.value === Number(f.margin)) ? Number(f.margin) : DEFAULT_DOCUMENT_FORMAT.margin;
+    f.align = f.align === 'left' ? 'left' : 'justify';
+    f.indent = !!f.indent;
+    f.pageNumbers = f.pageNumbers !== false;
+    return {
+        font: f.font, size: f.size, lineHeight: f.lineHeight, margin: f.margin, paper: f.paper,
+        align: f.align, indent: f.indent, pageNumbers: f.pageNumbers
+    };
+}
+
+function getDocumentFormat() {
+    return { ...documentFormatMemory };
+}
+
+/**
+ * Formato para los documentos nuevos (el que el usuario eligió como suyo).
+ */
+function getDefaultDocumentFormat() {
+    try {
+        return normalizeDocumentFormat(JSON.parse(localStorage.getItem('defaultDocumentFormat')));
+    } catch (e) {
+        return { ...DEFAULT_DOCUMENT_FORMAT };
+    }
+}
+
+/**
+ * @param {object|null} format
+ * @param {boolean} redraw - volver a armar la vista previa (no hace falta si después se llama a render())
+ */
+function setDocumentFormat(format, redraw = true) {
+    documentFormatMemory = normalizeDocumentFormat(format);
+    if (isAutosaveEnabled()) localStorage.setItem('documentFormat', JSON.stringify(documentFormatMemory));
+    applyDocumentFormat();
+    if (redraw) {
+        renderPreview();
+        applyPreviewZoom();
+    }
+}
+
+function getPageWidthPx() {
+    return Math.round(PAPER_SIZES[documentFormatMemory.paper].w * 96);
+}
+
+/**
+ * Pasa el formato a la hoja (variables CSS) y al tamaño de página de la impresión.
+ */
+function applyDocumentFormat() {
+    const f = documentFormatMemory;
+    const paper = PAPER_SIZES[f.paper];
+    const preview = document.getElementById('preview-container');
+    if (preview) {
+        preview.style.setProperty('--doc-font', DOC_FONTS[f.font].css);
+        preview.style.setProperty('--doc-size', f.size + 'pt');
+        preview.style.setProperty('--doc-line', String(f.lineHeight));
+        preview.style.setProperty('--doc-margin', f.margin + 'cm');
+        preview.style.setProperty('--doc-page-w', paper.w + 'in');
+        preview.style.setProperty('--doc-page-h', paper.h + 'in');
+        preview.style.setProperty('--doc-align', f.align);
+        preview.style.setProperty('--doc-align-last', f.align === 'justify' ? 'justify' : 'auto');
+        preview.style.setProperty('--doc-indent', f.indent ? '1.27cm' : '0');
+        preview.classList.toggle('no-page-numbers', !f.pageNumbers);
+    }
+
+    let pageStyle = document.getElementById('doc-page-style');
+    if (!pageStyle) {
+        pageStyle = document.createElement('style');
+        pageStyle.id = 'doc-page-style';
+        document.head.appendChild(pageStyle);
+    }
+    pageStyle.textContent = `@media print { @page { size: ${paper.w}in ${paper.h}in; margin: 0; } }`;
+
+    const title = document.getElementById('preview-title');
+    if (title) title.textContent = `Vista previa (Hoja ${paper.label})`;
+}
+
+document.addEventListener('DOMContentLoaded', applyDocumentFormat);
+
+function closeFormatModal() {
+    const overlay = document.getElementById('format-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+/**
+ * Ventana "Formato del documento": los cambios se ven al momento en la hoja.
+ */
+function openFormatModal() {
+    closeFormatModal();
+    const overlay = document.createElement('div');
+    overlay.className = 'university-modal-overlay';
+    overlay.id = 'format-modal-overlay';
+
+    const options = (list, current) => list.map(o => `<option value="${o.value}" ${Number(o.value) === Number(current) ? 'selected' : ''}>${escapeHtml(o.label)}</option>`).join('');
+
+    const draw = () => {
+        const f = getDocumentFormat();
+        const presetId = (DOCUMENT_FORMAT_PRESETS.find(p => JSON.stringify(normalizeDocumentFormat(p.format)) === JSON.stringify(f)) || {}).id;
+        overlay.innerHTML = `
+            <div class="university-modal format-modal">
+                <h3>🔤 Formato del documento</h3>
+                <p class="settings-hint">Cómo se ven las hojas, el PDF y el Word de <strong>este documento</strong>. Los cambios se ven al momento en la vista previa.</p>
+                <div class="format-presets">
+                    ${DOCUMENT_FORMAT_PRESETS.map(p => `
+                        <button type="button" class="format-preset${p.id === presetId ? ' is-active' : ''}" data-preset="${p.id}">
+                            <span class="format-preset-name">${escapeHtml(p.name)}</span>
+                            <span class="format-preset-desc">${escapeHtml(p.description)}</span>
+                        </button>`).join('')}
+                </div>
+                <div class="format-grid">
+                    <label>Tipo de letra
+                        <select data-field="font">${Object.entries(DOC_FONTS).map(([key, font]) => `<option value="${key}" ${f.font === key ? 'selected' : ''} style="font-family: ${escapeAttr(font.css)}">${escapeHtml(font.label)}</option>`).join('')}</select>
+                    </label>
+                    <label>Tamaño de letra
+                        <select data-field="size">${options(DOC_FONT_SIZES.map(n => ({ value: n, label: `${n} pt` })), f.size)}</select>
+                    </label>
+                    <label>Interlineado
+                        <select data-field="lineHeight">${options(DOC_LINE_HEIGHTS, f.lineHeight)}</select>
+                    </label>
+                    <label>Márgenes
+                        <select data-field="margin">${options(DOC_MARGINS, f.margin)}</select>
+                    </label>
+                    <label>Tamaño de hoja
+                        <select data-field="paper">${Object.entries(PAPER_SIZES).map(([key, paper]) => `<option value="${key}" ${f.paper === key ? 'selected' : ''}>${escapeHtml(paper.label)} (${escapeHtml(paper.detail)})</option>`).join('')}</select>
+                    </label>
+                    <label>Alineación de los párrafos
+                        <select data-field="align">
+                            <option value="justify" ${f.align === 'justify' ? 'selected' : ''}>Justificado</option>
+                            <option value="left" ${f.align === 'left' ? 'selected' : ''}>A la izquierda</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="format-checks">
+                    <label class="backup-check"><input type="checkbox" data-field="indent" ${f.indent ? 'checked' : ''}> <span>Sangría en la primera línea de cada párrafo (1.27 cm)</span></label>
+                    <label class="backup-check"><input type="checkbox" data-field="pageNumbers" ${f.pageNumbers ? 'checked' : ''}> <span>Números de página</span></label>
+                </div>
+                <p id="format-message" class="settings-success"></p>
+                <div class="university-modal-actions">
+                    <button type="button" class="action-btn" data-action="default" title="Los documentos nuevos empezarán con este formato">Usar en mis documentos nuevos</button>
+                    <button type="button" class="action-btn save-btn" data-action="close">Listo</button>
+                </div>
+            </div>`;
+
+        overlay.querySelectorAll('[data-field]').forEach(input => {
+            input.addEventListener('change', () => {
+                const next = getDocumentFormat();
+                const field = input.dataset.field;
+                next[field] = input.type === 'checkbox' ? input.checked : (['font', 'paper', 'align'].includes(field) ? input.value : Number(input.value));
+                setDocumentFormat(next);
+                draw();
+            });
+        });
+        overlay.querySelectorAll('[data-preset]').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const preset = DOCUMENT_FORMAT_PRESETS.find(p => p.id === btn.dataset.preset);
+                setDocumentFormat({ ...preset.format });
+                draw();
+            });
+        });
+        overlay.querySelector('[data-action="default"]').addEventListener('click', () => {
+            localStorage.setItem('defaultDocumentFormat', JSON.stringify(getDocumentFormat()));
+            overlay.querySelector('#format-message').textContent = '✓ Tus documentos nuevos usarán este formato';
+        });
+        overlay.querySelector('[data-action="close"]').addEventListener('click', closeFormatModal);
+    };
+
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeFormatModal(); });
+    draw();
+    document.body.appendChild(overlay);
+}
+
+// ==========================================
+// CONTADOR DE PALABRAS Y REVISIÓN ANTES DE ENTREGAR
+// La barra de abajo del editor muestra palabras y páginas, y el botón
+// "Revisar" lista lo que falta (también se abre al imprimir si hay algo).
+// ==========================================
+
+/**
+ * Palabras del cuerpo del documento: títulos, párrafos, tablas y
+ * descripciones. No cuenta el encabezado, el índice, el código, las
+ * referencias ni la declaración de IA.
+ */
+function countWords(text) {
+    return String(text || '').split(/\s+/).filter(word => /[\p{L}\p{N}]/u.test(word)).length;
+}
+
+function countDocumentWords() {
+    let total = 0;
+    reportData.forEach(block => {
+        if (block.type === 'title' || block.type === 'subtitle') total += countWords(block.content);
+        else if (block.type === 'text') total += countWords(richHtmlToPlainText(getRichHtml(block)));
+        else if (block.type === 'image') total += countWords(block.caption);
+        else if (block.type === 'table') {
+            total += countWords(block.caption);
+            (block.tableData || []).forEach(row => (row || []).forEach(cell => { total += countWords(cell); }));
+        }
+    });
+    return total;
+}
+
+let documentStatsTimer = null;
+
+function scheduleDocumentStats() {
+    clearTimeout(documentStatsTimer);
+    documentStatsTimer = setTimeout(updateDocumentStats, 250);
+}
+
+function updateDocumentStats() {
+    clearTimeout(documentStatsTimer);
+    const stats = document.getElementById('doc-stats');
+    if (stats) {
+        const words = countDocumentWords();
+        const pages = document.querySelectorAll('#preview-container .preview-page').length || 1;
+        stats.textContent = `${words.toLocaleString('es-MX')} ${words === 1 ? 'palabra' : 'palabras'} · ${pages} ${pages === 1 ? 'página' : 'páginas'}`;
+    }
+    const badge = document.getElementById('review-badge');
+    if (badge) {
+        const pending = getDocumentIssues().filter(issue => issue.level !== 'info').length;
+        badge.textContent = pending ? String(pending) : '✓';
+        badge.classList.toggle('is-ok', !pending);
+        const button = document.getElementById('review-btn');
+        if (button) button.title = pending ? `Hay ${pending} ${pending === 1 ? 'detalle' : 'detalles'} por revisar antes de entregar` : 'Todo listo para entregar';
+    }
+}
+
+/**
+ * Lo que conviene revisar antes de entregar.
+ * level: 'error' (falta algo importante), 'warn' (revisa) o 'info' (sugerencia).
+ */
+function getDocumentIssues() {
+    const issues = [];
+    const add = (level, message, blockId = null) => issues.push({ level, message, blockId });
+
+    if (!reportData.length) {
+        add('error', 'El documento está vacío: agrega bloques o usa una plantilla.');
+        return issues;
+    }
+
+    // Encabezado
+    const header = reportData.find(b => b.type === 'header');
+    const h = getHeaderData() || {};
+    if (!header) {
+        add('warn', 'No tiene encabezado (tu nombre, materia, profesor...).');
+    } else {
+        const people = getHeaderPeople(h);
+        if (!people.length) add('error', h.isTeam ? 'El encabezado no tiene integrantes.' : 'Falta tu nombre en el encabezado.', header.id);
+        if (h.coverMode && !String(h.taskName || '').trim()) add('error', 'La portada no tiene el nombre de la tarea.', header.id);
+        if (isHeaderFieldShown('studentId')) {
+            const missing = people.filter(person => !person.id).map(person => person.name);
+            if (missing.length) add('warn', `Falta la ${getHeaderFieldLabel('studentId', 'preview').toLowerCase()} de: ${missing.join(', ')}.`, header.id);
+        }
+        if (isHeaderFieldShown('subject') && !String(h.subject || '').trim()) add('warn', `Falta la ${getHeaderFieldLabel('subject', 'preview').toLowerCase()} en el encabezado.`, header.id);
+        if (isHeaderFieldShown('prof') && !String(h.prof || '').trim()) add('warn', `Falta el ${getHeaderFieldLabel('prof', 'preview').toLowerCase()} en el encabezado.`, header.id);
+        if (isHeaderFieldShown('date') && !String(h.date || '').trim()) add('warn', 'Falta la fecha de entrega en el encabezado.', header.id);
+    }
+
+    const refs = getReferenceBlocks();
+    const refIds = new Set(refs.map(r => String(r.id)));
+    const citedIds = new Set();
+    let figure = 0;
+    let table = 0;
+
+    reportData.forEach(block => {
+        switch (block.type) {
+            case 'title':
+                if (!String(block.content || '').trim()) add('warn', 'Hay un título vacío.', block.id);
+                break;
+            case 'subtitle':
+                if (!String(block.content || '').trim()) add('warn', 'Hay un subtítulo vacío.', block.id);
+                break;
+            case 'text': {
+                const html = getRichHtml(block);
+                if (!richHtmlToPlainText(html).trim()) {
+                    add('warn', block.hint ? `Párrafo sin llenar: "${block.hint}"` : 'Hay un párrafo vacío.', block.id);
+                }
+                const cited = Array.from(html.matchAll(/data-cite="(\d+)"/g)).map(m => m[1]);
+                cited.forEach(id => citedIds.add(id));
+                if (cited.some(id => !refIds.has(id))) add('error', 'Un párrafo cita una referencia que ya no existe.', block.id);
+                break;
+            }
+            case 'image':
+                figure++;
+                if (!block.content) add('error', `La figura ${figure} no tiene imagen.`, block.id);
+                if (!String(block.caption || '').trim()) add('warn', `La figura ${figure} no tiene descripción.`, block.id);
+                break;
+            case 'table': {
+                table++;
+                const data = block.tableData || [];
+                const cells = data.flat().map(cell => String(cell || '').trim());
+                if (!cells.some(Boolean)) add('warn', `La tabla ${table} está vacía.`, block.id);
+                else if (!(data[0] || []).some(cell => String(cell || '').trim())) add('warn', `La tabla ${table} no tiene encabezados.`, block.id);
+                if (!String(block.caption || '').trim()) add('warn', `La tabla ${table} no tiene descripción.`, block.id);
+                break;
+            }
+            case 'code':
+                if (!String(block.content || '').trim()) add('warn', 'Hay un bloque de código vacío.', block.id);
+                break;
+            case 'ref': {
+                if (!block.refData) break;
+                const r = block.refData;
+                const missing = [];
+                if (!String(r.author || '').trim()) missing.push('autor');
+                if (!String(r.title || '').trim()) missing.push('título');
+                if (!String(r.year || '').trim()) missing.push('año');
+                if (block.refType === 'web' && !String(r.url || '').trim()) missing.push('URL');
+                const name = getCitationStyle() === 'apa' ? `"${String(r.title || '').trim() || 'sin título'}"` : `[${refs.indexOf(block) + 1}]`;
+                if (missing.length) add('warn', `A la referencia ${name} le falta: ${missing.join(', ')}.`, block.id);
+                break;
+            }
+            case 'toc':
+                if (!getTocAnchors().size) add('warn', 'El índice no tiene títulos ni subtítulos.', block.id);
+                break;
+            case 'ai':
+                if (block.aiUsed === 'yes') {
+                    const ai = block.aiData || {};
+                    const missing = [];
+                    if (!String(ai.aiTool || '').trim()) missing.push('qué IA usaste');
+                    if (!String(ai.purpose || '').trim()) missing.push('el propósito');
+                    if (!String(ai.prompt || '').trim()) missing.push('el prompt');
+                    if (missing.length) add('warn', `En la declaración de IA falta: ${missing.join(', ')}.`, block.id);
+                }
+                break;
+        }
+    });
+
+    // Referencias que no se citan (solo si el documento ya usa citas en el texto)
+    if (citedIds.size) {
+        refs.forEach((ref, i) => {
+            if (!citedIds.has(String(ref.id))) {
+                add('info', `La referencia ${getCitationStyle() === 'apa' ? `"${String(ref.refData.title || '').trim() || 'sin título'}"` : `[${i + 1}]`} no se cita en el texto.`, ref.id);
+            }
+        });
+    }
+    if (!reportData.some(b => b.type === 'ai')) add('info', 'No incluye la Declaración de uso de IA (muchas escuelas la piden).');
+    if (!getDocumentName()) add('info', `El documento se llama "${DEFAULT_DOCUMENT_NAME}"; así se llamará el PDF.`);
+
+    const order = { error: 0, warn: 1, info: 2 };
+    return issues.sort((a, b) => order[a.level] - order[b.level]);
+}
+
+function closeReviewModal() {
+    const overlay = document.getElementById('review-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+/**
+ * Lista de la revisión. Con forPrint = true se abrió al imprimir y ofrece
+ * imprimir de todos modos.
+ */
+function openReviewModal(forPrint = false) {
+    closeReviewModal();
+    const issues = getDocumentIssues();
+    const pending = issues.filter(i => i.level !== 'info').length;
+    const icons = { error: 'error', warn: 'warning', info: 'lightbulb' };
+    const overlay = document.createElement('div');
+    overlay.className = 'university-modal-overlay';
+    overlay.id = 'review-modal-overlay';
+    overlay.innerHTML = `
+        <div class="university-modal review-modal">
+            <h3>${pending ? '🔎 Antes de entregar' : '✅ Todo listo para entregar'}</h3>
+            <p class="settings-hint">${pending
+                ? `Encontramos ${pending} ${pending === 1 ? 'detalle' : 'detalles'} que conviene revisar.${forPrint ? ' Puedes corregirlos o imprimir de todos modos.' : ''}`
+                : 'No falta nada importante.'} <span class="review-stats">${escapeHtml(document.getElementById('doc-stats') ? document.getElementById('doc-stats').textContent : '')}</span></p>
+            ${issues.length ? `<ul class="review-list">
+                ${issues.map((issue, i) => `
+                    <li class="review-item is-${issue.level}">
+                        <span class="material-symbols-outlined">${icons[issue.level]}</span>
+                        <span class="review-text">${escapeHtml(issue.message)}</span>
+                        ${issue.blockId !== null ? `<button type="button" class="review-go" data-index="${i}">Ir</button>` : ''}
+                    </li>`).join('')}
+            </ul>` : ''}
+            <div class="university-modal-actions">
+                ${forPrint ? '<button type="button" class="action-btn" data-action="print">Imprimir de todos modos</button>' : ''}
+                <button type="button" class="action-btn save-btn" data-action="close">${forPrint && pending ? 'Revisar' : 'Cerrar'}</button>
+            </div>
+        </div>`;
+    overlay.addEventListener('click', e => {
+        if (e.target === overlay) { closeReviewModal(); return; }
+        const go = e.target.closest('.review-go');
+        if (go) {
+            closeReviewModal();
+            goToBlock(issues[Number(go.dataset.index)].blockId);
+            return;
+        }
+        const action = e.target.closest('[data-action]');
+        if (!action) return;
+        closeReviewModal();
+        if (action.dataset.action === 'print') printDocument(true);
+    });
+    document.body.appendChild(overlay);
+}
+
+/**
+ * Lleva a la tarjeta del bloque y la resalta un momento.
+ */
+function goToBlock(blockId) {
+    if (isMobileLayout()) setMobileView('editor');
+    const index = reportData.findIndex(b => b.id === blockId);
+    const card = document.querySelectorAll('#editor-container .block-card-container')[index];
+    if (!card) return;
+    if (card.scrollIntoView) card.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    card.classList.remove('is-highlighted');
+    void card.offsetWidth;
+    card.classList.add('is-highlighted');
+    setTimeout(() => card.classList.remove('is-highlighted'), 2200);
+}
+
+/**
+ * Imprimir / PDF: si hay detalles pendientes, primero se muestran.
+ */
+function printDocument(force = false) {
+    if (!force && getDocumentIssues().some(issue => issue.level !== 'info')) {
+        openReviewModal(true);
+        return;
+    }
+    window.print();
+}
+
+// Ctrl+P también pasa por la revisión
+document.addEventListener('keydown', event => {
+    if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey || event.key.toLowerCase() !== 'p') return;
+    if (document.querySelector('.university-modal-overlay')) return;
+    event.preventDefault();
+    printDocument();
+});
+
+// ==========================================
+// EXPORTAR A WORD (.docx)
+// Un .docx es un ZIP con archivos XML (WordprocessingML). Se arma aquí mismo,
+// sin librerías: zipFiles() junta los archivos (sin comprimir) y las
+// funciones docx* escriben el XML. Usa el formato del documento (letra,
+// interlineado, márgenes, hoja) y los colores de la universidad. El índice es
+// un campo de Word: trae los números de página de la vista previa y Word
+// ofrece actualizarlos al abrir.
+// ==========================================
+
+const DOCX_MIME = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+
+const CRC32_TABLE = (() => {
+    const table = new Uint32Array(256);
+    for (let n = 0; n < 256; n++) {
+        let c = n;
+        for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;
+        table[n] = c >>> 0;
+    }
+    return table;
+})();
+
+function crc32(bytes) {
+    let c = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) c = CRC32_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+/**
+ * ZIP sin compresión. files: [{ name, data: Uint8Array | string }]
+ */
+function zipFiles(files, mimeType = 'application/zip') {
+    const encoder = new TextEncoder();
+    const now = new Date();
+    const dosTime = (now.getHours() << 11) | (now.getMinutes() << 5) | Math.floor(now.getSeconds() / 2);
+    const dosDate = ((now.getFullYear() - 1980) << 9) | ((now.getMonth() + 1) << 5) | now.getDate();
+    const parts = [];
+    const central = [];
+    let offset = 0;
+
+    files.forEach(file => {
+        const name = encoder.encode(file.name);
+        const data = typeof file.data === 'string' ? encoder.encode(file.data) : file.data;
+        const crc = crc32(data);
+
+        const local = new DataView(new ArrayBuffer(30));
+        local.setUint32(0, 0x04034b50, true);
+        local.setUint16(4, 20, true);
+        local.setUint16(6, 0x0800, true); // nombres en UTF-8
+        local.setUint16(8, 0, true);      // sin compresión
+        local.setUint16(10, dosTime, true);
+        local.setUint16(12, dosDate, true);
+        local.setUint32(14, crc, true);
+        local.setUint32(18, data.length, true);
+        local.setUint32(22, data.length, true);
+        local.setUint16(26, name.length, true);
+        local.setUint16(28, 0, true);
+        parts.push(new Uint8Array(local.buffer), name, data);
+
+        const entry = new DataView(new ArrayBuffer(46));
+        entry.setUint32(0, 0x02014b50, true);
+        entry.setUint16(4, 20, true);
+        entry.setUint16(6, 20, true);
+        entry.setUint16(8, 0x0800, true);
+        entry.setUint16(10, 0, true);
+        entry.setUint16(12, dosTime, true);
+        entry.setUint16(14, dosDate, true);
+        entry.setUint32(16, crc, true);
+        entry.setUint32(20, data.length, true);
+        entry.setUint32(24, data.length, true);
+        entry.setUint16(28, name.length, true);
+        entry.setUint32(42, offset, true);
+        central.push(new Uint8Array(entry.buffer), name);
+
+        offset += 30 + name.length + data.length;
+    });
+
+    const centralSize = central.reduce((sum, part) => sum + part.length, 0);
+    const end = new DataView(new ArrayBuffer(22));
+    end.setUint32(0, 0x06054b50, true);
+    end.setUint16(8, files.length, true);
+    end.setUint16(10, files.length, true);
+    end.setUint32(12, centralSize, true);
+    end.setUint32(16, offset, true);
+    return new Blob([...parts, ...central, new Uint8Array(end.buffer)], { type: mimeType });
+}
+
+function xmlText(text) {
+    return String(text === undefined || text === null ? '' : text)
+        .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\uFFFE\uFFFF]/g, '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+/**
+ * Color de la universidad en hexadecimal para Word ("1E3A8A").
+ */
+function docxColor(color, fallback) {
+    const value = String(color || '').trim();
+    let m = /^#?([0-9a-f]{6})$/i.exec(value);
+    if (m) return m[1].toUpperCase();
+    m = /^#?([0-9a-f]{3})$/i.exec(value);
+    if (m) return m[1].split('').map(c => c + c).join('').toUpperCase();
+    return fallback;
+}
+
+function docxRunProps(props) {
+    let x = '';
+    if (props.font) x += `<w:rFonts w:ascii="${xmlText(props.font)}" w:hAnsi="${xmlText(props.font)}" w:cs="${xmlText(props.font)}"/>`;
+    if (props.b) x += '<w:b/><w:bCs/>';
+    if (props.i) x += '<w:i/><w:iCs/>';
+    if (props.color) x += `<w:color w:val="${props.color}"/>`;
+    if (props.size) x += `<w:sz w:val="${Math.round(props.size * 2)}"/><w:szCs w:val="${Math.round(props.size * 2)}"/>`;
+    if (props.u) x += '<w:u w:val="single"/>';
+    return x ? `<w:rPr>${x}</w:rPr>` : '';
+}
+
+/**
+ * Un "run" de texto con formato. \n = salto de línea, \t = tabulador.
+ */
+function docxRun(text, props = {}) {
+    const inner = String(text === undefined || text === null ? '' : text).split('\n').map((line, i) =>
+        (i ? '<w:br/>' : '') + line.split('\t').map((piece, j) =>
+            (j ? '<w:tab/>' : '') + (piece ? `<w:t xml:space="preserve">${xmlText(piece)}</w:t>` : '')).join('')).join('');
+    return inner ? `<w:r>${docxRunProps(props)}${inner}</w:r>` : '';
+}
+
+function docxParagraph(content, o = {}) {
+    let pPr = '';
+    if (o.style) pPr += `<w:pStyle w:val="${o.style}"/>`;
+    if (o.keepNext) pPr += '<w:keepNext/>';
+    if (o.numId) pPr += `<w:numPr><w:ilvl w:val="0"/><w:numId w:val="${o.numId}"/></w:numPr>`;
+    if (o.borderBottom) pPr += `<w:pBdr><w:bottom w:val="single" w:sz="${o.borderBottom.size || 8}" w:space="4" w:color="${o.borderBottom.color}"/></w:pBdr>`;
+    if (o.tabs) pPr += `<w:tabs>${o.tabs.map(t => `<w:tab w:val="${t.val}"${t.leader ? ` w:leader="${t.leader}"` : ''} w:pos="${t.pos}"/>`).join('')}</w:tabs>`;
+    if (o.spacing) {
+        const sp = o.spacing;
+        pPr += `<w:spacing${sp.before !== undefined ? ` w:before="${sp.before}"` : ''}${sp.after !== undefined ? ` w:after="${sp.after}"` : ''}${sp.line !== undefined ? ` w:line="${sp.line}" w:lineRule="auto"` : ''}/>`;
+    }
+    if (o.ind) {
+        const ind = o.ind;
+        pPr += `<w:ind${ind.left !== undefined ? ` w:left="${ind.left}"` : ''}${ind.hanging !== undefined ? ` w:hanging="${ind.hanging}"` : ''}${ind.firstLine !== undefined ? ` w:firstLine="${ind.firstLine}"` : ''}/>`;
+    }
+    if (o.align) pPr += `<w:jc w:val="${o.align}"/>`;
+    return `<w:p>${pPr ? `<w:pPr>${pPr}</w:pPr>` : ''}${content || ''}</w:p>`;
+}
+
+/**
+ * HTML de una línea (negritas, cursivas, subrayado, <br> y citas) -> runs.
+ */
+function docxRunsFromHtml(html, base = {}) {
+    const doc = document.implementation.createHTMLDocument('');
+    const root = doc.createElement('div');
+    root.innerHTML = String(html || '').trim();
+    const walk = (node, props) => Array.from(node.childNodes).map(n => {
+        if (n.nodeType === 3) return docxRun(n.nodeValue.replace(/\s+/g, ' '), props);
+        if (n.nodeType !== 1) return '';
+        if (n.tagName === 'BR') return '<w:r><w:br/></w:r>';
+        if (n.hasAttribute('data-cite')) return docxRun(getCitationText(n.getAttribute('data-cite')), props);
+        const next = { ...props };
+        if (n.tagName === 'B' || n.tagName === 'STRONG') next.b = true;
+        if (n.tagName === 'I' || n.tagName === 'EM') next.i = true;
+        if (n.tagName === 'U') next.u = true;
+        return walk(n, next);
+    }).join('');
+    return walk(root, base);
+}
+
+/**
+ * Bytes, tipo y medidas de una imagen (data URL o dirección web). Los
+ * formatos que Word no abre (SVG, WebP...) se pasan a PNG. null si no se
+ * pudo leer (por ejemplo, un logo de otro sitio que no lo permite).
+ */
+async function loadImageForDocx(src) {
+    if (!src) return null;
+    try {
+        let blob;
+        const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(src);
+        if (match) {
+            const raw = match[2] ? atob(match[3]) : decodeURIComponent(match[3]);
+            const bytes = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i) & 0xFF;
+            blob = new Blob([bytes], { type: match[1] || 'image/png' });
+        } else {
+            const response = await fetch(src, { mode: 'cors' });
+            if (!response.ok) return null;
+            blob = await response.blob();
+        }
+        const url = URL.createObjectURL(blob);
+        try {
+            const img = await new Promise((resolve, reject) => {
+                const image = new Image();
+                image.onload = () => resolve(image);
+                image.onerror = reject;
+                image.src = url;
+            });
+            const w = img.naturalWidth || 300;
+            const h = img.naturalHeight || 150;
+            let type = blob.type;
+            if (!['image/png', 'image/jpeg', 'image/gif'].includes(type)) {
+                const canvas = document.createElement('canvas');
+                canvas.width = w;
+                canvas.height = h;
+                canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+                if (!blob) return null;
+                type = 'image/png';
+            }
+            return { bytes: new Uint8Array(await blob.arrayBuffer()), ext: type === 'image/jpeg' ? 'jpeg' : type.split('/')[1], w, h };
+        } finally {
+            URL.revokeObjectURL(url);
+        }
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Arma el .docx del documento actual (Blob). Lo usa exportDOCX().
+ */
+async function buildDocx() {
+    const f = getDocumentFormat();
+    const paper = PAPER_SIZES[f.paper];
+    const font = DOC_FONTS[f.font].word;
+    const size = f.size;
+    const pageW = Math.round(paper.w * 1440);
+    const pageH = Math.round(paper.h * 1440);
+    const margin = Math.round(f.margin * 566.93);
+    const contentW = pageW - 2 * margin;           // twips
+    const contentEmu = contentW * 635;             // 1 twip = 635 EMU
+    const maxImageEmu = 6480000;                   // 18 cm, como en la hoja
+    const bodyAlign = f.align === 'justify' ? 'both' : 'left';
+    const bodyInd = f.indent ? { firstLine: 720 } : null;
+
+    const themeId = (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '');
+    const uni = getUniversityById(themeId) || getUniversityById('generic') || {};
+    const colors = uni.color || {};
+    const primary = docxColor(colors.primary, '1F2937');
+    const secondary = docxColor(colors.secondary, '6B7280');
+
+    // ---------- Imágenes ----------
+    const media = [];
+    let drawingId = 0;
+    const imageRun = async (src, maxW, maxH) => {
+        const image = await loadImageForDocx(src);
+        if (!image) return '';
+        const n = media.length + 1;
+        media.push({ name: `word/media/image${n}.${image.ext}`, data: image.bytes, ext: image.ext, rid: `rIdImg${n}` });
+        let cx = image.w * 9525;
+        let cy = image.h * 9525;
+        const scale = Math.min(1, maxW / cx, maxH / cy);
+        cx = Math.round(cx * scale);
+        cy = Math.round(cy * scale);
+        drawingId++;
+        return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/>` +
+            `<wp:docPr id="${drawingId}" name="Imagen ${drawingId}"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>` +
+            `<a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic>` +
+            `<pic:nvPicPr><pic:cNvPr id="${drawingId}" name="image${n}.${image.ext}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+            `<pic:blipFill><a:blip r:embed="rIdImg${n}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
+            `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>` +
+            `</pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;
+    };
+
+    // ---------- Listas ----------
+    const orderedLists = []; // un numId por lista numerada (cada una empieza en 1)
+
+    // ---------- Contenido ----------
+    const body = [];
+    const header = getHeaderData() || {};
+    const show = key => isHeaderFieldShown(key);
+    const lbl = key => getHeaderFieldLabel(key, 'preview');
+    const labelRun = text => docxRun(text, { b: true });
+    const pageBreak = '<w:p><w:r><w:br w:type="page"/></w:r></w:p>';
+    let hasCover = false;
+    let hasToc = false;
+    let figure = 0;
+    let table = 0;
+    let refNumber = 0;
+    const tocAnchors = getTocAnchors();
+    const preview = document.getElementById('preview-container');
+    const tocPage = anchor => {
+        const target = preview && preview.querySelector(`[data-toc-anchor="${anchor}"]`);
+        const page = target && target.closest('.preview-page');
+        return page ? page.dataset.page : '';
+    };
+
+    const logosParagraph = async (alignCenter) => {
+        if (!header.includeLogo || !(uni.logoLeft || uni.logoRight)) return '';
+        const left = uni.logoLeft ? await imageRun(uni.logoLeft, 952500, 762000) : '';
+        const right = uni.logoRight ? await imageRun(uni.logoRight, 952500, 762000) : '';
+        if (!left && !right) return '';
+        return docxParagraph(`${left}<w:r><w:tab/></w:r>${right}`, {
+            tabs: [{ val: 'right', pos: contentW }], spacing: { after: 240 }, align: alignCenter ? undefined : undefined
+        });
+    };
+
+    for (const block of reportData) {
+        switch (block.type) {
+            case 'header': {
+                const people = getHeaderPeople(header);
+                const showIds = show('studentId');
+                if (header.coverMode) {
+                    hasCover = true;
+                    const center = { align: 'center', spacing: { after: 120 } };
+                    body.push(await logosParagraph(true));
+                    if (show('institution') && uni.id !== 'generic' && uni.name) {
+                        body.push(docxParagraph(docxRun(uni.name, { b: true, color: primary, size: size * 1.4 }), { align: 'center', spacing: { before: 600, after: 120 } }));
+                    }
+                    if (show('career') && header.career) body.push(docxParagraph(docxRun(header.career, { size: size * 1.15 }), center));
+                    const task = String(header.taskName || '').trim() || '[Nombre de la tarea]';
+                    body.push(docxParagraph(docxRun(task, { b: true, color: primary, size: size * 2.2 }), { align: 'center', spacing: { before: 2400, after: 2400, line: 240 } }));
+                    const row = (key, value) => (show(key) && value)
+                        ? body.push(docxParagraph(labelRun(`${lbl(key)}: `) + docxRun(value), center)) : null;
+                    row('subject', header.subject);
+                    row('prof', header.prof);
+                    if (header.isTeam) {
+                        body.push(docxParagraph(labelRun('Integrantes:'), center));
+                        (people.length ? people : [{ name: '[Nombre del alumno]', id: '' }]).forEach(person => {
+                            body.push(docxParagraph(docxRun(person.name + (showIds && person.id ? ` (${person.id})` : '')), { align: 'center', spacing: { after: 40 } }));
+                        });
+                    } else {
+                        const person = people[0] || { name: '[Nombre del alumno]', id: '' };
+                        body.push(docxParagraph(labelRun('Alumno: ') + docxRun(person.name), center));
+                        if (showIds && person.id) body.push(docxParagraph(labelRun(`${lbl('studentId')}: `) + docxRun(person.id), center));
+                    }
+                    row('group', header.group);
+                    row('term', formatTerm(header.term));
+                    if (show('date') && header.date) body.push(docxParagraph(docxRun(formatLongDate(header.date)), { align: 'center', spacing: { before: 1800 } }));
+                    body.push(pageBreak);
+                    break;
+                }
+
+                const line = { spacing: { after: 60, line: 276 } };
+                body.push(await logosParagraph(false));
+                if (show('institution')) body.push(docxParagraph(labelRun(`${lbl('institution')}: `) + docxRun(uni.name || ''), line));
+                if (show('career') && header.career) body.push(docxParagraph(labelRun(`${lbl('career')}: `) + docxRun(header.career), line));
+                const termText = show('term') && header.term ? formatTerm(header.term) : '';
+                if (show('subject')) body.push(docxParagraph(labelRun(`${lbl('subject')}: `) + docxRun(`${header.subject || ''}${termText ? ` (${termText})` : ''}`), line));
+                else if (termText) body.push(docxParagraph(labelRun(`${lbl('term')}: `) + docxRun(termText), line));
+                if (show('prof')) body.push(docxParagraph(labelRun(`${lbl('prof')}: `) + docxRun(header.prof || ''), line));
+                let peopleRuns;
+                if (header.isTeam) {
+                    peopleRuns = labelRun('Integrantes: ') + docxRun(people.map(p => p.name + (showIds && p.id ? ` (${p.id})` : '')).join(', '));
+                } else {
+                    const person = people[0] || { name: '', id: '' };
+                    peopleRuns = labelRun('Alumno: ') + docxRun(person.name) +
+                        (showIds && person.id ? docxRun(' | ') + labelRun(`${lbl('studentId')}: `) + docxRun(person.id) : '');
+                }
+                if (show('group') && header.group) peopleRuns += docxRun(' | ') + labelRun(`${lbl('group')}: `) + docxRun(header.group);
+                body.push(docxParagraph(peopleRuns, line));
+                if (show('date')) body.push(docxParagraph(labelRun(`${lbl('date')}: `) + docxRun(header.date || ''), line));
+                body.push(docxParagraph('', { borderBottom: { color: primary, size: 12 }, spacing: { after: 360 } }));
+                break;
+            }
+
+            case 'toc': {
+                hasToc = true;
+                body.push(docxParagraph(docxRun((block.content || '').trim() || 'Índice', { b: true, color: primary, size: size * 1.6 }), { align: 'center', spacing: { after: 360 } }));
+                const entries = reportData.filter(b => tocAnchors.has(b.id));
+                const tabs = [{ val: 'right', leader: 'dot', pos: contentW }];
+                const begin = '<w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-2" \\h \\z \\u </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r>';
+                const end = '<w:r><w:fldChar w:fldCharType="end"/></w:r>';
+                if (!entries.length) {
+                    body.push(docxParagraph(begin + docxRun('Agrega títulos o subtítulos y actualiza el índice.', { i: true }) + end));
+                } else {
+                    entries.forEach((entry, i) => {
+                        const runs = docxRun(entry.content.trim()) + '<w:r><w:tab/></w:r>' + docxRun(tocPage(tocAnchors.get(entry.id)));
+                        body.push(docxParagraph((i === 0 ? begin : '') + runs + (i === entries.length - 1 ? end : ''), {
+                            style: entry.type === 'title' ? 'TOC1' : 'TOC2', tabs
+                        }));
+                    });
+                }
+                body.push(pageBreak);
+                break;
+            }
+
+            case 'title':
+                body.push(docxParagraph(docxRun(block.content || ''), { style: 'Heading1' }));
+                break;
+
+            case 'subtitle':
+                body.push(docxParagraph(docxRun(block.content || ''), { style: 'Heading2' }));
+                break;
+
+            case 'text': {
+                const doc = document.implementation.createHTMLDocument('');
+                const root = doc.createElement('div');
+                root.innerHTML = getRichHtml(block);
+                Array.from(root.children).forEach(el => {
+                    if (el.tagName === 'UL' || el.tagName === 'OL') {
+                        let numId = 1;
+                        if (el.tagName === 'OL') {
+                            numId = 2 + orderedLists.length;
+                            orderedLists.push(numId);
+                        }
+                        Array.from(el.children).forEach(li => {
+                            body.push(docxParagraph(docxRunsFromHtml(li.innerHTML), { numId, align: bodyAlign, spacing: { after: 80 } }));
+                        });
+                    } else {
+                        body.push(docxParagraph(docxRunsFromHtml(el.innerHTML), { align: bodyAlign, ind: bodyInd }));
+                    }
+                });
+                break;
+            }
+
+            case 'image': {
+                figure++;
+                const picture = block.content ? await imageRun(block.content, contentEmu, maxImageEmu) : '';
+                body.push(docxParagraph(picture || docxRun('[Imagen no seleccionada]', { i: true }), { align: 'center', keepNext: true, spacing: { before: 240, after: 120 } }));
+                body.push(docxParagraph(docxRun(`Figura ${figure}: `, { b: true }) + docxRun(block.caption || ''), { style: 'Caption', align: 'center' }));
+                break;
+            }
+
+            case 'table': {
+                table++;
+                const data = block.tableData || [];
+                if (!data.length) break;
+                const cols = Math.max(1, Math.min(6, block.columns || (data[0] || []).length || 1));
+                const colW = Math.floor(contentW / cols);
+                const cell = (text, isHeader, last) => `<w:tc><w:tcPr><w:tcW w:w="${colW}" w:type="dxa"/>` +
+                    (isHeader ? '<w:tcBorders><w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/></w:tcBorders>' : '') +
+                    `<w:vAlign w:val="center"/></w:tcPr>` +
+                    docxParagraph(docxRun(text, { size: size * (isHeader ? 0.9 : 0.85) }), { align: 'center', spacing: { before: 60, after: 60, line: 260 } }) + '</w:tc>';
+                const rows = data.map((row, r) => {
+                    const cells = [];
+                    for (let c = 0; c < cols; c++) cells.push(cell((row || [])[c] || '', r === 0, r === data.length - 1));
+                    return `<w:tr>${r === 0 ? '<w:trPr><w:tblHeader/></w:trPr>' : '<w:trPr><w:cantSplit/></w:trPr>'}${cells.join('')}</w:tr>`;
+                }).join('');
+                body.push(`<w:tbl><w:tblPr><w:tblW w:w="${contentW}" w:type="dxa"/><w:jc w:val="center"/>` +
+                    `<w:tblBorders><w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/><w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/></w:tblBorders>` +
+                    `<w:tblLayout w:type="fixed"/><w:tblCellMar><w:left w:w="108" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar>` +
+                    `<w:tblLook w:val="0000" w:firstRow="0" w:lastRow="0" w:firstColumn="0" w:lastColumn="0" w:noHBand="1" w:noVBand="1"/></w:tblPr>` +
+                    `<w:tblGrid>${Array.from({ length: cols }, () => `<w:gridCol w:w="${colW}"/>`).join('')}</w:tblGrid>${rows}</w:tbl>`);
+                body.push(docxParagraph(docxRun(`Tabla ${table}: `, { b: true }) + docxRun(block.caption || ''), { style: 'Caption' }));
+                break;
+            }
+
+            case 'code': {
+                const lines = String(block.content || '').replace(/\r\n?/g, '\n').split('\n');
+                lines.forEach((codeLine, i) => {
+                    body.push(docxParagraph(docxRun(codeLine.replace(/\t/g, '    ')), {
+                        style: 'Codigo', spacing: i === 0 ? { before: 240 } : (i === lines.length - 1 ? { after: 240 } : undefined)
+                    }));
+                });
+                break;
+            }
+
+            case 'ref': {
+                if (!block.refData) break;
+                refNumber++;
+                const r = block.refData;
+                if (getCitationStyle() === 'apa') {
+                    body.push(docxParagraph(docxRunsFromHtml(formatAPAReference(block.refType, r.author, r.title, r.source, r.year, r.url)), {
+                        ind: { left: 720, hanging: 720 }, align: 'left', spacing: { after: 160 }
+                    }));
+                } else {
+                    body.push(docxParagraph(docxRun(`[${refNumber}]`, { b: true, color: primary }) + '<w:r><w:tab/></w:r>' +
+                        docxRunsFromHtml(formatIEEEReference(block.refType, r.author, r.title, r.source, r.year, r.url)), {
+                        tabs: [{ val: 'left', pos: 720 }], ind: { left: 720, hanging: 720 }, align: 'left', spacing: { after: 160 }
+                    }));
+                }
+                break;
+            }
+
+            case 'ai': {
+                if (!block.aiData) break;
+                const ai = block.aiData;
+                const studentName = getHeaderStudentName(header) || '[Nombre del estudiante]';
+                if (block.aiUsed === 'no') {
+                    const name = ai.name || studentName;
+                    body.push(docxParagraph(docxRunsFromHtml(`Yo, <b>${escapeHtml(name)}</b>, declaro que <b>NO</b> he utilizado herramientas de Inteligencia Artificial para la elaboración de este trabajo académico. Afirmo que cuento con evidencias físicas y/o digitales que demuestran mi autoría, incluyendo pero no limitándose a: documentos manuscritos, materiales impresos con anotaciones o subrayado, historial de versiones de documentos electrónicos, o commits en repositorios de código.`), { align: bodyAlign, spacing: { before: 480 } }));
+                    body.push(docxParagraph(docxRun('Reconozco y acepto que el profesor se reserva el derecho de solicitar dichas evidencias en cualquier momento, especialmente cuando existan sospechas o se detecten conductas que atenten contra la integridad académica, tales como plagio o uso no reportado de herramientas de IA.'), { align: bodyAlign }));
+                } else {
+                    const line = (label, value) => body.push(docxParagraph(labelRun(`${label}: `) + docxRun(value || ''), { spacing: { after: 80 } }));
+                    line('Nombre del estudiante', ai.name || studentName);
+                    line('IA utilizada', ai.aiTool);
+                    line('Fecha de uso', ai.date);
+                    line('Propósito', ai.purpose);
+                    body.push(docxParagraph(labelRun('Prompt utilizado:'), { spacing: { before: 240, after: 80 }, keepNext: true }));
+                    String(ai.prompt || '').split('\n').forEach(l => body.push(docxParagraph(docxRun(l), { style: 'Codigo' })));
+                    if (ai.attachments) line('Archivos suministrados', ai.attachments);
+                    body.push(docxParagraph(labelRun('Respuesta en crudo (raw):'), { spacing: { before: 240, after: 80 }, keepNext: true }));
+                    String(ai.rawResponse || '').split('\n').forEach(l => body.push(docxParagraph(docxRun(l), { style: 'Codigo' })));
+                }
+                break;
+            }
+        }
+    }
+
+    const sectPr = `<w:sectPr>${f.pageNumbers ? '<w:footerReference w:type="default" r:id="rIdFooter1"/>' : ''}` +
+        `<w:pgSz w:w="${pageW}" w:h="${pageH}"/>` +
+        `<w:pgMar w:top="${margin}" w:right="${margin}" w:bottom="${margin}" w:left="${margin}" w:header="708" w:footer="567" w:gutter="0"/>` +
+        `${hasCover ? '<w:titlePg/>' : ''}</w:sectPr>`;
+
+    const documentXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
+        'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ' +
+        'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
+        'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
+        'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">' +
+        `<w:body>${body.filter(Boolean).join('')}${sectPr}</w:body></w:document>`;
+
+    const half = n => Math.round(n * 2);
+    const stylesXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+        `<w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="${xmlText(font)}" w:hAnsi="${xmlText(font)}" w:eastAsia="${xmlText(font)}" w:cs="${xmlText(font)}"/>` +
+        `<w:sz w:val="${half(size)}"/><w:szCs w:val="${half(size)}"/><w:lang w:val="es-MX" w:eastAsia="es-MX" w:bidi="ar-SA"/></w:rPr></w:rPrDefault>` +
+        `<w:pPrDefault><w:pPr><w:spacing w:after="240" w:line="${Math.round(f.lineHeight * 240)}" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults>` +
+        '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/></w:style>' +
+        '<w:style w:type="character" w:default="1" w:styleId="DefaultParagraphFont"><w:name w:val="Default Paragraph Font"/><w:uiPriority w:val="1"/><w:semiHidden/><w:unhideWhenUsed/></w:style>' +
+        `<w:style w:type="paragraph" w:styleId="Heading1"><w:name w:val="heading 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:qFormat/>` +
+        `<w:pPr><w:keepNext/><w:keepLines/><w:spacing w:before="240" w:after="480" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/><w:outlineLvl w:val="0"/></w:pPr>` +
+        `<w:rPr><w:b/><w:bCs/><w:color w:val="${primary}"/><w:sz w:val="${half(size * 2.2)}"/><w:szCs w:val="${half(size * 2.2)}"/></w:rPr></w:style>` +
+        `<w:style w:type="paragraph" w:styleId="Heading2"><w:name w:val="heading 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="9"/><w:unhideWhenUsed/><w:qFormat/>` +
+        `<w:pPr><w:keepNext/><w:keepLines/><w:pBdr><w:bottom w:val="single" w:sz="12" w:space="4" w:color="${secondary}"/></w:pBdr><w:spacing w:before="360" w:after="200" w:line="240" w:lineRule="auto"/><w:outlineLvl w:val="1"/></w:pPr>` +
+        `<w:rPr><w:b/><w:bCs/><w:color w:val="${primary}"/><w:sz w:val="${half(size * 1.5)}"/><w:szCs w:val="${half(size * 1.5)}"/></w:rPr></w:style>` +
+        `<w:style w:type="paragraph" w:styleId="Caption"><w:name w:val="caption"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="35"/><w:unhideWhenUsed/><w:qFormat/>` +
+        `<w:pPr><w:spacing w:before="120" w:after="360" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:i/><w:iCs/><w:color w:val="6C757D"/><w:sz w:val="${half(size * 0.9)}"/><w:szCs w:val="${half(size * 0.9)}"/></w:rPr></w:style>` +
+        `<w:style w:type="paragraph" w:customStyle="1" w:styleId="Codigo"><w:name w:val="Código"/><w:basedOn w:val="Normal"/><w:qFormat/>` +
+        `<w:pPr><w:pBdr><w:left w:val="single" w:sz="24" w:space="8" w:color="${secondary}"/></w:pBdr><w:shd w:val="clear" w:color="auto" w:fill="F8F9FA"/><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:left="240"/><w:jc w:val="left"/></w:pPr>` +
+        `<w:rPr><w:rFonts w:ascii="Consolas" w:hAnsi="Consolas" w:cs="Courier New"/><w:noProof/><w:sz w:val="${half(size * 0.8)}"/><w:szCs w:val="${half(size * 0.8)}"/></w:rPr></w:style>` +
+        `<w:style w:type="paragraph" w:styleId="TOC1"><w:name w:val="toc 1"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="39"/><w:unhideWhenUsed/>` +
+        `<w:pPr><w:spacing w:after="120" w:line="240" w:lineRule="auto"/></w:pPr><w:rPr><w:b/><w:bCs/></w:rPr></w:style>` +
+        `<w:style w:type="paragraph" w:styleId="TOC2"><w:name w:val="toc 2"/><w:basedOn w:val="Normal"/><w:next w:val="Normal"/><w:uiPriority w:val="39"/><w:unhideWhenUsed/>` +
+        `<w:pPr><w:spacing w:after="120" w:line="240" w:lineRule="auto"/><w:ind w:left="440"/></w:pPr></w:style>` +
+        `<w:style w:type="paragraph" w:styleId="Footer"><w:name w:val="footer"/><w:basedOn w:val="Normal"/><w:uiPriority w:val="99"/><w:unhideWhenUsed/>` +
+        `<w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="center"/></w:pPr><w:rPr><w:color w:val="64748B"/><w:sz w:val="${half(size * 0.85)}"/><w:szCs w:val="${half(size * 0.85)}"/></w:rPr></w:style>` +
+        '</w:styles>';
+
+    const lvl = (fmt, text) => `<w:lvl w:ilvl="0"><w:start w:val="1"/><w:numFmt w:val="${fmt}"/><w:lvlText w:val="${text}"/><w:lvlJc w:val="left"/><w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr></w:lvl>`;
+    const numberingXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+        `<w:abstractNum w:abstractNumId="0"><w:multiLevelType w:val="singleLevel"/>${lvl('bullet', '•')}</w:abstractNum>` +
+        `<w:abstractNum w:abstractNumId="1"><w:multiLevelType w:val="singleLevel"/>${lvl('decimal', '%1.')}</w:abstractNum>` +
+        '<w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>' +
+        orderedLists.map(id => `<w:num w:numId="${id}"><w:abstractNumId w:val="1"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="1"/></w:lvlOverride></w:num>`).join('') +
+        '</w:numbering>';
+
+    const settingsXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">' +
+        '<w:defaultTabStop w:val="708"/>' + (hasToc ? '<w:updateFields w:val="true"/>' : '') +
+        '<w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat>' +
+        '</w:settings>';
+
+    const footerXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">' +
+        '<w:p><w:pPr><w:pStyle w:val="Footer"/></w:pPr><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> PAGE </w:instrText></w:r>' +
+        '<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>1</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p></w:ftr>';
+
+    const rel = (id, type, target) => `<Relationship Id="${id}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${type}" Target="${target}"/>`;
+    const documentRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        rel('rIdStyles', 'styles', 'styles.xml') + rel('rIdNumbering', 'numbering', 'numbering.xml') +
+        rel('rIdSettings', 'settings', 'settings.xml') + rel('rIdFooter1', 'footer', 'footer1.xml') +
+        media.map(m => rel(m.rid, 'image', m.name.replace('word/', ''))).join('') +
+        '</Relationships>';
+
+    const rootRels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>' +
+        '<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>' +
+        '</Relationships>';
+
+    const authors = getHeaderPeople(header).map(person => person.name).join(', ');
+    const nowIso = new Date().toISOString().replace(/\.\d+Z$/, 'Z');
+    const coreXml = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">' +
+        `<dc:title>${xmlText(getDocumentName() || DEFAULT_DOCUMENT_NAME)}</dc:title><dc:creator>${xmlText(authors)}</dc:creator>` +
+        `<dcterms:created xsi:type="dcterms:W3CDTF">${nowIso}</dcterms:created><dcterms:modified xsi:type="dcterms:W3CDTF">${nowIso}</dcterms:modified>` +
+        '</cp:coreProperties>';
+
+    const exts = Array.from(new Set(media.map(m => m.ext)));
+    const contentTypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+        '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">' +
+        '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
+        '<Default Extension="xml" ContentType="application/xml"/>' +
+        exts.map(ext => `<Default Extension="${ext}" ContentType="image/${ext}"/>`).join('') +
+        '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>' +
+        '<Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>' +
+        '<Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>' +
+        '<Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>' +
+        '<Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/>' +
+        '<Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/>' +
+        '</Types>';
+
+    return zipFiles([
+        { name: '[Content_Types].xml', data: contentTypes },
+        { name: '_rels/.rels', data: rootRels },
+        { name: 'docProps/core.xml', data: coreXml },
+        { name: 'word/document.xml', data: documentXml },
+        { name: 'word/styles.xml', data: stylesXml },
+        { name: 'word/numbering.xml', data: numberingXml },
+        { name: 'word/settings.xml', data: settingsXml },
+        { name: 'word/footer1.xml', data: footerXml },
+        { name: 'word/_rels/document.xml.rels', data: documentRels },
+        ...media.map(m => ({ name: m.name, data: m.data }))
+    ], DOCX_MIME);
+}
+
+/**
+ * Botón "Word": descarga el documento como .docx.
+ */
+async function exportDOCX() {
+    const buttons = document.querySelectorAll('.btn-word, .preview-docx-link');
+    buttons.forEach(b => { b.disabled = true; });
+    try {
+        renderPreview(); // números de página del índice al día
+        const blob = await buildDocx();
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = `${getSafeFileName()}.docx`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+    } catch (error) {
+        console.error('Error al exportar a Word:', error);
+        alert('No se pudo crear el archivo de Word: ' + error.message);
+    } finally {
+        buttons.forEach(b => { b.disabled = false; });
+    }
+}
+
+// ==========================================
+// MIS DOCUMENTOS (varios documentos guardados en el navegador)
+// Se guardan en IndexedDB (no en localStorage, que solo tiene ~5 MB) y
+// comprimidos con gzip cuando el navegador lo permite. Hay dos almacenes:
+// 'meta' (nombre, fechas, tamaño, palabras... lo único que se lee para la
+// lista) y 'data' (el documento completo, que solo se lee al abrirlo).
+// El documento abierto sigue en localStorage como siempre; su id está en
+// localStorage 'currentDocumentId'.
+// ==========================================
+
+const LIBRARY_DB_NAME = 'generador-reportes';
+let libraryDbPromise = null;
+let libraryUnavailable = false;
+let librarySaveTimer = null;
+let librarySaveQueue = Promise.resolve();
+const libraryLastSaved = new Map(); // id -> JSON guardado (para no reescribir si no cambió)
+
+function isLibraryAvailable() {
+    return !libraryUnavailable && typeof indexedDB !== 'undefined';
+}
+
+/**
+ * Con el autoguardado desactivado no se guarda nada solo en el navegador.
+ */
+function canKeepInLibrary() {
+    return isAutosaveEnabled() && isLibraryAvailable();
+}
+
+function openLibraryDb() {
+    if (!isLibraryAvailable()) return Promise.reject(new Error('Este navegador no permite guardar varios documentos.'));
+    if (!libraryDbPromise) {
+        libraryDbPromise = new Promise((resolve, reject) => {
+            const request = indexedDB.open(LIBRARY_DB_NAME, 1);
+            request.onupgradeneeded = () => {
+                const db = request.result;
+                if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'id' });
+                if (!db.objectStoreNames.contains('data')) db.createObjectStore('data', { keyPath: 'id' });
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+        }).catch(err => {
+            libraryDbPromise = null;
+            libraryUnavailable = true;
+            throw err;
+        });
+    }
+    return libraryDbPromise;
+}
+
+function idbRequest(request) {
+    return new Promise((resolve, reject) => {
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+    });
+}
+
+/**
+ * Transacción: fn recibe los almacenes y solo debe hacer operaciones de IndexedDB.
+ */
+async function libraryTransaction(mode, fn) {
+    const db = await openLibraryDb();
+    return new Promise((resolve, reject) => {
+        const tx = db.transaction(['meta', 'data'], mode);
+        let result;
+        Promise.resolve(fn(tx.objectStore('meta'), tx.objectStore('data'))).then(value => { result = value; }, reject);
+        tx.oncomplete = () => resolve(result);
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error || new Error('Se canceló el guardado'));
+    });
+}
+
+async function compressText(text) {
+    if (typeof CompressionStream === 'undefined') return { encoding: 'none', payload: text, size: text.length };
+    const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
+    const buffer = await new Response(stream).arrayBuffer();
+    return { encoding: 'gzip', payload: buffer, size: buffer.byteLength };
+}
+
+async function decompressRecord(record) {
+    if (record.encoding === 'gzip') {
+        const stream = new Blob([record.payload]).stream().pipeThrough(new DecompressionStream('gzip'));
+        return new Response(stream).text();
+    }
+    return record.payload;
+}
+
+function newDocumentId() {
+    return 'doc-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 8);
+}
+
+function getCurrentDocumentId() {
+    return localStorage.getItem('currentDocumentId') || '';
+}
+
+function setCurrentDocumentId(id) {
+    if (id) localStorage.setItem('currentDocumentId', id);
+    else localStorage.removeItem('currentDocumentId');
+}
+
+function documentHasContent() {
+    return reportData.length > 0 || !!getDocumentName();
+}
+
+/**
+ * Todo lo que forma el documento (lo que se guarda en Mis documentos).
+ */
+function buildLibraryPayload() {
+    return {
+        version: '2.4',
+        documentName: getDocumentName(),
+        reportData,
+        headerData: getHeaderData(),
+        documentFormat: getDocumentFormat(),
+        citationStyle: getCitationStyle(),
+        theme: (localStorage.getItem('selectedTheme') || 'generic').replace(/['"]+/g, '')
+    };
+}
+
+function scheduleLibrarySave() {
+    if (!canKeepInLibrary()) return;
+    clearTimeout(librarySaveTimer);
+    librarySaveTimer = setTimeout(() => { saveCurrentDocumentToLibrary(); }, 1500);
+}
+
+/**
+ * Guarda el documento abierto. La "foto" se toma en el momento de la llamada,
+ * así que se puede llamar justo antes de cambiar de documento. Devuelve una
+ * promesa con el id (o null si no se guardó).
+ * @param {{ force?: boolean }} options - force: guardar aunque el autoguardado esté apagado
+ */
+function saveCurrentDocumentToLibrary(options = {}) {
+    clearTimeout(librarySaveTimer);
+    if (!isLibraryAvailable() || (!options.force && !isAutosaveEnabled())) return Promise.resolve(null);
+    if (!documentHasContent()) return Promise.resolve(null);
+
+    let id = getCurrentDocumentId();
+    if (!id) {
+        id = newDocumentId();
+        setCurrentDocumentId(id);
+    }
+    const payload = buildLibraryPayload();
+    const json = JSON.stringify(payload);
+    const firstText = reportData.filter(b => b.type === 'text').map(b => richHtmlToPlainText(getRichHtml(b))).join(' ').replace(/\s+/g, ' ').trim();
+    const info = {
+        name: payload.documentName || DEFAULT_DOCUMENT_NAME,
+        words: countDocumentWords(),
+        pages: document.querySelectorAll('#preview-container .preview-page').length || 1,
+        blocks: reportData.length,
+        theme: payload.theme,
+        summary: firstText.slice(0, 140)
+    };
+
+    const task = async () => {
+        if (libraryLastSaved.get(id) === json) return id;
+        // Primera vez en esta sesión: si lo guardado es igual, no se toca (ni su fecha)
+        if (!libraryLastSaved.has(id)) {
+            const stored = await loadLibraryRecord(id).catch(() => null);
+            if (stored && stored.json === json) {
+                libraryLastSaved.set(id, json);
+                return id;
+            }
+        }
+        const compressed = await compressText(json);
+        const now = Date.now();
+        await libraryTransaction('readwrite', async (meta, data) => {
+            const previous = await idbRequest(meta.get(id));
+            meta.put({ id, ...info, createdAt: previous ? previous.createdAt : now, updatedAt: now, size: compressed.size, rawSize: json.length });
+            data.put({ id, encoding: compressed.encoding, payload: compressed.payload });
+        });
+        libraryLastSaved.set(id, json);
+        return id;
+    };
+    const run = librarySaveQueue.then(task, task);
+    librarySaveQueue = run.catch(err => { console.error('No se pudo guardar en Mis documentos:', err); });
+    return run.catch(() => null);
+}
+
+/**
+ * Antes de abrir o empezar otro documento: guarda el actual y le da un id
+ * nuevo al que sigue.
+ */
+function startNewLibraryDocument() {
+    if (canKeepInLibrary()) saveCurrentDocumentToLibrary();
+    clearTimeout(librarySaveTimer);
+    setCurrentDocumentId(newDocumentId());
+    driveCurrentFileId = null;
+    driveCurrentFileName = null;
+}
+
+async function loadLibraryRecord(id) {
+    const record = await libraryTransaction('readonly', (meta, data) => idbRequest(data.get(id)));
+    if (!record) return null;
+    const json = await decompressRecord(record);
+    return { json, data: JSON.parse(json) };
+}
+
+/**
+ * Lista (solo los datos de 'meta'), del más reciente al más antiguo.
+ */
+async function listLibraryDocuments() {
+    if (!isLibraryAvailable()) return [];
+    const docs = await libraryTransaction('readonly', meta => idbRequest(meta.getAll()));
+    return (docs || []).sort((a, b) => b.updatedAt - a.updatedAt);
+}
+
+function resetUndoHistory() {
+    clearTimeout(undoHistory.timer);
+    undoHistory.timer = null;
+    undoHistory.past = [];
+    undoHistory.future = [];
+    undoHistory.current = captureDocumentState();
+    updateUndoButtons();
+}
+
+/**
+ * Pone en pantalla un documento de Mis documentos.
+ */
+function applyLibraryDocument(id, data) {
+    clearTimeout(librarySaveTimer);
+    setCurrentDocumentId(id);
+    reportData = Array.isArray(data.reportData) ? data.reportData : [];
+    setHeaderData(data.headerData || null);
+    if (data.citationStyle === 'apa' || data.citationStyle === 'ieee') localStorage.setItem('citationStyle', data.citationStyle);
+    setDocumentFormat(data.documentFormat || getDefaultDocumentFormat(), false);
+    if (data.theme && getUniversityById(data.theme)) {
+        renderThemeSelector();
+        changeTheme(data.theme);
+    }
+    setDocumentName(data.documentName || '');
+    driveCurrentFileId = null;
+    driveCurrentFileName = null;
+    render();
+    saveToLocalStorage();
+    markDocumentSaved();
+    resetUndoHistory();
+    libraryLastSaved.set(id, JSON.stringify(buildLibraryPayload()));
+    const editor = document.getElementById('editor-container');
+    if (editor) editor.scrollTop = 0;
+}
+
+async function openLibraryDocument(id) {
+    if (id === getCurrentDocumentId()) {
+        closeLibraryModal();
+        return;
+    }
+    if (hasUnsavedChanges() && !confirm('Tienes cambios sin guardar en este documento (el autoguardado está desactivado). ¿Abrir otro de todos modos?')) return;
+    await saveCurrentDocumentToLibrary();
+    const record = await loadLibraryRecord(id);
+    if (!record) {
+        alert('No se encontró ese documento.');
+        return;
+    }
+    applyLibraryDocument(id, record.data);
+    closeLibraryModal();
+    if (isMobileLayout()) setMobileView('editor');
+}
+
+async function duplicateLibraryDocument(id) {
+    await saveCurrentDocumentToLibrary();
+    const [record, docs] = await Promise.all([loadLibraryRecord(id), listLibraryDocuments()]);
+    if (!record) return null;
+    const original = docs.find(d => d.id === id) || {};
+    const copyData = { ...record.data, documentName: `${record.data.documentName || DEFAULT_DOCUMENT_NAME} (copia)` };
+    const json = JSON.stringify(copyData);
+    const compressed = await compressText(json);
+    const newId = newDocumentId();
+    const now = Date.now();
+    await libraryTransaction('readwrite', (meta, data) => {
+        meta.put({ ...original, id: newId, name: copyData.documentName, createdAt: now, updatedAt: now, size: compressed.size, rawSize: json.length });
+        data.put({ id: newId, encoding: compressed.encoding, payload: compressed.payload });
+    });
+    return newId;
+}
+
+async function renameLibraryDocument(id, newName) {
+    const name = String(newName || '').trim().slice(0, 120);
+    if (id === getCurrentDocumentId()) {
+        setDocumentName(name);
+        await saveCurrentDocumentToLibrary();
+        return;
+    }
+    const record = await loadLibraryRecord(id);
+    if (!record) return;
+    const json = JSON.stringify({ ...record.data, documentName: name });
+    const compressed = await compressText(json);
+    await libraryTransaction('readwrite', async (meta, data) => {
+        const info = await idbRequest(meta.get(id));
+        meta.put({ ...info, name: name || DEFAULT_DOCUMENT_NAME, updatedAt: Date.now(), size: compressed.size, rawSize: json.length });
+        data.put({ id, encoding: compressed.encoding, payload: compressed.payload });
+    });
+}
+
+async function deleteLibraryDocument(id) {
+    await libraryTransaction('readwrite', (meta, data) => {
+        meta.delete(id);
+        data.delete(id);
+    });
+    libraryLastSaved.delete(id);
+    if (id === getCurrentDocumentId()) {
+        // Se borró el que estaba abierto: queda un documento nuevo en blanco
+        clearTimeout(librarySaveTimer);
+        setCurrentDocumentId(newDocumentId());
+        reportData = [];
+        setHeaderData(null);
+        setDocumentName('');
+        setDocumentFormat(getDefaultDocumentFormat(), false);
+        render();
+        saveToLocalStorage();
+        markDocumentSaved();
+        resetUndoHistory();
+    }
+}
+
+/**
+ * El documento como proyecto .json (con la configuración de este navegador).
+ */
+async function downloadLibraryDocument(id) {
+    let data;
+    if (id === getCurrentDocumentId()) {
+        data = buildProjectData();
+    } else {
+        const record = await loadLibraryRecord(id);
+        if (!record) return;
+        data = { ...buildProjectData(), ...record.data, version: '2.1', timestamp: new Date().toISOString() };
+    }
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `${(data.documentName || DEFAULT_DOCUMENT_NAME).replace(/[\\/:*?"<>|]+/g, '-').trim() || DEFAULT_DOCUMENT_NAME}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+/**
+ * Para el respaldo: todos los documentos (sin comprimir, legibles).
+ */
+async function exportLibraryDocuments() {
+    const docs = await listLibraryDocuments();
+    const result = [];
+    for (const info of docs) {
+        const record = await loadLibraryRecord(info.id);
+        if (record) result.push({ meta: info, data: record.data });
+    }
+    return result;
+}
+
+/**
+ * Del respaldo: agrega (o reemplaza, si es el mismo id) cada documento.
+ */
+async function importLibraryDocuments(list) {
+    let count = 0;
+    for (const item of list) {
+        if (!item || !item.data || !Array.isArray(item.data.reportData)) continue;
+        const id = (item.meta && typeof item.meta.id === 'string' && item.meta.id) || newDocumentId();
+        if (id === getCurrentDocumentId()) continue; // el abierto manda
+        const json = JSON.stringify(item.data);
+        const compressed = await compressText(json);
+        const now = Date.now();
+        const meta = item.meta || {};
+        await libraryTransaction('readwrite', (metaStore, dataStore) => {
+            metaStore.put({
+                id, name: item.data.documentName || DEFAULT_DOCUMENT_NAME,
+                words: Number(meta.words) || 0, pages: Number(meta.pages) || 1, blocks: item.data.reportData.length,
+                theme: item.data.theme || '', summary: String(meta.summary || ''),
+                createdAt: Number(meta.createdAt) || now, updatedAt: Number(meta.updatedAt) || now,
+                size: compressed.size, rawSize: json.length
+            });
+            dataStore.put({ id, encoding: compressed.encoding, payload: compressed.payload });
+        });
+        count++;
+    }
+    return count;
+}
+
+function formatBytes(bytes) {
+    if (!bytes) return '0 KB';
+    if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatRelativeTime(timestamp) {
+    const diff = Date.now() - timestamp;
+    const minutes = Math.floor(diff / 60000);
+    if (minutes < 1) return 'hace un momento';
+    if (minutes < 60) return `hace ${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `hace ${hours} h`;
+    const days = Math.floor(hours / 24);
+    if (days === 1) return 'ayer';
+    if (days < 7) return `hace ${days} días`;
+    return new Date(timestamp).toLocaleDateString('es-MX', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function closeLibraryModal() {
+    const overlay = document.getElementById('library-modal-overlay');
+    if (overlay) overlay.remove();
+}
+
+/**
+ * Ventana "Mis documentos".
+ */
+async function openLibraryModal() {
+    closeLibraryModal();
+    const overlay = document.createElement('div');
+    overlay.className = 'university-modal-overlay';
+    overlay.id = 'library-modal-overlay';
+    overlay.innerHTML = `<div class="university-modal library-modal"><h3>📚 Mis documentos</h3><p class="settings-hint">Cargando...</p></div>`;
+    overlay.addEventListener('click', e => { if (e.target === overlay) closeLibraryModal(); });
+    document.body.appendChild(overlay);
+
+    if (!isLibraryAvailable()) {
+        overlay.querySelector('.library-modal').innerHTML = `
+            <h3>📚 Mis documentos</h3>
+            <p class="settings-hint">Este navegador no permite guardar varios documentos (por ejemplo, en una ventana privada). Usa <strong>Guardar Proyecto</strong> para guardar cada documento como archivo.</p>
+            <div class="university-modal-actions"><button type="button" class="action-btn save-btn" onclick="closeLibraryModal()">Cerrar</button></div>`;
+        return;
+    }
+
+    // Que el navegador no borre los documentos si se queda sin espacio
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+
+    await saveCurrentDocumentToLibrary();
+    let docs = [];
+    try {
+        docs = await listLibraryDocuments();
+    } catch (err) {
+        console.error(err);
+    }
+    let usage = '';
+    try {
+        if (navigator.storage && navigator.storage.estimate) {
+            const estimate = await navigator.storage.estimate();
+            if (estimate.usage) usage = formatBytes(estimate.usage);
+        }
+    } catch (e) { /* sin estimación */ }
+    if (!document.getElementById('library-modal-overlay')) return;
+
+    const currentId = getCurrentDocumentId();
+    const total = docs.reduce((sum, d) => sum + (d.size || 0), 0);
+    const modal = overlay.querySelector('.library-modal');
+    const drawList = filter => {
+        const q = (filter || '').trim().toLowerCase();
+        const visible = docs.filter(d => !q || (d.name || '').toLowerCase().includes(q) || (d.summary || '').toLowerCase().includes(q));
+        const list = modal.querySelector('.library-list');
+        if (!docs.length) {
+            list.innerHTML = '<li class="library-empty">Todavía no tienes documentos guardados. Lo que escribas se guardará aquí solo.</li>';
+            return;
+        }
+        if (!visible.length) {
+            list.innerHTML = '<li class="library-empty">Ningún documento coincide con la búsqueda.</li>';
+            return;
+        }
+        list.innerHTML = visible.map(d => `
+            <li class="library-item${d.id === currentId ? ' is-current' : ''}" data-id="${escapeAttr(d.id)}">
+                <span class="library-icon material-symbols-outlined">description</span>
+                <div class="library-info">
+                    <div class="library-name">${escapeHtml(d.name || DEFAULT_DOCUMENT_NAME)}${d.id === currentId ? '<span class="library-badge">Abierto</span>' : ''}</div>
+                    <div class="library-meta">Editado ${escapeHtml(formatRelativeTime(d.updatedAt))} · ${d.pages || 1} ${d.pages === 1 ? 'página' : 'páginas'} · ${(d.words || 0).toLocaleString('es-MX')} ${d.words === 1 ? 'palabra' : 'palabras'} · ${formatBytes(d.size)}</div>
+                    ${d.summary ? `<div class="library-summary">${escapeHtml(d.summary)}</div>` : ''}
+                </div>
+                <div class="library-actions">
+                    ${d.id === currentId ? '' : '<button type="button" class="action-btn save-btn" data-action="open">Abrir</button>'}
+                    <button type="button" class="icon-btn" data-action="rename" title="Cambiar nombre"><span class="material-symbols-outlined">edit</span></button>
+                    <button type="button" class="icon-btn" data-action="duplicate" title="Duplicar"><span class="material-symbols-outlined">content_copy</span></button>
+                    <button type="button" class="icon-btn" data-action="download" title="Descargar como proyecto (.json)"><span class="material-symbols-outlined">download</span></button>
+                    <button type="button" class="icon-btn library-delete" data-action="delete" title="Eliminar"><span class="material-symbols-outlined">delete</span></button>
+                </div>
+            </li>`).join('');
+    };
+
+    modal.innerHTML = `
+        <h3>📚 Mis documentos</h3>
+        <p class="settings-hint">Tus documentos se guardan solos en este navegador (comprimidos, para que ocupen poco). ${docs.length ? `${docs.length} ${docs.length === 1 ? 'documento' : 'documentos'} · ${formatBytes(total)}${usage ? ` (el sitio usa ${usage} en total)` : ''}.` : ''}</p>
+        ${isAutosaveEnabled() ? '' : `<p class="library-warning">El autoguardado está desactivado: este documento no se guarda solo. <button type="button" class="link-btn" data-action="save-now">Guardar ahora en Mis documentos</button></p>`}
+        <div class="library-toolbar">
+            <input type="search" class="library-search" placeholder="Buscar por nombre o contenido..." aria-label="Buscar documentos">
+            <button type="button" class="action-btn save-btn" data-action="new">➕ Nuevo documento</button>
+        </div>
+        <ul class="library-list"></ul>
+        <div class="university-modal-actions">
+            <button type="button" class="action-btn" data-action="close">Cerrar</button>
+        </div>`;
+    drawList('');
+
+    modal.querySelector('.library-search').addEventListener('input', e => drawList(e.target.value));
+    modal.addEventListener('click', async e => {
+        const button = e.target.closest('[data-action]');
+        if (!button) return;
+        const action = button.dataset.action;
+        const item = button.closest('.library-item');
+        const id = item ? item.dataset.id : null;
+        const doc = docs.find(d => d.id === id);
+        try {
+            if (action === 'close') closeLibraryModal();
+            else if (action === 'new') { closeLibraryModal(); newDocument(); }
+            else if (action === 'save-now') { await saveCurrentDocumentToLibrary({ force: true }); openLibraryModal(); }
+            else if (action === 'open') await openLibraryDocument(id);
+            else if (action === 'duplicate') { await duplicateLibraryDocument(id); openLibraryModal(); }
+            else if (action === 'download') await downloadLibraryDocument(id);
+            else if (action === 'rename') {
+                const name = prompt('Nuevo nombre del documento:', doc ? doc.name : '');
+                if (name === null) return;
+                await renameLibraryDocument(id, name);
+                openLibraryModal();
+            } else if (action === 'delete') {
+                if (!confirm(`¿Eliminar "${doc ? doc.name : 'este documento'}"? No se puede deshacer.`)) return;
+                await deleteLibraryDocument(id);
+                openLibraryModal();
+            }
+        } catch (err) {
+            console.error(err);
+            alert('No se pudo completar la acción: ' + err.message);
+        }
+    });
+}
+
+/**
+ * Aviso breve abajo de la pantalla.
+ */
+function showToast(message) {
+    let toast = document.getElementById('app-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'app-toast';
+        toast.className = 'app-toast';
+        toast.setAttribute('role', 'status');
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.classList.add('is-visible');
+    clearTimeout(showToast.timer);
+    showToast.timer = setTimeout(() => toast.classList.remove('is-visible'), 3500);
+}
+
+// Al iniciar, el documento abierto queda registrado en Mis documentos
+document.addEventListener('DOMContentLoaded', () => {
+    if (!getCurrentDocumentId()) setCurrentDocumentId(newDocumentId());
+    setTimeout(() => { if (canKeepInLibrary()) saveCurrentDocumentToLibrary(); }, 1200);
+});
+
+// Al cambiar de pestaña o cerrar, se guarda lo pendiente
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && librarySaveTimer && canKeepInLibrary()) saveCurrentDocumentToLibrary();
+});
+
+// ==========================================
 // IDS DE BLOQUE, MOVER Y DUPLICAR
 // ==========================================
 
@@ -1567,7 +3687,7 @@ const HISTORY_MAX_CHARS = 25000000;
 const undoHistory = { past: [], future: [], current: null, timer: null, ignoreUntil: 0 };
 
 function captureDocumentState() {
-    return JSON.stringify({ r: reportData, h: getHeaderData(), n: getDocumentName() });
+    return JSON.stringify({ r: reportData, h: getHeaderData(), n: getDocumentName(), f: getDocumentFormat() });
 }
 
 function scheduleHistoryRecord() {
@@ -1601,6 +3721,7 @@ function applyDocumentState(state) {
     reportData = data.r || [];
     setHeaderData(data.h || null);
     setDocumentName(data.n || '');
+    setDocumentFormat(data.f || null, false);
     render();
     undoHistory.current = state;
     updateUndoButtons();
@@ -1992,7 +4113,7 @@ function paginatePreview(container, html) {
     // Intenta poner en `parent` la mayor parte de `el` que quepa.
     // Devuelve: el mismo `el` si no cupo nada, el resto que falta, o null.
     const splitToFit = (el, parent) => {
-        if (el.matches('p.p-text') && el.children.length === 0) return splitByTokens(el, parent, ' ', node => node);
+        if (el.matches('p.p-text')) return splitInline(el, parent);
         if (el.matches('pre')) return splitPre(el, parent);
         if (el.matches('.preview-table-container')) return splitTable(el, parent);
         if (el.dataset.split === 'children') return splitChildren(el, parent);
@@ -2029,6 +4150,65 @@ function paginatePreview(container, html) {
 
         const rest = el.cloneNode(true);
         getTextNode(rest).textContent = tokens.slice(low).join(separator);
+        rest.classList.add('p-split-rest');
+        return rest;
+    };
+
+    // Párrafo (con o sin formato): se corta después de un espacio o de un
+    // salto de línea, con búsqueda binaria; Range conserva las negritas,
+    // cursivas y citas de cada parte.
+    const splitInline = (el, parent) => {
+        const points = [];
+        const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+        let node;
+        while ((node = walker.nextNode())) {
+            if (node.nodeType === 1) {
+                if (node.tagName === 'BR') {
+                    const index = Array.prototype.indexOf.call(node.parentNode.childNodes, node);
+                    points.push({ node: node.parentNode, offset: index + 1 });
+                }
+                continue;
+            }
+            if (node.parentElement && node.parentElement.closest('.p-cite')) continue; // las citas no se parten
+            const text = node.nodeValue;
+            for (let i = 0; i < text.length - 1; i++) {
+                if (text[i] === ' ') points.push({ node, offset: i + 1 });
+            }
+        }
+        if (!points.length) return el;
+
+        const part = (fromStart, point) => {
+            const range = document.createRange();
+            if (fromStart) {
+                range.setStart(el, 0);
+                range.setEnd(point.node, point.offset);
+            } else {
+                range.setStart(point.node, point.offset);
+                range.setEnd(el, el.childNodes.length);
+            }
+            const clone = el.cloneNode(false);
+            clone.appendChild(range.cloneContents());
+            return clone;
+        };
+
+        let low = 0;
+        let high = points.length;
+        while (low < high) {
+            const mid = Math.ceil((low + high) / 2);
+            const trial = part(true, points[mid - 1]);
+            parent.appendChild(trial);
+            const ok = fits();
+            parent.removeChild(trial);
+            if (ok) low = mid; else high = mid - 1;
+        }
+        if (low === 0) return el;
+
+        const first = part(true, points[low - 1]);
+        first.classList.add('p-split-start');
+        parent.appendChild(first);
+
+        const rest = part(false, points[low - 1]);
+        if (!rest.textContent.trim()) return null;
         rest.classList.add('p-split-rest');
         return rest;
     };
@@ -2100,6 +4280,12 @@ function paginatePreview(container, html) {
         const rest = el.cloneNode(false);
         if (remainderChild) rest.appendChild(remainderChild);
         kids.slice(index).forEach(kid => rest.appendChild(kid));
+        // Lista numerada partida: la continuación sigue la numeración
+        if (el.tagName === 'OL') {
+            const placed = first.children.length - (remainderChild ? 1 : 0);
+            rest.setAttribute('start', (parseInt(el.getAttribute('start'), 10) || 1) + placed);
+            rest.classList.add('p-split-rest');
+        }
         return rest;
     };
 
@@ -2269,12 +4455,26 @@ function renderSubtitleEditor(block, deleteBtn) {
  * Renderiza el editor de texto (AHORA SEGURO)
  */
 function renderTextEditor(block, deleteBtn) {
+    const html = richHtmlForEditor(getRichHtml(block));
+    const isEmpty = !richHtmlToPlainText(getRichHtml(block)).trim();
     return `
         <div class="block-card text-card">
             ${deleteBtn}
             <label>Párrafo</label>
             <span class="field-label">Contenido del párrafo</span>
-            <textarea class="editor-input" placeholder="${escapeAttr(block.hint || 'Escribe tu texto aquí...')}" oninput="updateContent(${block.id}, this.value)">${escapeHtml(block.content)}</textarea>
+            <div class="rich-toolbar" role="toolbar" aria-label="Formato del párrafo">
+                <button type="button" class="rich-btn" data-cmd="bold" title="Negritas (Ctrl+B)" aria-label="Negritas" onmousedown="event.preventDefault()" onclick="richCommand(this, 'bold')"><span class="material-symbols-outlined">format_bold</span></button>
+                <button type="button" class="rich-btn" data-cmd="italic" title="Cursivas (Ctrl+I)" aria-label="Cursivas" onmousedown="event.preventDefault()" onclick="richCommand(this, 'italic')"><span class="material-symbols-outlined">format_italic</span></button>
+                <button type="button" class="rich-btn" data-cmd="underline" title="Subrayado (Ctrl+U)" aria-label="Subrayado" onmousedown="event.preventDefault()" onclick="richCommand(this, 'underline')"><span class="material-symbols-outlined">format_underlined</span></button>
+                <span class="rich-sep"></span>
+                <button type="button" class="rich-btn" data-cmd="insertUnorderedList" title="Lista con viñetas" aria-label="Lista con viñetas" onmousedown="event.preventDefault()" onclick="richCommand(this, 'insertUnorderedList')"><span class="material-symbols-outlined">format_list_bulleted</span></button>
+                <button type="button" class="rich-btn" data-cmd="insertOrderedList" title="Lista numerada" aria-label="Lista numerada" onmousedown="event.preventDefault()" onclick="richCommand(this, 'insertOrderedList')"><span class="material-symbols-outlined">format_list_numbered</span></button>
+                <span class="rich-sep"></span>
+                <button type="button" class="rich-btn rich-btn-cite" title="Citar una de tus referencias" onmousedown="event.preventDefault()" onclick="openCitationPicker(this, ${block.id})"><span class="material-symbols-outlined">format_quote</span><span>Citar</span></button>
+            </div>
+            <div class="editor-input rich-editor${isEmpty ? ' is-empty' : ''}" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true"
+                data-block-id="${escapeAttr(String(block.id))}" data-placeholder="${escapeAttr(block.hint || 'Escribe tu texto aquí...')}"
+                oninput="updateRichText(this)">${html}</div>
         </div>`;
 }
 
@@ -2485,7 +4685,7 @@ function renderPreview() {
                 return `<h2 class="p-subtitle"${tocAnchors.has(block.id) ? ` data-toc-anchor="${tocAnchors.get(block.id)}"` : ''}>${escapeHtml(block.content)}</h2>`;
             
             case 'text':
-                return `<p class="p-text">${escapeHtml(block.content)}</p>`;
+                return richHtmlForPreview(getRichHtml(block));
             
             case 'image':
                 figureCounter++;
@@ -2676,6 +4876,8 @@ case 'header':
     // Se arma en hojas tamaño carta, igual que como se imprimirá
     paginatePreview(preview, previewHTML);
     fillTocPageNumbers(preview);
+    refreshCitationChips();
+    scheduleDocumentStats();
 
     scheduleAutosave();
 }
@@ -2767,7 +4969,7 @@ function exportTXT() {
                 break;
             
             case 'text':
-                textContent += `${block.content}\n\n`;
+                textContent += `${richHtmlToPlainText(getRichHtml(block))}\n\n`;
                 break;
             
             case 'code':
@@ -2998,6 +5200,7 @@ function scheduleAutosave() {
     autosaveTimer = setTimeout(() => {
         saveToLocalStorage();
         updateAutosaveUI();
+        scheduleLibrarySave();
     }, 500);
 }
 
@@ -3956,7 +6159,7 @@ function renderProfileTab(content) {
 const BACKUP_KEYS = [
     'user_profile', 'header_fields', 'list_universities', 'list_subjects', 'list_profs',
     'subject_prof_map', 'list_classmates', 'selectedTheme', 'citationStyle',
-    'autosaveEnabled', 'previewZoom', 'previewWidth', 'previewHidden', 'colorScheme'
+    'autosaveEnabled', 'previewZoom', 'previewWidth', 'previewHidden', 'colorScheme', 'defaultDocumentFormat'
 ];
 
 /**
@@ -3974,13 +6177,18 @@ function buildBackupData(includeDocument = true) {
         exportedAt: new Date().toISOString(),
         settings,
         document: includeDocument
-            ? { documentName: getDocumentName(), reportData, headerData: getHeaderData() }
+            ? { documentName: getDocumentName(), reportData, headerData: getHeaderData(), documentFormat: getDocumentFormat() }
             : null
     };
 }
 
-function exportBackup(includeDocument = true) {
-    const json = JSON.stringify(buildBackupData(includeDocument), null, 2);
+async function exportBackup(includeDocument = true, includeLibrary = false) {
+    const backup = buildBackupData(includeDocument);
+    if (includeLibrary) {
+        await saveCurrentDocumentToLibrary();
+        backup.library = await exportLibraryDocuments();
+    }
+    const json = JSON.stringify(backup, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const today = new Date().toISOString().slice(0, 10);
     const link = document.createElement('a');
@@ -4019,6 +6227,9 @@ function describeBackup(data) {
     if (doc && Array.isArray(doc.reportData)) {
         lines.push(`• Documento: "${doc.documentName || DEFAULT_DOCUMENT_NAME}" (${doc.reportData.length} bloques)`);
     }
+    if (Array.isArray(data.library) && data.library.length) {
+        lines.push(`• Mis documentos: ${data.library.length}`);
+    }
     return lines.join('\n');
 }
 
@@ -4037,9 +6248,11 @@ function importBackupData(data) {
 
     const doc = data.document;
     if (doc && Array.isArray(doc.reportData)) {
+        startNewLibraryDocument();
         reportData = doc.reportData;
         setHeaderData(doc.headerData || null);
         setDocumentName(doc.documentName || '');
+        setDocumentFormat(doc.documentFormat || getDefaultDocumentFormat(), false);
         driveCurrentFileId = null;
         driveCurrentFileName = null;
     }
@@ -4054,6 +6267,10 @@ function importBackupData(data) {
     if (isAutosaveEnabled()) saveToLocalStorage();
     markDocumentSaved();
     updateAutosaveUI();
+    if (doc && Array.isArray(doc.reportData)) resetUndoHistory();
+    if (Array.isArray(data.library) && data.library.length) {
+        importLibraryDocuments(data.library).catch(err => console.error('No se pudieron importar los documentos:', err));
+    }
 }
 
 /**
@@ -4124,6 +6341,10 @@ function renderBackupTab(content) {
                 <input type="checkbox" id="backup-include-document" checked>
                 <span>Incluir también el documento actual ("${escapeHtml(getDocumentName() || DEFAULT_DOCUMENT_NAME)}")</span>
             </label>
+            <label class="backup-check" id="backup-library-row" style="display: none;">
+                <input type="checkbox" id="backup-include-library" checked>
+                <span id="backup-library-label">Incluir todos mis documentos</span>
+            </label>
             <button type="button" class="action-btn save-btn" id="backup-export">⬇️ Descargar respaldo (.json)</button>
         </div>
 
@@ -4135,8 +6356,17 @@ function renderBackupTab(content) {
             <p id="backup-message" class="settings-success"></p>
         </div>`;
 
-    content.querySelector('#backup-export').addEventListener('click', () => {
-        exportBackup(content.querySelector('#backup-include-document').checked);
+    // Cuántos documentos hay en "Mis documentos"
+    listLibraryDocuments().then(docs => {
+        if (!docs.length) return;
+        content.querySelector('#backup-library-row').style.display = '';
+        content.querySelector('#backup-library-label').textContent = `Incluir todos mis documentos (${docs.length})`;
+    }).catch(() => {});
+
+    content.querySelector('#backup-export').addEventListener('click', async () => {
+        const libraryRow = content.querySelector('#backup-library-row');
+        const withLibrary = libraryRow.style.display !== 'none' && content.querySelector('#backup-include-library').checked;
+        await exportBackup(content.querySelector('#backup-include-document').checked, withLibrary);
         content.querySelector('#backup-message').textContent = '✓ Respaldo descargado';
     });
     content.querySelector('#backup-import').addEventListener('click', () => {
@@ -4427,6 +6657,7 @@ function setDocumentName(name) {
     if (input && input.value !== documentNameMemory) input.value = documentNameMemory;
     document.title = getDocumentName() || DEFAULT_DOCUMENT_NAME;
     updateAutosaveUI();
+    scheduleLibrarySave();
 }
 
 /**
@@ -4443,7 +6674,7 @@ function getSafeFileName() {
 // ---------- Cambios sin guardar ----------
 
 function getDocumentSnapshot() {
-    return JSON.stringify({ reportData, header: getHeaderData(), name: getDocumentName() });
+    return JSON.stringify({ reportData, header: getHeaderData(), name: getDocumentName(), format: getDocumentFormat() });
 }
 
 function markDocumentSaved() {
@@ -4467,7 +6698,9 @@ function setAutosaveEnabled(enabled) {
         // Guardar de inmediato lo que haya en pantalla
         setHeaderData(headerDataMemory);
         localStorage.setItem('documentName', documentNameMemory);
+        localStorage.setItem('documentFormat', JSON.stringify(getDocumentFormat()));
         saveToLocalStorage();
+        saveCurrentDocumentToLibrary();
     } else {
         // Lo último guardado pasa a memoria y desde aquí ya no se escribe
         try {
@@ -4502,20 +6735,28 @@ function updateAutosaveUI() {
 // ---------- Nuevo documento ----------
 
 function newDocument() {
-    const message = '¿Borrar todo el documento y empezar uno nuevo?\n\n' +
-        'Se borran todos los bloques, los datos del encabezado y el nombre del documento.\n' +
-        'Tus universidades, materias y profesores se conservan.' +
-        (hasUnsavedChanges() ? '\n\n⚠️ Tienes cambios sin guardar.' : '');
-    if (!confirm(message)) return;
+    // Con autoguardado, el documento actual se queda en "Mis documentos": no se pierde nada
+    const keepsCopy = canKeepInLibrary() && documentHasContent();
+    if (!keepsCopy) {
+        const message = '¿Borrar todo el documento y empezar uno nuevo?\n\n' +
+            'Se borran todos los bloques, los datos del encabezado y el nombre del documento.\n' +
+            'Tus universidades, materias y profesores se conservan.' +
+            (hasUnsavedChanges() ? '\n\n⚠️ Tienes cambios sin guardar.' : '');
+        if (documentHasContent() && !confirm(message)) return;
+    }
+    startNewLibraryDocument();
 
     reportData = [];
     setHeaderData(null);
     setDocumentName('');
+    setDocumentFormat(getDefaultDocumentFormat(), false);
     driveCurrentFileId = null;
     driveCurrentFileName = null;
     render();
     saveToLocalStorage();
     markDocumentSaved();
+    resetUndoHistory();
+    if (keepsCopy) showToast('El documento anterior quedó guardado en Mis documentos');
 
     const editor = document.getElementById('editor-container');
     if (editor) editor.scrollTop = 0;
@@ -4532,6 +6773,10 @@ document.addEventListener('DOMContentLoaded', function() {
         headerDataMemory = null;
     }
     setDocumentName(localStorage.getItem('documentName') || '');
+    let storedFormat = null;
+    try { storedFormat = JSON.parse(localStorage.getItem('documentFormat')); } catch (e) { storedFormat = null; }
+    // Se vuelve a paginar: el documento ya se dibujó con el formato predeterminado
+    setDocumentFormat(storedFormat || getDefaultDocumentFormat(), reportData.length > 0);
     markDocumentSaved();
 });
 
@@ -4607,6 +6852,7 @@ function buildProjectData() {
         reportData: reportData,
         headerData: headerData,
         citationStyle: getCitationStyle(),
+        documentFormat: getDocumentFormat(),
         settings: {
             universities: getUniversities(),
             subjects: getSimpleList('list_subjects'),
@@ -4684,6 +6930,9 @@ function applyProjectData(projectData, fallbackName = '') {
         throw new Error('Formato de archivo inválido');
     }
 
+    // El proyecto se abre como un documento más de "Mis documentos"
+    startNewLibraryDocument();
+
     // Primero la configuración: el tema del proyecto puede ser una
     // universidad personalizada que todavía no existe en este navegador.
     mergeProjectSettings(projectData.settings);
@@ -4697,6 +6946,7 @@ function applyProjectData(projectData, fallbackName = '') {
     }
 
     reportData = projectData.reportData;
+    setDocumentFormat(projectData.documentFormat || getDefaultDocumentFormat(), false);
 
     renderThemeSelector();
     if (projectData.theme) {
@@ -4706,6 +6956,7 @@ function applyProjectData(projectData, fallbackName = '') {
     setDocumentName(projectData.documentName || fallbackName.replace(/\.json$/i, ''));
     render();
     markDocumentSaved();
+    resetUndoHistory();
 }
 
 /**
@@ -4739,7 +6990,7 @@ function loadJSON(input) {
             }
 
             // Confirmar carga (advertir que se perderá el trabajo actual)
-            const hasCurrentData = reportData.length > 0;
+            const hasCurrentData = reportData.length > 0 && !canKeepInLibrary();
             if (hasCurrentData) {
                 const confirm = window.confirm(
                     '¿Estás seguro de cargar este proyecto?\n\n' +
@@ -5091,6 +7342,11 @@ function initializeDragAndDrop() {
         container.setAttribute('draggable', 'true');
         container.setAttribute('data-index', index);
 
+        // Al seleccionar texto dentro de un campo, la tarjeta no se arrastra
+        container.addEventListener('mousedown', function(e) {
+            this.setAttribute('draggable', e.target.closest('.rich-editor, input, textarea, select') ? 'false' : 'true');
+        });
+
         container.addEventListener('dragstart', function(e) {
             draggedElement = this;
             draggedIndex = parseInt(this.getAttribute('data-index'));
@@ -5099,6 +7355,8 @@ function initializeDragAndDrop() {
         });
 
         container.addEventListener('dragend', function(e) {
+            draggedIndex = null;
+            this.setAttribute('draggable', 'true');
             this.classList.remove('dragging');
             containers.forEach(c => c.classList.remove('drag-over'));
         });
@@ -5117,6 +7375,8 @@ function initializeDragAndDrop() {
         });
 
         container.addEventListener('drop', function(e) {
+            // Texto soltado dentro de un campo: lo maneja el navegador
+            if (draggedIndex === null) return;
             e.preventDefault();
             const dropIndex = parseInt(this.getAttribute('data-index'));
 
