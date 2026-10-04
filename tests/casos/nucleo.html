@@ -1,0 +1,137 @@
+<!-- Prueba "nucleo": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+let confirmAnswer = true;
+window.confirm = () => confirmAnswer;
+let promptAnswers = [];
+window.prompt = () => promptAnswers.shift() ?? null;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const text = () => document.getElementById('preview-container').textContent.replace(/\s+/g, ' ');
+  const pages = () => Array.from(document.querySelectorAll('.preview-page'));
+  let lastBlob = null, lastDownload = null;
+  URL.createObjectURL = b => { lastBlob = b; return 'blob:test'; };
+  URL.revokeObjectURL = () => {};
+  HTMLAnchorElement.prototype.click = function () { lastDownload = this.download; };
+  let uid = 9000;
+  const add = type => { addBlock(type); reportData[reportData.length - 1].id = ++uid; render(); return reportData[reportData.length - 1]; };
+  const long = n => Array.from({ length: n }, (_, i) => `Oración ${i + 1} de un párrafo largo para probar la paginación del documento.`).join(' ');
+
+  try {
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+    setAutosaveEnabled(true);
+    setDocumentName('');
+    reportData = []; render(); loadSavedTheme();
+
+    // ---------- Listas, vínculo materia-profesor ----------
+    ok('add subject', addListItem('list_subjects', 'Cálculo') === null && addListItem('list_subjects', 'Física') === null);
+    ok('duplicate rejected', addListItem('list_subjects', 'Física') !== null);
+    addListItem('list_profs', 'Dr. X'); addListItem('list_profs', 'Mtra. Y');
+    setSubjectProf('Cálculo', 'Dr. X');
+    add('header');
+    const subj = document.getElementById('select-subject-main');
+    const prof = document.getElementById('select-prof-main');
+    subj.value = 'Cálculo'; subj.dispatchEvent(new Event('change'));
+    ok('subject selects linked prof', prof.value === 'Dr. X');
+    promptAnswers = ['Cálculo I'];
+    editListItem('list_subjects', 'Cálculo');
+    ok('rename subject keeps link + selection', getSubjectProfMap()['Cálculo I'] === 'Dr. X' && subj.value === 'Cálculo I');
+    deleteListItem('list_profs', 'Dr. X');
+    ok('delete prof removes link', !('Cálculo I' in getSubjectProfMap()));
+
+    // ---------- Encabezado: autoguardado y lectura por id ----------
+    const card = document.getElementById('header-card-main');
+    card.querySelector('.student-name-input').value = 'Ana Pérez';
+    document.getElementById('header-group').value = '5A';
+    document.getElementById('header-term').value = '7';
+    document.getElementById('header-career').value = 'Ingeniería en Datos';
+    document.getElementById('header-term').dispatchEvent(new Event('input'));
+    let hd = getHeaderData();
+    ok('header autosaved', hd.group === '5A' && hd.term === '7' && hd.names[0] === 'Ana Pérez' && hd.career === 'Ingeniería en Datos');
+    ok('preview term', text().includes('(7° Cuatrimestre)'));
+    ok('preview career', text().includes('Carrera: Ingeniería en Datos'));
+    ok('formatTerm no dup', formatTerm('7mo Cuatrimestre') === '7mo Cuatrimestre' && formatTerm('7mo') === '7mo Cuatrimestre');
+
+    // Equipo
+    const team = document.getElementById('check-is-team');
+    team.checked = true; toggleTeamMode(team);
+    addTeamMember();
+    const names = document.querySelectorAll('.student-name-input');
+    names[1].value = 'Luis Gómez'; names[1].dispatchEvent(new Event('input'));
+    ok('team names in preview', text().includes('Integrantes: Ana Pérez, Luis Gómez'));
+
+    // ---------- Declaración IA usa nombres ----------
+    const ai = add('ai'); ai.aiUsed = 'no'; render();
+    ok('AI uses team names', text().includes('Yo, Ana Pérez, Luis Gómez, declaro'));
+
+    // ---------- Portada ----------
+    document.getElementById('btn-toggle-cover').click();
+    ok('cover mode', document.querySelector('.p-cover') && pages()[0].classList.contains('is-cover-page'));
+    document.getElementById('header-task-name').value = 'Práctica 3';
+    document.getElementById('header-task-name').dispatchEvent(new Event('input'));
+    ok('cover title', document.querySelector('.p-cover-title').textContent.trim() === 'Práctica 3');
+    document.getElementById('btn-toggle-cover').click();
+    ok('back to header', !!document.querySelector('.p-header') && !document.querySelector('.p-cover'));
+
+    // ---------- Índice y páginas ----------
+    reportData = reportData.filter(b => b.type === 'header');
+    const t1 = add('title'); t1.content = 'Introducción';
+    const p1 = add('text'); p1.content = long(80);
+    const s1 = add('subtitle'); s1.content = 'Resultados';
+    add('toc'); render();
+    ok('toc after header', reportData[1].type === 'toc');
+    const entries = Array.from(document.querySelectorAll('.p-toc-entry'));
+    const realPage = ref => document.querySelector(`[data-toc-anchor="${ref}"]`).closest('.preview-page').dataset.page;
+    ok('toc numbers real', entries.length === 2 && entries.every(e => e.querySelector('.p-toc-page').textContent === realPage(e.dataset.tocRef)));
+    ok('pages no overflow', pages().every(pg => { const b = pg.querySelector('.preview-page-body'); return b.scrollHeight <= b.clientHeight + 1; }));
+    ok('paragraph split', !!document.querySelector('.p-split-start'));
+
+    // ---------- Tabla ----------
+    const tb = add('table'); updateTableColumns(tb.id, 4);
+    ok('table header cells = cols', document.querySelectorAll('.table-card .table-header-cell').length === 4);
+
+    // ---------- APA ----------
+    const ref = add('ref'); ref.refType = 'book'; ref.refData = { author: 'García, J.', title: 'Redes', source: 'Pearson', year: '2020', url: '' };
+    setCitationStyle('apa');
+    ok('APA', document.querySelector('.p-ref-apa').textContent === 'García, J. (2020). Redes. Pearson.');
+    setCitationStyle('ieee');
+
+    // ---------- Proyecto ----------
+    setDocumentName('Mi Reporte');
+    const proj = buildProjectData();
+    ok('project data', proj.documentName === 'Mi Reporte' && proj.settings.subjects.length === 2 && proj.headerData.group === '5A');
+    saveJSON();
+    ok('json filename', lastDownload === 'Mi Reporte.json');
+    localStorage.clear(); saveProfile({ onboardingDone: true });
+    applyProjectData(proj);
+    ok('project restored', getSimpleList('list_subjects').length === 2 && getHeaderData().group === '5A' && getDocumentName() === 'Mi Reporte');
+
+    // ---------- Autoguardado / nuevo ----------
+    setAutosaveEnabled(false);
+    const stored = localStorage.getItem('reportData');
+    add('title'); await wait(700);
+    ok('autosave off does not write', localStorage.getItem('reportData') === stored);
+    setAutosaveEnabled(true);
+    ok('autosave on writes', JSON.parse(localStorage.getItem('reportData')).length === reportData.length);
+    newDocument();
+    ok('new document', reportData.length === 0 && getHeaderData() === null && getDocumentName() === '');
+
+    // ---------- Zoom / ancho ----------
+    setPreviewZoom('fit');
+    ok('zoom fit', getPreviewZoom() === 'fit');
+    setPreviewWidth(700);
+    ok('preview width', Math.abs(document.getElementById('preview-pane').getBoundingClientRect().width - 700) <= 2);
+    setPreviewWidth(null);
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

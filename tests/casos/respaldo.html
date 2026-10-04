@@ -1,0 +1,121 @@
+<!-- Prueba "respaldo": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = msg => { lastAlert = msg; };
+let lastAlert = '';
+let confirmAnswer = true;
+let lastConfirm = '';
+window.confirm = msg => { lastConfirm = msg; return confirmAnswer; };
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  let lastBlob = null, lastDownload = null;
+  URL.createObjectURL = b => { lastBlob = b; return 'blob:test'; };
+  URL.revokeObjectURL = () => {};
+  HTMLAnchorElement.prototype.click = function () { lastDownload = this.download; };
+
+  try {
+    closeOnboarding();
+    localStorage.clear();
+    // Configuración de ejemplo
+    saveProfile({ onboardingDone: true, fullName: 'Ana Pérez', studentId: '2109001', career: 'Datos', group: '7A', period: '7', periodType: 'semestre' });
+    addListItem('list_subjects', 'Cálculo'); addListItem('list_profs', 'Dr. X'); setSubjectProf('Cálculo', 'Dr. X');
+    addClassmate('Luis Gómez', '2109002');
+    const cfg = getHeaderFieldConfig(); cfg.career.label = 'Escuela'; cfg.prof.show = false; saveHeaderFieldConfig(cfg);
+    const unis = getUniversities(); unis.push({ id: 'uni_x', name: 'Mi Uni', builtin: false, color: { primary: '#123456', secondary: '#654321', accent: '#abcdef' }, logoLeft: 'data:image/png;base64,AAA', logoRight: '' }); saveUniversities(unis);
+    changeTheme('uni_x');
+    localStorage.setItem('citationStyle', 'apa');
+    reportData = []; render();
+    addBlock('header'); reportData[0].id = 1;
+    addBlock('title'); reportData[1].id = 2; reportData[1].content = 'Mi práctica'; render();
+    setDocumentName('Práctica 5');
+
+    // ---------- Pestaña ----------
+    openSettingsModal('backup');
+    ok('7 tabs incl. Respaldo', document.querySelectorAll('.settings-tabs button').length === 7 && $('.settings-tabs button.active').dataset.tab === 'backup');
+    ok('tab shows counts', $('#settings-tab-content').textContent.includes('1 compañero') && $('#settings-tab-content').textContent.includes('Práctica 5'));
+
+    // ---------- Exportar ----------
+    $('#backup-export').click();
+    ok('download name', /^Respaldo Generador de Reportes \d{4}-\d{2}-\d{2}\.json$/.test(lastDownload));
+    const backup = JSON.parse(await lastBlob.text());
+    ok('backup type', backup.type === 'backup' && backup.app === 'generador-reportes-academicos');
+    ok('backup has all settings', JSON.parse(backup.settings.user_profile).fullName === 'Ana Pérez' &&
+       JSON.parse(backup.settings.list_classmates).length === 1 &&
+       JSON.parse(backup.settings.header_fields).career.label === 'Escuela' &&
+       JSON.parse(backup.settings.subject_prof_map)['Cálculo'] === 'Dr. X' &&
+       JSON.parse(backup.settings.list_universities).some(u => u.id === 'uni_x') &&
+       backup.settings.selectedTheme === 'uni_x' && backup.settings.citationStyle === 'apa');
+    ok('backup has document', backup.document.documentName === 'Práctica 5' && backup.document.reportData.length === 2 && backup.document.headerData.names[0] === 'Ana Pérez');
+    // Sin documento
+    $('#backup-include-document').checked = false;
+    $('#backup-export').click();
+    const backupNoDoc = JSON.parse(await lastBlob.text());
+    ok('backup without document', backupNoDoc.document === null);
+    ok('describe', describeBackup(backup).includes('Ana Pérez — 2109001') && describeBackup(backup).includes('Compañeros: 1') && describeBackup(backup).includes('2 bloques'));
+
+    // ---------- Importar en un navegador "vacío" ----------
+    closeSettingsModal();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+    reportData = []; setHeaderData(null); setDocumentName(''); render();
+    importBackupData(backup);
+    ok('import restores profile', getProfile().fullName === 'Ana Pérez' && getPeriodType() === 'semestre');
+    ok('import restores lists + link', getSimpleList('list_subjects')[0] === 'Cálculo' && getSubjectProfMap()['Cálculo'] === 'Dr. X');
+    ok('import restores classmates', getClassmates()[0].studentId === '2109002');
+    ok('import restores field config', getHeaderFieldConfig().career.label === 'Escuela' && !getHeaderFieldConfig().prof.show);
+    ok('import restores university + theme', !!getUniversityById('uni_x') && localStorage.getItem('selectedTheme') === 'uni_x' && document.getElementById('themeSelector').value === 'uni_x');
+    ok('import restores citation style', getCitationStyle() === 'apa');
+    ok('import restores document', reportData.length === 2 && getDocumentName() === 'Práctica 5' && document.title === 'Práctica 5' && getHeaderData().names[0] === 'Ana Pérez');
+    ok('editor rendered', !!$('#header-card-main') && $('label[for="header-career"]').textContent === 'Escuela');
+    await wait(700);
+    ok('restored doc saved in browser', JSON.parse(localStorage.getItem('reportData')).length === 2);
+
+    // ---------- Importar desde archivo (con confirmación) ----------
+    localStorage.clear(); saveProfile({ onboardingDone: true }); reportData = []; render();
+    openSettingsModal('backup');
+    const input = $('#backup-file');
+    const fileList = f => { const dt = new DataTransfer(); dt.items.add(f); return dt.files; };
+    const waitFor = async cond => { for (let i = 0; i < 100 && !cond(); i++) await wait(100); };
+    confirmAnswer = false;
+    lastConfirm = '';
+    input.files = fileList(new File([JSON.stringify(backup)], 'r.json', { type: 'application/json' }));
+    importBackupFromFile(input);
+    await waitFor(() => lastConfirm);
+    ok('confirm shows summary', lastConfirm.includes('Ana Pérez') && lastConfirm.includes('Reemplaza'));
+    ok('cancel does nothing', !getProfile().fullName);
+    confirmAnswer = true;
+    input.files = fileList(new File([JSON.stringify(backup)], 'r.json', { type: 'application/json' }));
+    importBackupFromFile(input);
+    await waitFor(() => getProfile().fullName === 'Ana Pérez');
+    ok('file import works', getProfile().fullName === 'Ana Pérez' && reportData.length === 2);
+    ok('success message', $('#backup-message') && $('#backup-message').textContent.includes('restaurado'));
+
+    // Archivo equivocado
+    lastAlert = '';
+    input.files = fileList(new File([JSON.stringify({ version: '2.1', reportData: [] })], 'p.json'));
+    importBackupFromFile(input);
+    await waitFor(() => lastAlert);
+    ok('project file detected', lastAlert.includes('proyecto'));
+    lastAlert = '';
+    input.files = fileList(new File(['no es json'], 'x.json'));
+    importBackupFromFile(input);
+    await waitFor(() => lastAlert);
+    ok('invalid json detected', lastAlert.includes('JSON'));
+    let threw = false; try { importBackupData({ foo: 1 }); } catch (e) { threw = true; }
+    ok('invalid backup throws', threw);
+
+    // Respaldo sin documento no toca el documento abierto
+    reportData = [{ id: 50, type: 'title', content: 'Se queda' }]; render();
+    importBackupData(backupNoDoc);
+    ok('backup without doc keeps open document', reportData.length === 1 && reportData[0].content === 'Se queda');
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

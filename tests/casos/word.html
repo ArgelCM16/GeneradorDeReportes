@@ -1,0 +1,101 @@
+<!-- Prueba "word": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const files = {};
+  const progress = document.createElement('pre'); progress.id = 'PROGRESS'; document.body.appendChild(progress);
+  const step = s => { progress.textContent += s + String.fromCharCode(10); };
+  const ok = (name, cond) => { out.push((cond ? 'PASS ' : 'FAIL ') + name); step(name); };
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const toB64 = blob => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result.split(',')[1]); fr.readAsDataURL(blob); });
+  try {
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+    addListItem('list_subjects', 'Física'); addListItem('list_profs', 'Mtro. Ruiz');
+
+    // ZIP básico
+    const zip = zipFiles([{ name: 'a.txt', data: 'hola' }, { name: 'ñ/b.txt', data: new Uint8Array([1, 2, 3]) }]);
+    step('zip');
+    files['zip.zip'] = await toB64(zip);
+    step('zip b64');
+    ok('crc32 known value', crc32(new TextEncoder().encode('123456789')) === 0xCBF43926);
+
+    // Imágenes de prueba
+    const canvas = document.createElement('canvas'); canvas.width = 1200; canvas.height = 800;
+    const ctx = canvas.getContext('2d'); ctx.fillStyle = '#0ea5e9'; ctx.fillRect(0, 0, 1200, 800); ctx.fillStyle = '#f97316'; ctx.fillRect(100, 100, 400, 300);
+    const png = canvas.toDataURL('image/png');
+    const jpg = canvas.toDataURL('image/jpeg', 0.8);
+    const svg = 'data:image/svg+xml;base64,' + btoa('<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100"><rect width="200" height="100" fill="red"/></svg>');
+
+    const blocks = () => [
+      { id: 1, type: 'header', content: '' },
+      { id: 2, type: 'toc', content: '' },
+      { id: 3, type: 'title', content: 'Práctica de Ohm & <otros>' },
+      { id: 4, type: 'subtitle', content: 'Introducción' },
+      { id: 5, type: 'text', format: 'html', content: '<p>Texto con <b>negritas</b>, <i>cursivas</i> y <u>subrayado</u> <span data-cite="20"></span>.</p><ul><li>Viñeta uno</li><li>Viñeta dos</li></ul><ol><li>Paso uno</li><li>Paso dos</li></ol><ol><li>Otra lista</li></ol>' },
+      { id: 6, type: 'image', content: png, caption: 'Diagrama PNG' },
+      { id: 7, type: 'image', content: jpg, caption: 'Foto JPG' },
+      { id: 8, type: 'image', content: svg, caption: 'Vector SVG' },
+      { id: 9, type: 'image', content: '', caption: 'Sin imagen' },
+      { id: 10, type: 'subtitle', content: 'Resultados' },
+      { id: 11, type: 'table', columns: 3, caption: 'Datos medidos', tableData: [['V', 'R', 'I'], ['5', '10', '0.5'], ['9', '3', '3']] },
+      { id: 12, type: 'code', content: 'def ohm(v, r):\n\treturn v / r' },
+      { id: 20, type: 'ref', refType: 'book', refData: { author: 'Pérez, J.', title: 'Circuitos', source: 'Ed. UPY', year: '2020', url: '' }, content: '' },
+      { id: 21, type: 'ref', refType: 'web', refData: { author: 'López, A.', title: 'Web', source: 'Sitio', year: '2021', url: 'https://x.org' }, content: '' },
+      { id: 22, type: 'ai', aiUsed: 'yes', aiData: { name: '', aiTool: 'Claude', date: '2026-10-01', purpose: 'Revisar', prompt: 'Revisa mi texto\nPor favor', attachments: 'a.pdf', rawResponse: 'Listo' }, content: '' }
+    ];
+
+    // Variante 1: encabezado normal, IEEE, carta
+    changeTheme('upy');
+    setHeaderData({ names: ['Ana López'], studentIds: ['2109045'], isTeam: false, subject: 'Física', prof: 'Mtro. Ruiz', date: '2026-10-04', group: 'IDY-7A', term: '7', career: 'Ingeniería', includeLogo: false, coverMode: false });
+    setDocumentName('Reporte Word');
+    localStorage.setItem('citationStyle', 'ieee');
+    setDocumentFormat(null, false);
+    reportData = blocks();
+    render();
+    await wait(600);
+    step('building 1');
+    const blob1 = await buildDocx();
+    ok('docx blob type', blob1.type === DOCX_MIME && blob1.size > 5000);
+    files['normal.docx'] = await toB64(blob1);
+    step('b64 1 done ' + files['normal.docx'].length);
+
+    // Variante 2: portada en equipo, APA, oficio, sin números
+    setHeaderData({ names: ['Ana López', 'Luis Mora'], studentIds: ['1', '2'], isTeam: true, subject: 'Física', prof: 'Mtro. Ruiz', date: '2026-10-04', group: 'A', term: '7', career: 'Ingeniería', includeLogo: false, coverMode: true, taskName: 'Ley de Ohm' });
+    localStorage.setItem('citationStyle', 'apa');
+    setDocumentFormat({ ...DOCUMENT_FORMAT_PRESETS.find(p => p.id === 'apa').format, paper: 'legal', pageNumbers: false }, false);
+    reportData = blocks().map(b => b.type === 'ai' ? { ...b, aiUsed: 'no', aiData: { name: '' } } : b);
+    render();
+    await wait(600);
+    step('building 2');
+    const blob2 = await buildDocx();
+    step('built 2');
+    files['cover.docx'] = await toB64(blob2);
+    step('b64 2');
+
+    // Botón: descarga con el nombre del documento
+    let downloaded = '';
+    const origClick = HTMLAnchorElement.prototype.click;
+    HTMLAnchorElement.prototype.click = function () { downloaded = this.download; };
+    step('export');
+    await exportDOCX();
+    step('exported');
+    HTMLAnchorElement.prototype.click = origClick;
+    ok('download name', downloaded === 'Reporte Word.docx');
+    ok('word button present', !!document.querySelector('.btn-word') && !!document.querySelector('.preview-docx-link'));
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+  const data = document.createElement('pre');
+  data.id = 'DOCX_FILES';
+  data.textContent = JSON.stringify(files);
+  document.body.appendChild(data);
+}, 1500));
+</script>

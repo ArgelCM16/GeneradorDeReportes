@@ -1,0 +1,512 @@
+{
+  "version": "2.1",
+  "timestamp": "2026-09-25T02:00:00.000Z",
+  "theme": "upy",
+  "citationStyle": "apa",
+  "headerData": {
+    "names": [
+      "Ana Pérez López",
+      "Luis Gómez Chan",
+      "María Torres Uc"
+    ],
+    "isTeam": true,
+    "group": "IDY-7A",
+    "subject": "Inteligencia Artificial",
+    "prof": "Dr. Eduardo Gómez Ramírez",
+    "career": "Ingeniería en Datos",
+    "term": "7",
+    "date": "2026-09-25",
+    "includeLogo": true,
+    "coverMode": true,
+    "taskName": "Práctica 3: Redes Neuronales Convolucionales"
+  },
+  "settings": {
+    "universities": [
+      {
+        "id": "uni_prueba_2026",
+        "name": "UPR - Universidad de Prueba",
+        "builtin": false,
+        "color": {
+          "primary": "#0e7490",
+          "secondary": "#f59e0b",
+          "accent": "#67e8f9"
+        },
+        "logoLeft": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMjAiIGhlaWdodD0iMTIwIiB2aWV3Qm94PSIwIDAgMTIwIDEyMCI+PGNpcmNsZSBjeD0iNjAiIGN5PSI2MCIgcj0iNTYiIGZpbGw9IiMwZTc0OTAiLz48dGV4dCB4PSI2MCIgeT0iNzQiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSI0MCIgZm9udC13ZWlnaHQ9ImJvbGQiIGZpbGw9IiNmZmYiIHRleHQtYW5jaG9yPSJtaWRkbGUiPlVQPC90ZXh0Pjwvc3ZnPg==",
+        "logoRight": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxNjAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCAxNjAgODAiPjxyZWN0IHdpZHRoPSIxNjAiIGhlaWdodD0iODAiIHJ4PSIxMiIgZmlsbD0iI2Y1OWUwYiIvPjx0ZXh0IHg9IjgwIiB5PSI1MiIgZm9udC1mYW1pbHk9IkFyaWFsIiBmb250LXNpemU9IjMwIiBmb250LXdlaWdodD0iYm9sZCIgZmlsbD0iI2ZmZiIgdGV4dC1hbmNob3I9Im1pZGRsZSI+UFJVRUJBPC90ZXh0Pjwvc3ZnPg=="
+      }
+    ],
+    "subjects": [
+      "Inteligencia Artificial",
+      "Cálculo Diferencial",
+      "Bases de Datos",
+      "Física"
+    ],
+    "profs": [
+      "Dr. Eduardo Gómez Ramírez",
+      "Mtra. Sofía Villamil Chan",
+      "Dr. Javier Aranda Montero"
+    ],
+    "subjectProfMap": {
+      "Inteligencia Artificial": "Dr. Eduardo Gómez Ramírez",
+      "Cálculo Diferencial": "Mtra. Sofía Villamil Chan",
+      "Bases de Datos": "Dr. Javier Aranda Montero"
+    }
+  },
+  "reportData": [
+    {
+      "id": 1001,
+      "type": "header",
+      "content": ""
+    },
+    {
+      "id": 1002,
+      "type": "title",
+      "content": "Introducción"
+    },
+    {
+      "id": 1003,
+      "type": "text",
+      "content": "En esta sección se describe el problema de clasificación de imágenes con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe el problema de clasificación de imágenes con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe el problema de clasificación de imágenes con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares."
+    },
+    {
+      "id": 1004,
+      "type": "subtitle",
+      "content": "Objetivos"
+    },
+    {
+      "id": 1005,
+      "type": "text",
+      "content": "En esta sección se describe los objetivos generales y específicos con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe los objetivos generales y específicos con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada."
+    },
+    {
+      "id": 1006,
+      "type": "title",
+      "content": "Metodología"
+    },
+    {
+      "id": 1007,
+      "type": "subtitle",
+      "content": "Arquitectura del modelo"
+    },
+    {
+      "id": 1008,
+      "type": "text",
+      "content": "En esta sección se describe la arquitectura de la red con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe la arquitectura de la red con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe la arquitectura de la red con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe la arquitectura de la red con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe la arquitectura de la red con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe la arquitectura de la red con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe la arquitectura de la red con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar."
+    },
+    {
+      "id": 1009,
+      "type": "code",
+      "content": "import torch\nimport torch.nn as nn\nimport torch.nn.functional as F\n\nclass RedConvolucional(nn.Module):\n    \"\"\"Red convolucional sencilla para clasificar imágenes de 64x64.\"\"\"\n\n    def __init__(self, num_clases=10):\n        super().__init__()\n        self.conv1 = nn.Conv2d(3, 16, kernel_size=3, padding=1)\n        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, padding=1)\n        self.conv3 = nn.Conv2d(32, 48, kernel_size=3, padding=1)\n        self.conv4 = nn.Conv2d(48, 64, kernel_size=3, padding=1)\n        self.pool = nn.MaxPool2d(2, 2)\n        self.dropout = nn.Dropout(p=0.3)\n        self.fc1 = nn.Linear(64 * 4 * 4, 256)\n        self.fc2 = nn.Linear(256, num_clases)\n\n    def forward(self, x):\n        x = self.pool(F.relu(self.conv1(x)))\n        x = self.pool(F.relu(self.conv2(x)))\n        x = self.pool(F.relu(self.conv3(x)))\n        x = self.pool(F.relu(self.conv4(x)))\n        x = torch.flatten(x, 1)\n        x = self.dropout(F.relu(self.fc1(x)))\n        return self.fc2(x)\n\n\ndef entrenar(modelo, datos, epocas=50, lr=1e-4):\n    optimizador = torch.optim.AdamW(modelo.parameters(), lr=lr)\n    criterio = nn.CrossEntropyLoss()\n    for epoca in range(epocas):\n        perdida_total = 0.0\n        for imagenes, etiquetas in datos:\n            optimizador.zero_grad()\n            salida = modelo(imagenes)\n            perdida = criterio(salida, etiquetas)\n            perdida.backward()\n            optimizador.step()\n            perdida_total += perdida.item()\n        print(f'Época {epoca + 1}: pérdida = {perdida_total / len(datos):.4f}')\n    return modelo\n# Línea de comentario 1 para que el código ocupe más de una hoja\n# Línea de comentario 2 para que el código ocupe más de una hoja\n# Línea de comentario 3 para que el código ocupe más de una hoja\n# Línea de comentario 4 para que el código ocupe más de una hoja\n# Línea de comentario 5 para que el código ocupe más de una hoja\n# Línea de comentario 6 para que el código ocupe más de una hoja\n# Línea de comentario 7 para que el código ocupe más de una hoja\n# Línea de comentario 8 para que el código ocupe más de una hoja\n# Línea de comentario 9 para que el código ocupe más de una hoja\n# Línea de comentario 10 para que el código ocupe más de una hoja\n# Línea de comentario 11 para que el código ocupe más de una hoja\n# Línea de comentario 12 para que el código ocupe más de una hoja\n# Línea de comentario 13 para que el código ocupe más de una hoja\n# Línea de comentario 14 para que el código ocupe más de una hoja\n# Línea de comentario 15 para que el código ocupe más de una hoja\n# Línea de comentario 16 para que el código ocupe más de una hoja\n# Línea de comentario 17 para que el código ocupe más de una hoja\n# Línea de comentario 18 para que el código ocupe más de una hoja\n# Línea de comentario 19 para que el código ocupe más de una hoja\n# Línea de comentario 20 para que el código ocupe más de una hoja\n# Línea de comentario 21 para que el código ocupe más de una hoja\n# Línea de comentario 22 para que el código ocupe más de una hoja\n# Línea de comentario 23 para que el código ocupe más de una hoja\n# Línea de comentario 24 para que el código ocupe más de una hoja\n# Línea de comentario 25 para que el código ocupe más de una hoja\n# Línea de comentario 26 para que el código ocupe más de una hoja\n# Línea de comentario 27 para que el código ocupe más de una hoja\n# Línea de comentario 28 para que el código ocupe más de una hoja\n# Línea de comentario 29 para que el código ocupe más de una hoja\n# Línea de comentario 30 para que el código ocupe más de una hoja\n# Línea de comentario 31 para que el código ocupe más de una hoja\n# Línea de comentario 32 para que el código ocupe más de una hoja\n# Línea de comentario 33 para que el código ocupe más de una hoja\n# Línea de comentario 34 para que el código ocupe más de una hoja\n# Línea de comentario 35 para que el código ocupe más de una hoja\n# Línea de comentario 36 para que el código ocupe más de una hoja\n# Línea de comentario 37 para que el código ocupe más de una hoja\n# Línea de comentario 38 para que el código ocupe más de una hoja\n# Línea de comentario 39 para que el código ocupe más de una hoja\n# Línea de comentario 40 para que el código ocupe más de una hoja"
+    },
+    {
+      "id": 1010,
+      "type": "subtitle",
+      "content": "Entrenamiento"
+    },
+    {
+      "id": 1011,
+      "type": "image",
+      "content": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI2MDAiIGhlaWdodD0iMzAwIiB2aWV3Qm94PSIwIDAgNjAwIDMwMCI+PHJlY3Qgd2lkdGg9IjYwMCIgaGVpZ2h0PSIzMDAiIGZpbGw9IiNmOGZhZmMiLz48bGluZSB4MT0iNTAiIHkxPSIyNjAiIHgyPSI1ODAiIHkyPSIyNjAiIHN0cm9rZT0iIzMzNDE1NSIgc3Ryb2tlLXdpZHRoPSIyIi8+PGxpbmUgeDE9IjUwIiB5MT0iMjAiIHgyPSI1MCIgeTI9IjI2MCIgc3Ryb2tlPSIjMzM0MTU1IiBzdHJva2Utd2lkdGg9IjIiLz48cG9seWxpbmUgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjNUIxRjhDIiBzdHJva2Utd2lkdGg9IjQiIHBvaW50cz0iNTAsMjQwIDEyMCwxOTAgMTkwLDE1MCAyNjAsMTIwIDMzMCw5NSA0MDAsODAgNDcwLDcwIDU0MCw2NCIvPjxwb2x5bGluZSBmaWxsPSJub25lIiBzdHJva2U9IiNGNUE2MjMiIHN0cm9rZS13aWR0aD0iNCIgcG9pbnRzPSI1MCwyNDUgMTIwLDIwNSAxOTAsMTcwIDI2MCwxNDUgMzMwLDEyNSA0MDAsMTEyIDQ3MCwxMDUgNTQwLDEwMSIvPjx0ZXh0IHg9IjMwMCIgeT0iMjkwIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTYiIGZpbGw9IiMzMzQxNTUiIHRleHQtYW5jaG9yPSJtaWRkbGUiPsOJcG9jYXM8L3RleHQ+PC9zdmc+",
+      "caption": "Curvas de exactitud de entrenamiento (morado) y validación (dorado)"
+    },
+    {
+      "id": 1012,
+      "type": "title",
+      "content": "Resultados"
+    },
+    {
+      "id": 1013,
+      "type": "table",
+      "content": "",
+      "columns": 4,
+      "tableData": [
+        [
+          "Época",
+          "Exactitud entrenamiento",
+          "Exactitud validación",
+          "Pérdida"
+        ],
+        [
+          "1",
+          "60.7 %",
+          "58.7 %",
+          "1.865"
+        ],
+        [
+          "2",
+          "61.4 %",
+          "59.4 %",
+          "1.830"
+        ],
+        [
+          "3",
+          "62.2 %",
+          "60.1 %",
+          "1.795"
+        ],
+        [
+          "4",
+          "62.9 %",
+          "60.8 %",
+          "1.760"
+        ],
+        [
+          "5",
+          "63.6 %",
+          "61.5 %",
+          "1.725"
+        ],
+        [
+          "6",
+          "64.3 %",
+          "62.2 %",
+          "1.690"
+        ],
+        [
+          "7",
+          "65.0 %",
+          "62.9 %",
+          "1.655"
+        ],
+        [
+          "8",
+          "65.8 %",
+          "63.6 %",
+          "1.620"
+        ],
+        [
+          "9",
+          "66.5 %",
+          "64.3 %",
+          "1.585"
+        ],
+        [
+          "10",
+          "67.2 %",
+          "65.0 %",
+          "1.550"
+        ],
+        [
+          "11",
+          "67.9 %",
+          "65.7 %",
+          "1.515"
+        ],
+        [
+          "12",
+          "68.6 %",
+          "66.4 %",
+          "1.480"
+        ],
+        [
+          "13",
+          "69.4 %",
+          "67.1 %",
+          "1.445"
+        ],
+        [
+          "14",
+          "70.1 %",
+          "67.8 %",
+          "1.410"
+        ],
+        [
+          "15",
+          "70.8 %",
+          "68.5 %",
+          "1.375"
+        ],
+        [
+          "16",
+          "71.5 %",
+          "69.2 %",
+          "1.340"
+        ],
+        [
+          "17",
+          "72.2 %",
+          "69.9 %",
+          "1.305"
+        ],
+        [
+          "18",
+          "73.0 %",
+          "70.6 %",
+          "1.270"
+        ],
+        [
+          "19",
+          "73.7 %",
+          "71.3 %",
+          "1.235"
+        ],
+        [
+          "20",
+          "74.4 %",
+          "72.0 %",
+          "1.200"
+        ],
+        [
+          "21",
+          "75.1 %",
+          "72.7 %",
+          "1.165"
+        ],
+        [
+          "22",
+          "75.8 %",
+          "73.4 %",
+          "1.130"
+        ],
+        [
+          "23",
+          "76.6 %",
+          "74.1 %",
+          "1.095"
+        ],
+        [
+          "24",
+          "77.3 %",
+          "74.8 %",
+          "1.060"
+        ],
+        [
+          "25",
+          "78.0 %",
+          "75.5 %",
+          "1.025"
+        ],
+        [
+          "26",
+          "78.7 %",
+          "76.2 %",
+          "0.990"
+        ],
+        [
+          "27",
+          "79.4 %",
+          "76.9 %",
+          "0.955"
+        ],
+        [
+          "28",
+          "80.2 %",
+          "77.6 %",
+          "0.920"
+        ],
+        [
+          "29",
+          "80.9 %",
+          "78.3 %",
+          "0.885"
+        ],
+        [
+          "30",
+          "81.6 %",
+          "79.0 %",
+          "0.850"
+        ],
+        [
+          "31",
+          "82.3 %",
+          "79.7 %",
+          "0.815"
+        ],
+        [
+          "32",
+          "83.0 %",
+          "80.4 %",
+          "0.780"
+        ],
+        [
+          "33",
+          "83.8 %",
+          "81.1 %",
+          "0.745"
+        ],
+        [
+          "34",
+          "84.5 %",
+          "81.8 %",
+          "0.710"
+        ],
+        [
+          "35",
+          "85.2 %",
+          "82.5 %",
+          "0.675"
+        ],
+        [
+          "36",
+          "85.9 %",
+          "83.2 %",
+          "0.640"
+        ],
+        [
+          "37",
+          "86.6 %",
+          "83.9 %",
+          "0.605"
+        ],
+        [
+          "38",
+          "87.4 %",
+          "84.6 %",
+          "0.570"
+        ],
+        [
+          "39",
+          "88.1 %",
+          "85.3 %",
+          "0.535"
+        ],
+        [
+          "40",
+          "88.8 %",
+          "86.0 %",
+          "0.500"
+        ],
+        [
+          "41",
+          "89.5 %",
+          "86.7 %",
+          "0.465"
+        ],
+        [
+          "42",
+          "90.2 %",
+          "87.4 %",
+          "0.430"
+        ],
+        [
+          "43",
+          "91.0 %",
+          "88.1 %",
+          "0.395"
+        ],
+        [
+          "44",
+          "91.7 %",
+          "88.8 %",
+          "0.360"
+        ],
+        [
+          "45",
+          "92.4 %",
+          "89.5 %",
+          "0.325"
+        ],
+        [
+          "46",
+          "93.1 %",
+          "90.2 %",
+          "0.290"
+        ],
+        [
+          "47",
+          "93.8 %",
+          "90.9 %",
+          "0.255"
+        ],
+        [
+          "48",
+          "94.6 %",
+          "91.6 %",
+          "0.220"
+        ],
+        [
+          "49",
+          "95.3 %",
+          "92.3 %",
+          "0.185"
+        ],
+        [
+          "50",
+          "96.0 %",
+          "93.0 %",
+          "0.150"
+        ]
+      ],
+      "caption": "Evolución de las métricas durante 50 épocas"
+    },
+    {
+      "id": 1014,
+      "type": "text",
+      "content": "En esta sección se describe la discusión de los resultados con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares. En esta sección se describe la discusión de los resultados con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar."
+    },
+    {
+      "id": 1015,
+      "type": "title",
+      "content": "Conclusiones"
+    },
+    {
+      "id": 1016,
+      "type": "text",
+      "content": "En esta sección se describe las conclusiones del trabajo con el detalle necesario para reproducir el experimento. Los resultados obtenidos se compararon con trabajos previos reportados en la literatura especializada. Se utilizó un conjunto de datos balanceado para evitar sesgos durante la etapa de entrenamiento. Cada configuración se ejecutó cinco veces y se reporta el promedio junto con su desviación estándar. Las métricas principales fueron la exactitud, la precisión, la exhaustividad y la puntuación F1. El análisis de errores mostró que la mayoría de las confusiones ocurren entre clases visualmente similares."
+    },
+    {
+      "id": 1017,
+      "type": "subtitle",
+      "content": "Referencias"
+    },
+    {
+      "id": 1018,
+      "type": "ref",
+      "content": "",
+      "refType": "book",
+      "refData": {
+        "author": "Goodfellow, I., Bengio, Y. y Courville, A.",
+        "title": "Deep Learning",
+        "source": "MIT Press",
+        "year": "2016",
+        "url": ""
+      }
+    },
+    {
+      "id": 1019,
+      "type": "ref",
+      "content": "",
+      "refType": "article",
+      "refData": {
+        "author": "He, K., Zhang, X., Ren, S. y Sun, J.",
+        "title": "Deep residual learning for image recognition",
+        "source": "Proceedings of the IEEE CVPR",
+        "year": "2016",
+        "url": ""
+      }
+    },
+    {
+      "id": 1020,
+      "type": "ref",
+      "content": "",
+      "refType": "web",
+      "refData": {
+        "author": "PyTorch",
+        "title": "Training a classifier",
+        "source": "PyTorch Tutorials",
+        "year": "",
+        "url": "https://pytorch.org/tutorials/beginner/blitz/cifar10_tutorial.html"
+      }
+    },
+    {
+      "id": 1021,
+      "type": "ai",
+      "content": "",
+      "aiUsed": "yes",
+      "aiData": {
+        "name": "",
+        "aiTool": "Claude",
+        "date": "2026-09-20",
+        "purpose": "Depuración del código de entrenamiento",
+        "prompt": "¿Por qué mi red convolucional no mejora la exactitud de validación después de la época 20?",
+        "attachments": "entrenamiento.py",
+        "rawResponse": "1. Sugerencia de la IA número 1: revisar la tasa de aprendizaje y el tamaño de lote.\n2. Sugerencia de la IA número 2: revisar la tasa de aprendizaje y el tamaño de lote.\n3. Sugerencia de la IA número 3: revisar la tasa de aprendizaje y el tamaño de lote.\n4. Sugerencia de la IA número 4: revisar la tasa de aprendizaje y el tamaño de lote.\n5. Sugerencia de la IA número 5: revisar la tasa de aprendizaje y el tamaño de lote.\n6. Sugerencia de la IA número 6: revisar la tasa de aprendizaje y el tamaño de lote.\n7. Sugerencia de la IA número 7: revisar la tasa de aprendizaje y el tamaño de lote.\n8. Sugerencia de la IA número 8: revisar la tasa de aprendizaje y el tamaño de lote.\n9. Sugerencia de la IA número 9: revisar la tasa de aprendizaje y el tamaño de lote.\n10. Sugerencia de la IA número 10: revisar la tasa de aprendizaje y el tamaño de lote.\n11. Sugerencia de la IA número 11: revisar la tasa de aprendizaje y el tamaño de lote.\n12. Sugerencia de la IA número 12: revisar la tasa de aprendizaje y el tamaño de lote.\n13. Sugerencia de la IA número 13: revisar la tasa de aprendizaje y el tamaño de lote.\n14. Sugerencia de la IA número 14: revisar la tasa de aprendizaje y el tamaño de lote.\n15. Sugerencia de la IA número 15: revisar la tasa de aprendizaje y el tamaño de lote.\n16. Sugerencia de la IA número 16: revisar la tasa de aprendizaje y el tamaño de lote.\n17. Sugerencia de la IA número 17: revisar la tasa de aprendizaje y el tamaño de lote.\n18. Sugerencia de la IA número 18: revisar la tasa de aprendizaje y el tamaño de lote.\n19. Sugerencia de la IA número 19: revisar la tasa de aprendizaje y el tamaño de lote.\n20. Sugerencia de la IA número 20: revisar la tasa de aprendizaje y el tamaño de lote.\n21. Sugerencia de la IA número 21: revisar la tasa de aprendizaje y el tamaño de lote.\n22. Sugerencia de la IA número 22: revisar la tasa de aprendizaje y el tamaño de lote.\n23. Sugerencia de la IA número 23: revisar la tasa de aprendizaje y el tamaño de lote.\n24. Sugerencia de la IA número 24: revisar la tasa de aprendizaje y el tamaño de lote.\n25. Sugerencia de la IA número 25: revisar la tasa de aprendizaje y el tamaño de lote.\n26. Sugerencia de la IA número 26: revisar la tasa de aprendizaje y el tamaño de lote.\n27. Sugerencia de la IA número 27: revisar la tasa de aprendizaje y el tamaño de lote.\n28. Sugerencia de la IA número 28: revisar la tasa de aprendizaje y el tamaño de lote.\n29. Sugerencia de la IA número 29: revisar la tasa de aprendizaje y el tamaño de lote.\n30. Sugerencia de la IA número 30: revisar la tasa de aprendizaje y el tamaño de lote.\n31. Sugerencia de la IA número 31: revisar la tasa de aprendizaje y el tamaño de lote.\n32. Sugerencia de la IA número 32: revisar la tasa de aprendizaje y el tamaño de lote.\n33. Sugerencia de la IA número 33: revisar la tasa de aprendizaje y el tamaño de lote.\n34. Sugerencia de la IA número 34: revisar la tasa de aprendizaje y el tamaño de lote.\n35. Sugerencia de la IA número 35: revisar la tasa de aprendizaje y el tamaño de lote.\n36. Sugerencia de la IA número 36: revisar la tasa de aprendizaje y el tamaño de lote.\n37. Sugerencia de la IA número 37: revisar la tasa de aprendizaje y el tamaño de lote.\n38. Sugerencia de la IA número 38: revisar la tasa de aprendizaje y el tamaño de lote.\n39. Sugerencia de la IA número 39: revisar la tasa de aprendizaje y el tamaño de lote.\n40. Sugerencia de la IA número 40: revisar la tasa de aprendizaje y el tamaño de lote.\n41. Sugerencia de la IA número 41: revisar la tasa de aprendizaje y el tamaño de lote.\n42. Sugerencia de la IA número 42: revisar la tasa de aprendizaje y el tamaño de lote.\n43. Sugerencia de la IA número 43: revisar la tasa de aprendizaje y el tamaño de lote.\n44. Sugerencia de la IA número 44: revisar la tasa de aprendizaje y el tamaño de lote.\n45. Sugerencia de la IA número 45: revisar la tasa de aprendizaje y el tamaño de lote.\n46. Sugerencia de la IA número 46: revisar la tasa de aprendizaje y el tamaño de lote.\n47. Sugerencia de la IA número 47: revisar la tasa de aprendizaje y el tamaño de lote.\n48. Sugerencia de la IA número 48: revisar la tasa de aprendizaje y el tamaño de lote.\n49. Sugerencia de la IA número 49: revisar la tasa de aprendizaje y el tamaño de lote.\n50. Sugerencia de la IA número 50: revisar la tasa de aprendizaje y el tamaño de lote.\n51. Sugerencia de la IA número 51: revisar la tasa de aprendizaje y el tamaño de lote.\n52. Sugerencia de la IA número 52: revisar la tasa de aprendizaje y el tamaño de lote.\n53. Sugerencia de la IA número 53: revisar la tasa de aprendizaje y el tamaño de lote.\n54. Sugerencia de la IA número 54: revisar la tasa de aprendizaje y el tamaño de lote.\n55. Sugerencia de la IA número 55: revisar la tasa de aprendizaje y el tamaño de lote.\n56. Sugerencia de la IA número 56: revisar la tasa de aprendizaje y el tamaño de lote.\n57. Sugerencia de la IA número 57: revisar la tasa de aprendizaje y el tamaño de lote.\n58. Sugerencia de la IA número 58: revisar la tasa de aprendizaje y el tamaño de lote.\n59. Sugerencia de la IA número 59: revisar la tasa de aprendizaje y el tamaño de lote.\n60. Sugerencia de la IA número 60: revisar la tasa de aprendizaje y el tamaño de lote."
+      }
+    },
+    {
+      "id": 1022,
+      "type": "toc",
+      "content": "Índice"
+    }
+  ]
+}

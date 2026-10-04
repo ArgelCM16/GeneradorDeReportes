@@ -1,0 +1,110 @@
+<!-- Prueba "rendimiento": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+let printed = 0;
+window.alert = () => {};
+window.confirm = () => true;
+window.print = () => { printed++; };
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const long = (n, tag) => Array.from({ length: n }, (_, i) => `Oración ${i + 1} ${tag} de un párrafo largo para medir el rendimiento de la vista previa.`).join(' ');
+  try {
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+
+    // Contar cuántas veces se reparte el documento en hojas
+    let paginations = 0;
+    const originalPaginate = paginatePreview;
+    paginatePreview = function (...args) { paginations++; return originalPaginate.apply(this, args); };
+    const pages = () => $$('#preview-container .preview-page').length;
+
+    // ---------- Documento corto: se actualiza al momento ----------
+    reportData = [{ id: 1, type: 'title', content: 'Corto' }, { id: 2, type: 'text', content: 'Hola' }];
+    render();
+    paginations = 0;
+    updateContent(2, 'Hola mundo');
+    ok('short doc updates immediately', paginations === 1 && $('#preview-container .p-text').textContent === 'Hola mundo');
+
+    // ---------- Sin cambios: no se vuelve a paginar ----------
+    paginations = 0;
+    renderPreview();
+    renderPreview();
+    ok('unchanged preview not repaginated', paginations === 0);
+    renderPreview(true);
+    ok('force repaginates', paginations === 1);
+    setDocumentFormat({ ...getDocumentFormat(), lineHeight: 2 });
+    ok('format change repaginates', paginations === 2);
+    setDocumentFormat(null);
+
+    // ---------- Documento largo ----------
+    reportData = [{ id: 10, type: 'header', content: '' }, { id: 11, type: 'toc', content: '' }];
+    for (let i = 0; i < 20; i++) {
+      reportData.push({ id: 100 + i, type: 'subtitle', content: 'Sección ' + (i + 1) });
+      reportData.push({ id: 200 + i, type: 'text', format: 'html', content: '<p>' + long(30, 'de la sección <b>' + (i + 1) + '</b>') + '</p>' });
+    }
+    const started = performance.now();
+    render();
+    const fullMs = performance.now() - started;
+    out.push(`INFO documento largo: ${pages()} hojas, paginar ${Math.round(lastPaginationMs)} ms (render completo ${Math.round(fullMs)} ms)`);
+    ok('long doc has many pages (' + pages() + ')', pages() >= PREVIEW_DEBOUNCE_MIN_PAGES);
+
+    // Escribir rápido: no se pagina con cada tecla
+    paginations = 0;
+    const typingStart = performance.now();
+    for (let i = 1; i <= 20; i++) updateContent(219, 'Texto escrito ' + 'x'.repeat(i));
+    const typingMs = performance.now() - typingStart;
+    out.push(`INFO 20 teclas en el documento largo: ${Math.round(typingMs)} ms`);
+    ok('typing does not repaginate per key', paginations === 0);
+    await wait(PREVIEW_DEBOUNCE_MS + 150);
+    ok('one pagination after typing stops (' + paginations + ')', paginations === 1);
+    ok('preview shows last text', $('#preview-container').textContent.includes('Texto escrito ' + 'x'.repeat(20)));
+
+    // Encabezado (oninput del formulario) también espera
+    paginations = 0;
+    const name = $('.student-name-input');
+    name.value = 'Ana'; name.dispatchEvent(new Event('input', { bubbles: true }));
+    name.value = 'Ana López'; name.dispatchEvent(new Event('input', { bubbles: true }));
+    ok('header typing waits', paginations === 0);
+    await wait(PREVIEW_DEBOUNCE_MS + 150);
+    ok('header shows in preview', paginations === 1 && $('#preview-container .p-header').textContent.includes('Ana López'));
+
+    // Párrafo con formato (editor) también espera
+    paginations = 0;
+    const editor = $$('.rich-editor')[0];
+    editor.innerHTML = '<p>Cambio en el editor</p>';
+    editor.dispatchEvent(new Event('input', { bubbles: true }));
+    ok('rich editor waits', paginations === 0 && reportData.find(b => b.id === 200).content === '<p>Cambio en el editor</p>');
+
+    // Imprimir con un cambio pendiente: primero se actualiza
+    printed = 0;
+    printDocument(true);
+    ok('print flushes pending preview', paginations === 1 && printed === 1 && $('#preview-container').textContent.includes('Cambio en el editor'));
+
+    // Al cerrar la pestaña se guarda lo pendiente
+    updateContent(219, 'Último cambio antes de cerrar');
+    window.dispatchEvent(new Event('pagehide'));
+    const saved = JSON.parse(localStorage.getItem('reportData') || '[]');
+    ok('pagehide flushes and saves', $('#preview-container').textContent.includes('Último cambio antes de cerrar') && saved.some(b => b.content === 'Último cambio antes de cerrar'));
+
+    // Deshacer sigue funcionando con la espera
+    await wait(900);
+    recordHistory();
+    updateContent(219, 'Para deshacer');
+    await wait(PREVIEW_DEBOUNCE_MS + 600);
+    undo();
+    ok('undo after debounced typing', richHtmlToPlainText(getRichHtml(reportData.find(b => b.id === 219))) === 'Último cambio antes de cerrar');
+
+    paginatePreview = originalPaginate;
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

@@ -1,0 +1,203 @@
+<!-- Prueba "herramientas": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const $ = sel => document.querySelector(sel);
+  const $$ = sel => Array.from(document.querySelectorAll(sel));
+  const types = () => reportData.map(b => b.type).join(',');
+  try {
+    const st = document.createElement('style'); st.textContent = '*{transition:none !important}'; document.head.appendChild(st);
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true, fullName: 'Ana López' });
+
+    // ---------- 1. ids únicos ----------
+    reportData = []; render();
+    for (let i = 0; i < 6; i++) reportData.push(createBlock('text'));
+    ok('unique ids in same ms', new Set(reportData.map(b => b.id)).size === 6);
+    reportData = [{ id: 9999999999999, type: 'title', content: 'x' }];
+    ok('new id above existing', newBlockId() > 9999999999999);
+
+    // ---------- 1. subir / bajar / duplicar ----------
+    reportData = [
+      { id: 1, type: 'header', content: '' },
+      { id: 2, type: 'toc', content: '' },
+      { id: 3, type: 'title', content: 'Uno' },
+      { id: 4, type: 'text', content: 'Párrafo A' },
+      { id: 5, type: 'table', content: '', columns: 2, caption: 'T', tableData: [['a', 'b'], ['1', '2']] }
+    ];
+    render();
+    const cards = $$('#editor-container .block-card-container');
+    ok('header has no tools group', !cards[0].querySelector('.block-tools') && cards[0].querySelector('.delete-btn'));
+    ok('toc has no tools group', !cards[1].querySelector('.block-tools') && cards[1].querySelector('.delete-btn'));
+    ok('title has 4 tools', cards[2].querySelectorAll('.block-tools button').length === 4);
+    ok('first movable: up disabled', cards[2].querySelector('[title="Subir"]').disabled && !cards[2].querySelector('[title="Bajar"]').disabled);
+    ok('last: down disabled', cards[4].querySelector('[title="Bajar"]').disabled);
+    const lbl = cards[2].querySelector('.block-card > label').getBoundingClientRect();
+    const tools = cards[2].querySelector('.block-tools').getBoundingClientRect();
+    ok('tools do not overlap title text', tools.left >= lbl.left + 100 && tools.top < lbl.bottom);
+
+    moveBlockBy(3, -1);
+    ok('cannot move above header/toc', types() === 'header,toc,title,text,table');
+    cards[3] && $$('#editor-container .block-card-container')[3].querySelector('[title="Subir"]').click();
+    ok('move text up via button', types() === 'header,toc,text,title,table');
+    moveBlockBy(4, 1);
+    ok('move text down', types() === 'header,toc,title,text,table');
+    moveBlockBy(5, 1);
+    ok('cannot move past end', types() === 'header,toc,title,text,table');
+
+    $$('#editor-container .block-card-container')[4].querySelector('[title="Duplicar"]').click();
+    const copy = reportData[5];
+    ok('duplicate inserted after', types() === 'header,toc,title,text,table,table' && copy.id !== 5);
+    copy.tableData[1][0] = 'cambiado';
+    ok('duplicate is deep copy', reportData[4].tableData[1][0] === '1');
+    duplicateBlock(1); duplicateBlock(2);
+    ok('header/toc not duplicated', reportData.length === 6);
+    deleteBlock(copy.id);
+
+    // ---------- 2. imágenes ----------
+    const big = document.createElement('canvas'); big.width = 3000; big.height = 2000;
+    const bctx = big.getContext('2d'); bctx.fillStyle = '#fff'; bctx.fillRect(0, 0, 3000, 2000);
+    const imgData = bctx.createImageData(3000, 2000); for (let k = 0; k < imgData.data.length; k += 4) { const x = (k / 4) % 3000, y = Math.floor(k / 12000); imgData.data[k] = (x / 12 + Math.random() * 40) | 0; imgData.data[k + 1] = (y / 8 + Math.random() * 40) | 0; imgData.data[k + 2] = 120 + (Math.random() * 60 | 0); imgData.data[k + 3] = 255; } bctx.putImageData(imgData, 0, 0);
+    const bigUrl = big.toDataURL('image/png');
+    const small = await shrinkImageDataUrl(bigUrl, 'image/png', BLOCK_IMAGE_MAX_SIZE, true);
+    const dims = await new Promise(r => { const i = new Image(); i.onload = () => r([i.width, i.height]); i.src = small; });
+    ok('big photo -> jpeg ' + dims.join('x') + ' (' + Math.round(bigUrl.length / 1024) + 'KB -> ' + Math.round(small.length / 1024) + 'KB)', small.startsWith('data:image/jpeg') && dims[0] === 1600 && dims[1] === 1067 && small.length < bigUrl.length);
+    const tr = document.createElement('canvas'); tr.width = 2400; tr.height = 1200;
+    const tctx = tr.getContext('2d'); tctx.fillStyle = '#e11d48'; tctx.fillRect(100, 100, 800, 600);
+    const trUrl = tr.toDataURL('image/png');
+    const trSmall = await shrinkImageDataUrl(trUrl, 'image/png', BLOCK_IMAGE_MAX_SIZE, true);
+    ok('transparent png stays png', trSmall.startsWith('data:image/png'));
+    const tiny = document.createElement('canvas'); tiny.width = 40; tiny.height = 40;
+    const tinyUrl = tiny.toDataURL('image/png');
+    ok('never bigger than original', (await shrinkImageDataUrl(tinyUrl, 'image/png', 1600, true)).length <= tinyUrl.length);
+
+    // ---------- 3. deshacer / rehacer ----------
+    reportData = []; setDocumentName(''); render();
+    await wait(500); recordHistory();
+    undoHistory.past = []; undoHistory.future = []; updateUndoButtons();
+    ok('undo disabled at start', $('#undo-btn').disabled && $('#redo-btn').disabled);
+    addBlock('title');
+    await wait(500);
+    ok('undo enabled after change', !$('#undo-btn').disabled);
+    const titleId = reportData[0].id;
+    updateContent(titleId, 'H'); updateContent(titleId, 'Ho'); updateContent(titleId, 'Hola');
+    await wait(500);
+    ok('typing grouped (2 steps: ' + undoHistory.past.length + ')', undoHistory.past.length === 2);
+    undo();
+    ok('undo text', reportData.length === 1 && reportData[0].content === '' && $('#editor-container input, #editor-container textarea').value === '');
+    ok('redo enabled', !$('#redo-btn').disabled);
+    undo();
+    ok('undo add block', reportData.length === 0);
+    redo(); redo();
+    ok('redo twice', reportData.length === 1 && reportData[0].content === 'Hola' && $('#preview-container').textContent.includes('Hola'));
+    await wait(800);
+
+    // Teclado
+    setDocumentName('Mi reporte'); render();
+    await wait(500);
+    document.activeElement && document.activeElement.blur();
+    let ev = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(ev);
+    ok('Ctrl+Z undoes name', ev.defaultPrevented && getDocumentName() === '' && $('#document-name').value === '');
+    ev = new KeyboardEvent('keydown', { key: 'y', ctrlKey: true, bubbles: true, cancelable: true });
+    document.body.dispatchEvent(ev);
+    ok('Ctrl+Y redoes name', getDocumentName() === 'Mi reporte');
+    await wait(800);
+    const field = $('#editor-container input, #editor-container textarea');
+    field.focus();
+    ev = new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true, cancelable: true });
+    field.dispatchEvent(ev);
+    ok('Ctrl+Z inside a field is left to the browser', !ev.defaultPrevented && getDocumentName() === 'Mi reporte');
+    field.blur();
+
+    // Un cambio nuevo borra el "rehacer"
+    undo();
+    await wait(800);
+    addBlock('text'); await wait(500);
+    ok('new change clears redo', undoHistory.future.length === 0 && $('#redo-btn').disabled);
+
+    // Encabezado también se deshace
+    reportData = []; render(); addBlock('header'); await wait(500);
+    const nameInput = $('.student-name-input');
+    nameInput.value = 'Luis Pérez'; nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+    await wait(500);
+    ok('header saved', (getHeaderData().names || [])[0] === 'Luis Pérez');
+    undo();
+    ok('undo header field', ($('.student-name-input').value || '') !== 'Luis Pérez');
+    redo();
+    ok('redo header field', $('.student-name-input').value === 'Luis Pérez');
+    await wait(800);
+
+    // ---------- 4. plantillas ----------
+    reportData = []; render();
+    applyTemplate('practica', 'append');
+    ok('template adds header first + toc', reportData[0].type === 'header' && reportData[1].type === 'toc');
+    ok('template block count', reportData.length === 1 + TEMPLATES[0].blocks.length);
+    ok('header kept name', $('.student-name-input').value === 'Luis Pérez');
+    const hinted = reportData.find(b => b.hint);
+    const ta = $$('#editor-container .rich-editor').find(t => t.dataset.placeholder === hinted.hint && t.classList.contains('is-empty'));
+    ok('paragraph shows hint as placeholder', !!ta);
+    ok('preview has toc entries', $$('.p-toc-entry').length === TEMPLATES[0].blocks.filter(b => b.type === 'subtitle' || b.type === 'title').length);
+    ok('template ids unique', new Set(reportData.map(b => b.id)).size === reportData.length);
+    const tableBlock = reportData.find(b => b.type === 'table');
+    ok('table initialized', tableBlock.caption === 'Resultados obtenidos' && Array.isArray(tableBlock.tableData) && tableBlock.columns === 3);
+    const n1 = reportData.length;
+    applyTemplate('ensayo', 'append');
+    ok('append keeps content, single toc', reportData.length === n1 + TEMPLATES[1].blocks.length && reportData.filter(b => b.type === 'toc').length === 1);
+    applyTemplate('investigacion', 'replace');
+    ok('replace keeps only header + template', reportData.length === 1 + TEMPLATES[2].blocks.length && reportData[0].type === 'header');
+    await wait(500);
+    undo();
+    ok('template can be undone', reportData.length === n1 + TEMPLATES[1].blocks.length);
+    await wait(800);
+
+    openTemplatesModal();
+    ok('modal with 4 cards + mode choice', $$('.template-card').length === 4 && $$('input[name="template-mode"]').length === 2);
+    $('input[name="template-mode"][value="replace"]').checked = true;
+    $('.template-card[data-template="proyecto"]').click();
+    ok('card click applies template + closes', !$('#templates-modal-overlay') && reportData.some(b => b.type === 'code') && reportData.length === 1 + TEMPLATES[3].blocks.length);
+
+    reportData = []; render();
+    openTemplatesModal();
+    ok('no mode choice when empty', !$('input[name="template-mode"]'));
+    closeTemplatesModal();
+
+    // ---------- 6. modo oscuro ----------
+    localStorage.removeItem('colorScheme');
+    applyColorScheme();
+    const sysDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    ok('auto follows system (dark=' + sysDark + ')', getColorScheme() === 'auto' && document.body.classList.contains('theme-dark') === sysDark);
+    localStorage.setItem('colorScheme', 'light'); applyColorScheme();
+    applyTemplate('practica', 'append');
+    $('#color-scheme-btn').click();
+    ok('toggle -> dark', localStorage.getItem('colorScheme') === 'dark' && document.body.classList.contains('theme-dark') && $('#color-scheme-icon').textContent === 'light_mode');
+    const cardBg = getComputedStyle($('.block-card')).backgroundColor;
+    ok('card dark (' + cardBg + ')', cardBg !== 'rgb(255, 255, 255)');
+    const inputBg = getComputedStyle($('#editor-container .rich-editor')).backgroundColor;
+    ok('fields dark (' + inputBg + ')', inputBg !== 'rgb(255, 255, 255)' && inputBg !== 'rgb(248, 250, 252)');
+    ok('page stays white', getComputedStyle($('.preview-page')).backgroundColor === 'rgb(255, 255, 255)');
+    const textColor = getComputedStyle($('.preview-page .p-title, .preview-page h1, .preview-page .p-subtitle')).color;
+    ok('page text dark (' + textColor + ')', (() => { const m = textColor.match(/\d+/g).map(Number); return m[0] + m[1] + m[2] < 300; })());
+    ok('meta theme-color', $('meta[name="theme-color"]').content === '#0b1120');
+    ok('in backup', buildBackupData(false).settings.colorScheme === 'dark');
+    $('#color-scheme-btn').click();
+    ok('toggle -> light', localStorage.getItem('colorScheme') === 'light' && !document.body.classList.contains('theme-dark'));
+
+    // ---------- 5. PWA en file:// ----------
+    ok('manifest linked', !!$('link[rel="manifest"]'));
+    ok('install button hidden by default', $('#install-app-btn').style.display === 'none');
+    ok('no service worker on file://', !navigator.serviceWorker || !navigator.serviceWorker.controller);
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

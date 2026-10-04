@@ -1,0 +1,202 @@
+<!-- Prueba "perfil": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+let confirmAnswer = true;
+window.confirm = () => confirmAnswer;
+let promptAnswers = [];
+window.prompt = () => promptAnswers.shift() ?? null;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const text = () => document.getElementById('preview-container').textContent.replace(/\s+/g, ' ');
+  const $ = sel => document.querySelector(sel);
+  let lastBlob = null;
+  URL.createObjectURL = b => { lastBlob = b; return 'blob:test'; };
+  URL.revokeObjectURL = () => {};
+  HTMLAnchorElement.prototype.click = function () {};
+  const typeIn = (sel, value) => { const el = $(sel); el.value = value; el.dispatchEvent(new Event('input')); };
+
+  try {
+    // ---------- Primera vez: el asistente se abre solo ----------
+    ok('wizard opens on first visit', !!$('#onboarding-overlay'));
+    reportData = []; render();
+
+    // Paso 1: nombre obligatorio
+    $('#onboarding-next').click();
+    ok('step 1 requires name', $('.onboarding-step-count').textContent.startsWith('Paso 1') && $('#onboarding-error').textContent.includes('nombre'));
+    typeIn('#profile-fullname', 'Ana Pérez López');
+    typeIn('#profile-studentid', '2109001');
+    $('#onboarding-next').click();
+
+    // Paso 2: escuela
+    ok('step 2 school', $('.onboarding-step-count').textContent.startsWith('Paso 2') && !!$('#profile-university'));
+    $('#profile-university').value = 'upy'; $('#profile-university').dispatchEvent(new Event('change'));
+    ok('university applied as theme', localStorage.getItem('selectedTheme') === 'upy');
+    typeIn('#profile-career', 'Ingeniería en Datos');
+    typeIn('#profile-group', 'IDY-7A');
+    typeIn('#profile-period', '7');
+    $('input[name="profile-period-type"][value="semestre"]').checked = true;
+    // Atrás y adelante no pierde datos
+    $('#onboarding-back').click();
+    ok('back keeps step 1 data', $('#profile-fullname').value === 'Ana Pérez López');
+    $('#onboarding-next').click();
+    ok('forward keeps step 2 data', $('#profile-group').value === 'IDY-7A' && $('input[name="profile-period-type"][value="semestre"]').checked);
+    $('#onboarding-next').click();
+
+    // Paso 3: campos del encabezado
+    ok('step 3 fields editor', document.querySelectorAll('#onboarding-fields .field-config-row').length === 8);
+    const row = key => $(`#onboarding-fields .field-config-row[data-key="${key}"]`);
+    row('prof').querySelector('input[type="checkbox"]').checked = false;
+    row('prof').querySelector('input[type="checkbox"]').dispatchEvent(new Event('change'));
+    const careerLabel = row('career').querySelector('.field-config-label');
+    careerLabel.value = 'Escuela'; careerLabel.dispatchEvent(new Event('input'));
+    ok('field config saved', getHeaderFieldConfig().prof.show === false && getHeaderFieldConfig().career.label === 'Escuela');
+    ok('term default name follows period type', row('term').textContent.includes('Semestre'));
+    $('#onboarding-next').click();
+
+    // Paso 4: materias (opcional)
+    ok('step 4 optional', $('.onboarding-step-count').textContent.includes('opcional') && !!$('#onboarding-skip'));
+    let rows = document.querySelectorAll('.onboarding-row');
+    rows[0].querySelector('.ob-subject').value = 'Cálculo';
+    rows[0].querySelector('.ob-prof').value = 'Dr. X';
+    $('#onboarding-add-row').click();
+    rows = document.querySelectorAll('.onboarding-row');
+    ok('add row keeps first', rows.length === 2 && rows[0].querySelector('.ob-subject').value === 'Cálculo');
+    rows[1].querySelector('.ob-subject').value = 'Física';
+    $('#onboarding-next').click();
+
+    // Paso 5: compañeros (opcional)
+    rows = document.querySelectorAll('.onboarding-row');
+    rows[0].querySelector('.ob-name').value = 'Luis Gómez';
+    rows[0].querySelector('.ob-id').value = '2109002';
+    $('#onboarding-add-row').click();
+    rows = document.querySelectorAll('.onboarding-row');
+    rows[1].querySelector('.ob-name').value = 'María Torres';
+    rows[1].querySelector('.ob-id').value = '2109003';
+    ok('last step says Terminar', $('#onboarding-next').textContent.includes('Terminar'));
+    $('#onboarding-next').click();
+
+    // ---------- Resultado del asistente ----------
+    const profile = getProfile();
+    ok('wizard closed', !$('#onboarding-overlay'));
+    ok('profile saved', profile.onboardingDone && profile.fullName === 'Ana Pérez López' && profile.studentId === '2109001' && profile.periodType === 'semestre' && profile.group === 'IDY-7A');
+    ok('subjects + link saved', getSimpleList('list_subjects').join() === 'Cálculo,Física' && getSubjectProfMap()['Cálculo'] === 'Dr. X');
+    ok('classmates saved', getClassmates().length === 2 && getClassmates()[1].studentId === '2109003');
+    ok('header block created', reportData.length === 1 && reportData[0].type === 'header');
+    ok('header prefilled from profile', $('.student-name-input').value === 'Ana Pérez López' && $('.student-id-input').value === '2109001' && $('#header-group').value === 'IDY-7A' && $('#header-career').value === 'Ingeniería en Datos' && $('#header-term').value === '7');
+    ok('labels follow config', $('label[for="header-career"]').textContent === 'Escuela' && $('label[for="header-term"]').textContent === 'Semestre');
+    ok('hidden field hidden in editor', $('.header-field[data-field="prof"]').style.display === 'none');
+    let t = text();
+    ok('preview: renamed + matricula + semestre', t.includes('Escuela: Ingeniería en Datos') && t.includes('Matrícula: 2109001') && !t.includes('Profesor:'));
+    $('#select-subject-main').value = 'Cálculo'; $('#select-subject-main').dispatchEvent(new Event('change'));
+    ok('preview term semestre', text().includes('(7° Semestre)'));
+    ok('formatTerm by period type', formatTerm('5') === '5° Semestre');
+
+    // ---------- Botón para limpiar la primera fila ----------
+    const clearBtn = document.querySelector('.member-row .btn-clear-member');
+    ok('clear button on first row', !!clearBtn && document.querySelectorAll('.btn-clear-member').length === 1);
+    clearBtn.click();
+    ok('clear empties name + id', document.querySelector('.student-name-input').value === '' && document.querySelector('.student-id-input').value === '' && document.querySelectorAll('.member-row').length === 1);
+    ok('clear saved', getHeaderPeople(getHeaderData()).length === 0);
+    document.querySelector('.student-name-input').value = 'Ana Pérez López';
+    document.querySelector('.student-id-input').value = '2109001';
+    renderPreview();
+
+    // ---------- Compañeros en equipo ----------
+    const team = $('#check-is-team');
+    team.checked = true; toggleTeamMode(team);
+    const picker = $('#classmate-picker');
+    ok('classmate picker visible in team mode', picker.style.display === '' && picker.options.length === 3);
+    picker.value = '0'; addClassmateToTeam(picker);
+    picker.value = '1'; addClassmateToTeam(picker);
+    const rowsNow = document.querySelectorAll('#team-members-container .member-row');
+    ok('classmates added with matricula', rowsNow.length === 3 && rowsNow[1].querySelector('.student-name-input').value === 'Luis Gómez' && rowsNow[1].querySelector('.student-id-input').value === '2109002');
+    picker.value = '0'; addClassmateToTeam(picker);
+    ok('same classmate not added twice', document.querySelectorAll('#team-members-container .member-row').length === 3);
+    ok('team preview with ids', text().includes('Integrantes: Ana Pérez López (2109001), Luis Gómez (2109002), María Torres (2109003)'));
+    ok('header data has ids', getHeaderData().studentIds.join() === '2109001,2109002,2109003');
+    team.checked = false; toggleTeamMode(team);
+    ok('first row keeps clear button after team toggles', document.querySelectorAll('.member-row').length === 1 && !!document.querySelector('.member-row .btn-clear-member'));
+    ok('picker hidden when not team', $('#classmate-picker').style.display === 'none');
+
+    // ---------- Ocultar matrícula / renombrar grupo ----------
+    const cfg = getHeaderFieldConfig();
+    cfg.studentId.show = false; cfg.group.label = 'Salón';
+    saveHeaderFieldConfig(cfg); render();
+    ok('id input hidden', $('.student-id-input').style.display === 'none');
+    t = text();
+    ok('preview without matricula + renamed group', !t.includes('2109001') && t.includes('Salón: IDY-7A'));
+    cfg.studentId.show = true; cfg.group.label = ''; saveHeaderFieldConfig(cfg); render();
+
+    // ---------- Portada con matrícula ----------
+    $('#btn-toggle-cover').click();
+    ok('cover shows matricula', text().includes('Matrícula: 2109001') && !text().includes('Profesor:'));
+    $('#btn-toggle-cover').click();
+
+    // ---------- TXT ----------
+    exportTXT();
+    const txt = lastBlob ? await lastBlob.text() : '';
+    ok('TXT respects config', txt.includes('Escuela: Ingeniería en Datos') && txt.includes('Ana Pérez López (2109001)') && !txt.includes('Profesor:'));
+
+    // ---------- Configuración: pestañas nuevas ----------
+    openSettingsModal();
+    ok('settings opens on Mi perfil', $('.settings-tabs button.active').dataset.tab === 'profile' && $('#profile-fullname').value === 'Ana Pérez López');
+    ok('7 tabs', document.querySelectorAll('.settings-tabs button').length === 7);
+    typeIn('#profile-group', 'IDY-8B');
+    $('#profile-save').click();
+    ok('profile save', getProfile().group === 'IDY-8B' && $('#profile-message').textContent.includes('guardado'));
+    ok('current document not changed', $('#header-group').value === 'IDY-7A');
+    $('#profile-apply').click();
+    ok('apply to current header', $('#header-group').value === 'IDY-8B');
+
+    $('.settings-tabs button[data-tab="classmates"]').click();
+    ok('classmates tab lists 2', document.querySelectorAll('.settings-list li').length === 2);
+    typeIn('#classmate-new-name', 'Pedro Uc'); typeIn('#classmate-new-id', '2109004');
+    $('#classmate-add').click();
+    ok('classmate added', getClassmates().length === 3 && $('#classmate-picker').options.length === 4);
+    $('#classmate-add').click();
+    ok('classmate name required', $('#settings-error').textContent.includes('nombre'));
+    promptAnswers = ['Pedro Uc Chan', '2109044'];
+    document.querySelectorAll('.settings-list li')[2].querySelector('[data-action="edit"]').click();
+    ok('classmate edited', getClassmates()[2].name === 'Pedro Uc Chan' && getClassmates()[2].studentId === '2109044');
+    document.querySelectorAll('.settings-list li')[2].querySelector('[data-action="delete"]').click();
+    ok('classmate deleted', getClassmates().length === 2);
+
+    $('.settings-tabs button[data-tab="header_fields"]').click();
+    ok('header fields tab', document.querySelectorAll('#settings-tab-content .field-config-row').length === 8);
+    closeSettingsModal();
+
+    // ---------- Documento nuevo usa el perfil ----------
+    newDocument();
+    addBlock('header');
+    ok('new document header from profile', $('.student-name-input').value === 'Ana Pérez López' && $('#header-group').value === 'IDY-8B');
+
+    // ---------- Proyecto: compañeros y campos ----------
+    const proj = buildProjectData();
+    ok('project has classmates/fields/period', proj.settings.classmates.length === 2 && proj.settings.headerFields.career.label === 'Escuela' && proj.settings.periodType === 'semestre');
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+    applyProjectData(proj);
+    ok('project restores classmates/fields/period', getClassmates().length === 2 && getHeaderFieldConfig().career.label === 'Escuela' && getPeriodType() === 'semestre');
+    const cfg2 = getHeaderFieldConfig(); cfg2.career.label = 'Bachillerato'; saveHeaderFieldConfig(cfg2);
+    applyProjectData(proj);
+    ok('local field config wins', getHeaderFieldConfig().career.label === 'Bachillerato');
+
+    // ---------- Año escolar ----------
+    saveProfile({ ...getProfile(), periodType: 'anio' });
+    ok('año escolar', formatTerm('3') === '3° Año escolar');
+
+    // ---------- "Configurar después" ----------
+    localStorage.removeItem('user_profile');
+    openOnboarding();
+    $('#onboarding-later').click();
+    ok('configure later closes and marks done', !$('#onboarding-overlay') && getProfile().onboardingDone === true);
+  } catch (e) {
+    out.push('ERROR ' + e.message + ' ' + e.stack);
+  }
+  const pre = document.createElement('pre');
+  pre.id = 'TEST_RESULTS';
+  pre.textContent = out.join('\n');
+  document.body.appendChild(pre);
+}, 1500));
+</script>

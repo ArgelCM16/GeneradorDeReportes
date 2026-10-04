@@ -1,0 +1,36 @@
+# Corre las pruebas automáticas (tests/ejecutar.py) en cada push a test o main
+# y en cada Pull Request a main. El resultado sale como ✅ / ❌ en GitHub.
+name: Pruebas
+
+on:
+  push:
+    branches: [test, main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Preparar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar python-docx (para revisar el Word a fondo)
+        run: pip install python-docx
+
+      - name: Versión de Chrome
+        run: google-chrome --version
+
+      - name: Correr las pruebas
+        env:
+          CHROME: google-chrome
+          CHROME_FLAGS: --no-sandbox
+          PYTHONIOENCODING: utf-8
+        run: python tests/ejecutar.py

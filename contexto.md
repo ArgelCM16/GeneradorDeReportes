@@ -1,0 +1,192 @@
+# Contexto del proyecto
+
+Estado actual, decisiones tomadas y planes del **Generador de Reportes Académicos**.
+La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
+
+Última actualización: 4 de octubre de 2026.
+
+---
+
+## Estado actual (versión 2.5.0)
+
+### Qué se hizo en la versión 2.5.0
+
+| Cambio | Detalle |
+|---|---|
+| Código con colores | Resaltado propio (sin librerías) para Python, JavaScript/TypeScript, Java, C, C++, C#, PHP, SQL, HTML/XML y CSS; el lenguaje se elige o se detecta solo; números de línea opcionales que siguen la cuenta entre hojas; los colores salen en el PDF y en el Word |
+| `script.js` dividido (2.5.1) | La lógica pasó de un solo archivo de ~7 900 líneas a 27 archivos en `JS/`, cortados en el mismo orden (no se movió ni cambió nada de código). El service worker lee la lista de archivos de `index.html`. Commit de respaldo justo antes: "Antes de división de script" |
+| Rendimiento (2.5.2) | La vista previa no se vuelve a paginar si nada cambió, y en documentos de 8 hojas o más espera a que se deje de escribir: con 24 hojas, paginar tarda ~260 ms y antes pasaba en cada tecla |
+| Pruebas en GitHub (2.5.2) | `.github/workflows/pruebas.yml` corre `tests/ejecutar.py` en Ubuntu con Chrome en cada push a `test`/`main` y en los Pull Requests |
+| Pruebas en el repositorio | `tests/ejecutar.py` (solo Python y Chrome) corre las 15 pruebas de `tests/casos/` (~450 revisiones en ~30 s) |
+
+### Qué se hizo en la versión 2.4.0
+
+| Cambio | Detalle |
+|---|---|
+| Mis documentos | Varios documentos en IndexedDB, comprimidos con gzip (una foto de 5 MB ya reducida + texto ocupa poco). La lista solo lee un resumen ('meta'); el documento completo se lee al abrirlo. Abrir, duplicar, renombrar, descargar y eliminar. "Nuevo", "Cargar Proyecto" y el respaldo con documento ya no borran el actual: queda en la lista. El respaldo puede incluir todos los documentos |
+| Párrafos con formato | Editor con negritas, cursivas, subrayado y listas; al pegar se conserva solo ese formato. Los párrafos viejos (texto plano) se convierten solos |
+| Citas en el texto | Botón "Citar": [1] en IEEE o (Pérez, 2020) en APA; cambian solas si se mueven o editan las referencias; una cita a una referencia borrada sale como [?] |
+| Formato del documento | Letra (Georgia, Times New Roman, Arial, Calibri), tamaño, interlineado, márgenes, hoja (carta, oficio, A4), alineación, sangría y números de página; formatos APA 7 y Formal; se puede guardar como predeterminado |
+| Word (.docx) | Se arma en el navegador sin librerías, con el formato del documento, estilos de Word (títulos para el índice), listas, imágenes, tablas, citas, referencias y números de página |
+| Logo (2.4.1) | Nuevo logo "Generador CM" (birrete naranja): favicon, íconos de la app instalable, ícono de iPhone y marca de la barra lateral |
+| Contador y revisión | Barra abajo del editor con palabras y páginas, y botón "Revisar" con lo que falta; al imprimir (botón o Ctrl+P) se muestra primero si hay pendientes |
+
+### Qué se hizo en la versión 2.3.0
+
+| Cambio | Detalle |
+|---|---|
+| Subir, bajar y duplicar | Botones ↑ ↓ y Duplicar en la esquina de cada tarjeta; funcionan en celular, donde no se puede arrastrar. El encabezado y el índice no se mueven ni se duplican |
+| ids únicos | Los bloques ya no repiten id aunque se creen en el mismo milisegundo (`newBlockId()`) |
+| Imágenes ligeras | Al subirlas se reducen a 1600 px y se guardan como JPEG si no tienen transparencia (una foto de 5 MB queda en ~400 KB) |
+| Deshacer / rehacer | Botones en la barra del editor y Ctrl+Z / Ctrl+Y fuera de los campos de texto; deshace bloques, encabezado y nombre del documento |
+| Plantillas | Reporte de práctica, ensayo, trabajo de investigación y proyecto de programación; los párrafos traen una pista de qué escribir. Agregar al final o reemplazar (el encabezado se conserva) |
+| App instalable (PWA) | `manifest.json`, íconos y `sw.js`: se instala y funciona sin internet (salvo Drive). Botón "Instalar la app" cuando el navegador lo permite |
+| Modo oscuro | Botón 🌙/☀️; por defecto sigue al sistema. Solo la interfaz: las hojas y la impresión no cambian |
+| Barra del editor angosta | Con la vista previa abierta, los botones quedan solo con su ícono para que se lea el nombre del documento |
+
+### Qué se hizo en la versión 2.2.0
+
+| Cambio | Detalle |
+|---|---|
+| Asistente de bienvenida | La primera vez: nombre y matrícula; escuela, carrera, grupo y periodo; qué datos salen en el encabezado; y, opcionales, materias/profesores y compañeros |
+| Perfil | Llena solo el encabezado de cada documento nuevo; cambiar el documento no cambia el perfil |
+| Matrícula | Por estudiante y por integrante del equipo |
+| Compañeros | Lista con nombre y matrícula; en equipo se eligen de un menú |
+| Campos del encabezado | Cada dato se puede mostrar/ocultar y renombrar (p. ej. "Carrera" → "Escuela") |
+| Periodo | Cuatrimestre, semestre o año escolar (se elige en el perfil) |
+| Vista previa y celular | La vista previa se puede ocultar por completo en computadora; en celular hay menú desplegable (☰) y pestañas Editor / Vista previa |
+| Respaldo | Configuración → Respaldo: exporta/importa en un .json todo lo guardado en el navegador (y opcionalmente el documento); al importar muestra un resumen y reemplaza la configuración |
+
+## Estado de la versión 2.1.0
+
+- Rama de trabajo: `test`. La rama `main` todavía **no** tiene los cambios de la 2.1.0 (falta el Pull Request de `test` a `main`).
+- Todo funciona sin servidor. Google Drive es opcional y requiere servir la página por http(s).
+
+### Qué se hizo en la versión 2.1.0
+
+| Cambio | Detalle |
+|---|---|
+| Panel de Configuración | Botón en la barra lateral con pestañas para universidades, materias y profesores. Reemplazó los botones sueltos ➕ ✏️ 🗑️ que había junto al tema y a cada lista |
+| Autoguardado del encabezado | Se quitaron los botones 💾 y ✏️ y el bloqueo del formulario; solo queda "🧹 Limpiar" |
+| Vínculo materia → profesor | Cada materia puede tener un profesor; al elegirla en el encabezado, su profesor se selecciona solo |
+| Etiquetas en el encabezado | Cada campo lleva su etiqueta arriba (Grupo, Materia, Profesor...) |
+| El proyecto guarda todo | El JSON y Google Drive incluyen el encabezado y la configuración; al cargar se añade lo que falte sin sobrescribir lo local |
+| Logos ligeros | Se reducen a 400 px por lado al subirlos; si el navegador se queda sin espacio, se avisa |
+| Rediseño visual | Réplica de la pantalla "Rediseño Completo" de Google Stitch ("Project Redesign Initiative"): barra lateral con marca, bloques en 2 columnas y pie fijo (TXT, Configuración, Imprimir); barra superior en el editor; tarjetas con cabecera "Bloque: ..." e íconos en los campos; vista previa como hoja carta con barra superior e inferior. Estilos en `CSS/redesign.css`; la lógica no cambió |
+| Portada | Botón "Hacer portada" en la tarjeta del encabezado: el mismo encabezado cambia a formato de portada (hoja completa) y solo pide el nombre de la tarea; "Volver a encabezado" lo regresa. Nuevo campo "Carrera" en el encabezado (sale en la portada y en el encabezado normal) |
+| Formato APA | Etiqueta en la tarjeta de referencia para elegir IEEE o APA 7ma Ed. para todo el documento (se guarda con el proyecto) |
+| Vista previa real | El documento se reparte en hojas tamaño carta (márgenes de 2 cm, número de página) y se imprime exactamente así; párrafos, código y tablas largas se parten entre hojas |
+| Índice | Bloque "Índice" (botón en la barra lateral): tabla de contenido con títulos y subtítulos y su número de página real. Siempre va después del encabezado: en la hoja siguiente a la portada, o debajo del encabezado normal; el contenido empieza en la hoja de después. Solo puede haber uno |
+| Zoom | Botones − % + en la barra de la vista previa; por defecto ajusta la hoja al ancho del panel (solo pantalla) |
+| Ancho de la vista previa | Divisor arrastrable entre el editor y la vista previa (doble clic = tamaño normal) y botón para agrandarla al 60%; el ancho se recuerda |
+| Documento | Nombre editable en la barra del editor (nombre del PDF, TXT, JSON y Drive); botón "Nuevo" para empezar de cero; la pastilla de autoguardado es un interruptor (sin autoguardado avisa de cambios sin guardar) |
+| Correcciones | Nombre del alumno en la Declaración de IA; "Cuatrimestre" duplicado; encabezados de tabla mal marcados; README corrupto (texto UTF-16 al final) |
+
+### Decisiones de diseño que conviene respetar
+
+- **El rediseño va en un archivo aparte** (`redesign.css`) para poder revertirlo quitando una línea de `index.html`.
+- **El color de acento de la interfaz sigue a la universidad** (`--secondary`); con el tema genérico se usa el naranja de Stitch.
+- **Al cargar un proyecto, lo local gana**: se añaden universidades, materias, profesores y vínculos que falten, pero nunca se sobrescriben ni se borran los existentes.
+- **Las materias, profesores y universidades son personales** (de cada navegador); el encabezado del reporte es del proyecto.
+
+### Pendientes conocidos
+
+- Crear el Pull Request de `test` a `main`.
+- Cambiar la API key de Google Stitch (quedó escrita en una conversación).
+- Los ids de bloque ya son únicos en el documento (`newBlockId()`), pero siguen siendo números locales: antes de la colaboración en vivo conviene cambiarlos por `crypto.randomUUID()`. Ojo: las citas guardan el id de la referencia (`data-cite`), así que un cambio de ids tendría que actualizarlas.
+- El Word se validó con python-docx (estructura, estilos, imágenes, listas), pero no se ha abierto en Microsoft Word real: conviene probarlo.
+- Al publicar una versión nueva hay que subir el `?v=` **y** `VERSION` en `sw.js` (si no, quien instaló la app se queda con la copia vieja).
+- En móvil funciona, pero con detalles visuales.
+
+---
+
+## Próxima función: colaboración en vivo (Nivel 1)
+
+Estado: **en planeación** (aprobada la idea; falta crear el proyecto de Firebase y elegir el modo de acceso).
+
+### Objetivo
+
+Que los integrantes de un equipo trabajen **el mismo reporte al mismo tiempo desde distintas computadoras**, cada quien en sus bloques, y vean los cambios de los demás en uno o dos segundos.
+
+### Cómo se vería para el usuario
+
+1. **Sin compartir, todo sigue igual que hoy** (sin cuenta ni internet).
+2. Botón **"Compartir"**: sube el reporte a la nube y da un enlace, por ejemplo `.../index.html?proyecto=k7x2p9`.
+3. Los compañeros abren el enlace, **inician sesión con Google** y ven el mismo reporte.
+4. Al editar un bloque, los demás ven **"✏️ Ana está editando"** y ese bloque queda bloqueado para ellos; los otros bloques siguen libres.
+5. Arriba se muestra **quién está conectado** ("👤 Tú, Ana, Luis · 3 conectados").
+6. Agregar, eliminar y reordenar bloques se refleja para todos.
+7. Cualquiera puede exportar (PDF, TXT, Drive).
+
+### Cómo funciona por dentro
+
+```
+  Navegador A ──┐                          ┌── Navegador B
+                ├──►  Firebase Firestore ◄──┤
+  Navegador C ──┘   projects/{projectId}    └── ...
+                    ├─ (documento)  tema, encabezado, dueño, miembros
+                    ├─ blocks/{blockId}   un documento por bloque + campo "order"
+                    ├─ locks/{blockId}    { uid, name, expiresAt }
+                    └─ presence/{uid}     { name, photo, lastSeen }
+```
+
+- **Un documento por bloque**: dos personas editando bloques distintos nunca se pisan. Además, cada bloque tiene su propio límite de 1 MB en Firestore.
+- **Guardado con espera de ~500 ms** mientras se escribe (no con cada letra). Los cambios llegan a los demás con `onSnapshot`.
+- **Bloqueo por bloque**: al enfocar un bloque se escribe `locks/{blockId}`. Se libera al salir del bloque o, si pasan ~30 s sin actividad o se cierra la pestaña, por `expiresAt`, para que nada quede trabado.
+- **Presencia**: cada navegador actualiza `presence/{uid}.lastSeen` periódicamente; se muestran los que tengan actividad reciente.
+- **Sin conexión**: la persistencia sin conexión de Firestore guarda los cambios y los envía al reconectar.
+
+### Qué se comparte y qué no
+
+| Se comparte (del reporte) | Sigue siendo personal (del navegador) |
+|---|---|
+| Bloques y su orden | Lista de materias y profesores |
+| Datos del encabezado (integrantes, grupo, materia...) | Universidades personalizadas |
+| Universidad o tema del reporte | Preferencias |
+
+### Imágenes
+
+Se comprimen automáticamente (como los logos) y viajan dentro de su propio documento de bloque. Así no hace falta Firebase Storage, que requiere activar el plan de pago.
+
+### Cambios necesarios en el código actual
+
+- **Actualizar solo el bloque que cambió**, en lugar de `render()` completo, para no perder el cursor cuando llegan cambios de otros.
+- **ids únicos** (`crypto.randomUUID()`) en lugar de `Date.now()`.
+- **Mover el encabezado** de `localStorage` (`global_header_data`) al documento del proyecto cuando el reporte esté compartido.
+- Capa de sincronización separada (por ejemplo `JS/collab.js`) para no mezclarla con la lógica actual.
+
+### Costo
+
+Plan gratuito de Firebase (Spark): unas 20,000 escrituras y 50,000 lecturas al día, de sobra para equipos escolares.
+
+### Límites (aceptados)
+
+- **Dos personas no pueden escribir en el mismo bloque al mismo tiempo** (eso sería el Nivel 2, tipo Google Docs, con Yjs).
+- Para colaborar se necesita internet y servir la página por http(s).
+- Cada persona inicia sesión con Google.
+
+### Etapas
+
+1. **Compartir y sincronizar**: inicio de sesión con Google, botón "Compartir", abrir por enlace y sincronizar bloques, orden, encabezado y tema.
+2. **Trabajo en equipo**: bloqueo por bloque y lista de conectados.
+3. **Detalles**: compresión de imágenes, aviso de conexión perdida y "Dejar de compartir".
+
+Cada etapa debe quedar funcionando y probada antes de pasar a la siguiente.
+
+### Decisiones pendientes (las toma el usuario)
+
+- **Modo de acceso**:
+  - **A)** cualquiera con el enlace que inicie sesión con Google (más simple);
+  - **B)** solo los correos que invite el dueño (más seguro).
+- **Proyecto de Firebase**: crearlo (puede ser el mismo proyecto de Google Cloud que ya usa Google Drive). Pasos:
+  1. Agregar una app web.
+  2. Activar el inicio de sesión con Google.
+  3. Crear la base de datos Firestore.
+  4. Agregar el dominio (GitHub Pages o localhost) a los dominios autorizados.
+  5. Copiar la configuración web.
+
+  Esa configuración es pública; la seguridad se define con reglas de Firestore.
+
+### Alternativa descartada por ahora: Nivel 2
+
+Edición simultánea dentro del mismo bloque con cursores de colores (Yjs más un servidor de sincronización). Descartada por el esfuerzo (reescribir buena parte del editor); queda para la versión 3.0.

@@ -1,0 +1,29 @@
+<!-- Prueba "barra_celular": se inyecta en index.html (ver tests/ejecutar.py). -->
+<script>
+window.alert = () => {};
+window.confirm = () => true;
+window.addEventListener('load', () => setTimeout(async () => {
+  const out = [];
+  const ok = (name, cond) => out.push((cond ? 'PASS ' : 'FAIL ') + name);
+  const $ = sel => document.querySelector(sel);
+  try {
+    closeOnboarding();
+    localStorage.clear();
+    saveProfile({ onboardingDone: true });
+    setDocumentName('Práctica 3 - Circuitos');
+    applyTemplate('practica', 'replace');
+    const W = window.innerWidth;
+    const tb = $('.editor-toolbar');
+    out.push('DETALLE W=' + W + ' toolbar client=' + tb.clientWidth + ' scroll=' + tb.scrollWidth + ' doc=' + document.documentElement.scrollWidth);
+    Array.from(tb.children).forEach(c => { const r = c.getBoundingClientRect(); out.push('DETALLE ' + (c.id || c.className) + ' ' + Math.round(r.left) + '-' + Math.round(r.right) + ' w=' + Math.round(r.width) + ' disp=' + getComputedStyle(c).display); });
+    ok('toolbar fits', tb.scrollWidth <= tb.clientWidth + 1 && $('#color-scheme-btn').getBoundingClientRect().right <= W);
+    ok('no horizontal scroll', document.documentElement.scrollWidth <= W + 1);
+    const name = $('#document-name').getBoundingClientRect();
+    ok('name readable (' + Math.round(name.width) + 'px)', name.width >= 90);
+    const card = Array.from(document.querySelectorAll('.block-card')).find(c => c.querySelector('.block-tools'));
+    const t = card.querySelector('.block-tools').getBoundingClientRect(), c = card.getBoundingClientRect();
+    ok('card tools inside card', t.right <= c.right && t.left >= c.left);
+  } catch (e) { out.push('ERROR ' + e.message + ' ' + e.stack); }
+  const pre = document.createElement('pre'); pre.id = 'TEST_RESULTS'; pre.textContent = out.join('\n'); document.body.appendChild(pre);
+}, 1500));
+</script>
