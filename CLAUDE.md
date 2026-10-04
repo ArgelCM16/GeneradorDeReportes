@@ -9,7 +9,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 - Rama de trabajo: **`test`**. La rama por defecto (la que muestra GitHub) es **`main`**; los cambios pasan a `main` cuando el usuario lo pide.
 - Haz commit o push solo cuando el usuario lo pida.
 - Si el usuario pide un cambio "solo de diseño", no toques la lógica de `JS/`: los estilos del rediseño viven en `CSS/redesign.css`.
-- Después de cambiar algo, corre las pruebas: `python tests/ejecutar.py` (ver [Cómo probar](#cómo-probar)). Si agregas una función, agrega su prueba en `tests/casos/`.
+- Después de cambiar algo, corre las pruebas: `python tests/ejecutar.py` (ver [Cómo probar](#cómo-probar)). Si agregas una función, agrega su prueba en `tests/casos/`. En GitHub corren solas en cada push a `test`/`main` y en los Pull Requests (`.github/workflows/pruebas.yml`); revisa que salgan ✅ antes de fusionar.
 - **Si cambia qué datos usa la app o con qué servicios se conecta** (nuevos recursos externos, analítica, otro permiso de Google...), actualiza `privacidad.html` (y `terminos.html` si aplica) junto con su fecha de "Última actualización".
 - **Si cambias `CSS/*.css` o `JS/*.js`, sube el número `?v=` de sus enlaces en `index.html`** (todos llevan el mismo, y `legal.css` en `terminos.html` y `privacidad.html` también) **y pon el mismo número en `VERSION` de `sw.js`**. GitHub Pages deja que el navegador guarde esos archivos hasta 10 minutos y el service worker los guarda sin límite; sin cambiar los dos números, el navegador puede mezclar el HTML nuevo con CSS o JS viejos y la página se ve rota (o se queda con la versión vieja).
 
@@ -19,7 +19,7 @@ Para el estado actual, las decisiones tomadas y los planes, lee también [contex
 
 - Autor original: Jorge Javier Pedrozo Romero. Modificado por: Argel Alberto Cano Morales.
 - Repositorio: `https://github.com/ArgelCM16/GeneradorDeReportes`.
-- Versión actual: **2.5.1** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
+- Versión actual: **2.5.2** (aparece en los créditos de `index.html`, en la marca de la barra lateral y en la insignia del `README.md`).
 
 ## Estructura
 
@@ -149,6 +149,7 @@ Además, **Mis documentos** vive en IndexedDB (base `generador-reportes`, almace
 - `renderPreview()` hace dos cosas:
   1. Llama primero a `persistHeaderFromDOM()`, que es el **autoguardado del encabezado**: lee el formulario del encabezado en pantalla y lo guarda en `global_header_data`.
   2. Genera la vista previa (`#preview-container`). Para el encabezado lee directamente del DOM si la tarjeta está en pantalla.
+- **Rendimiento**: `renderPreview(force)` no vuelve a paginar si el HTML de la vista previa y el formato no cambiaron (`force = true` lo obliga; se usa cuando termina de cargar una imagen). Lo que se escribe tecla por tecla llama a **`renderPreviewSoon()`**: en documentos de 8 hojas o más espera 250 ms a que se deje de escribir (en los cortos actualiza al momento). Si agregas un campo de texto nuevo, usa `renderPreviewSoon()` en su `oninput`. `flushPreview()` hace lo pendiente (lo usan imprimir y `pagehide`/`visibilitychange`, que además guardan en el navegador).
 - Cada tipo de bloque tiene su `render<Tipo>Editor(block, deleteBtn)`, que devuelve un string de HTML. Todo texto del usuario pasa por `escapeHtml()` / `escapeAttr()` (protección XSS). Mantén esa regla.
 
 ### Encabezado (`renderHeaderEditor`)

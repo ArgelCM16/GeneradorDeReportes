@@ -10,7 +10,7 @@
  * Los archivos de JS/ y CSS/ se leen de index.html al instalar (no hay que
  * repetir aquí la lista).
  */
-const VERSION = '2.5.1';
+const VERSION = '2.5.2';
 const CACHE_NAME = `reportes-${VERSION}`;
 
 const APP_FILES = [

@@ -10,9 +10,11 @@ Uso:
     python tests/ejecutar.py                 # todas las pruebas
     python tests/ejecutar.py nucleo formato  # solo algunas
     python tests/ejecutar.py --lista         # ver las pruebas disponibles
+    python tests/ejecutar.py --detalle       # mostrar también los datos de diagnóstico
 
 Chrome se busca solo; si no lo encuentra, indica la ruta con la variable de
-entorno CHROME.
+entorno CHROME. Opciones extra para Chrome en CHROME_FLAGS (por ejemplo,
+"--no-sandbox" en servidores Linux como GitHub Actions).
 """
 import base64
 import html
@@ -44,6 +46,7 @@ TESTS = {
     'formato':            {'modo': 'archivo'},
     'revision':           {'modo': 'archivo'},
     'codigo':             {'modo': 'archivo', 'tiempo': 40000},
+    'rendimiento':        {'modo': 'http'},  # tiempo real: mide milisegundos de verdad
     'imagenes':           {'modo': 'archivo'},
     'diseno_computadora': {'modo': 'archivo'},
     'diseno_celular':     {'modo': 'archivo', 'ventana': '390,844'},
@@ -74,6 +77,10 @@ def find_chrome():
         if found:
             return found
     sys.exit('No se encontró Chrome. Indica la ruta con la variable de entorno CHROME.')
+
+
+def extra_flags():
+    return os.environ.get('CHROME_FLAGS', '').split()
 
 
 def read_case(name):
@@ -107,7 +114,7 @@ def run_file_test(chrome, name, cfg, work):
     profile = short_profile()
     try:
         proc = subprocess.run([
-            chrome, '--headless=new', '--disable-gpu', '--allow-file-access-from-files', '--no-first-run',
+            chrome, '--headless=new', '--disable-gpu', '--allow-file-access-from-files', '--no-first-run', *extra_flags(),
             f'--user-data-dir={profile}', f'--window-size={cfg.get("ventana", "1440,900")}',
             f'--virtual-time-budget={cfg.get("tiempo", 25000)}', '--dump-dom',
             'file:///' + path.replace('\\', '/').lstrip('/')
@@ -187,7 +194,7 @@ def run_http_test(chrome, name, cfg, server, site):
     profile = short_profile()
     try:
         proc = subprocess.run([
-            chrome, '--headless=new', '--disable-gpu', '--no-first-run', f'--user-data-dir={profile}',
+            chrome, '--headless=new', '--disable-gpu', '--no-first-run', *extra_flags(), f'--user-data-dir={profile}',
             f'--window-size={cfg.get("ventana", "1440,900")}', '--timeout=160000', '--dump-dom',
             f'http://127.0.0.1:{server.port}/prueba_{name}.html'
         ], capture_output=True, timeout=300)
@@ -251,6 +258,9 @@ def main():
             total_fail += len(failed)
             mark = '✓' if not failed else '✗'
             print(f'{mark} {name}: {passed} bien, {len(failed)} mal')
+            for line in lines:
+                if line.startswith('INFO') or (line.startswith('DETALLE') and '--detalle' in sys.argv):
+                    print('    ' + line)
             for line in failed:
                 print('    ' + line)
             if failed:

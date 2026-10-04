@@ -16,7 +16,10 @@ Desde la carpeta del proyecto:
 python tests/ejecutar.py                    # todas (unos 30 segundos)
 python tests/ejecutar.py formato codigo     # solo algunas
 python tests/ejecutar.py --lista            # ver cuáles hay
+python tests/ejecutar.py --detalle          # con datos de diagnóstico
 ```
+
+En GitHub corren solas en cada push a `test` o `main` y en cada Pull Request a `main` (`.github/workflows/pruebas.yml`); el resultado sale como ✅ o ❌ junto al commit.
 
 Al final muestra cuántas revisiones salieron bien y mal; si alguna falla, el programa termina con código 1.
 
@@ -32,6 +35,7 @@ Al final muestra cuántas revisiones salieron bien y mal; si alguna falla, el pr
 | `formato` | Letra, interlineado, márgenes, tamaño de hoja, números de página |
 | `revision` | Contador de palabras y revisión antes de entregar |
 | `codigo` | Código con colores, detección del lenguaje, números de línea |
+| `rendimiento` | Documentos largos: no se reparten las hojas con cada tecla; nada se pierde al imprimir o cerrar |
 | `imagenes` | Imágenes reducidas al subirlas |
 | `diseno_computadora` / `diseno_celular` / `barra_celular` | Ocultar la vista previa, diseño en celular |
 | `word` | Exportar a Word (.docx) |
@@ -42,7 +46,7 @@ Al final muestra cuántas revisiones salieron bien y mal; si alguna falla, el pr
 
 - Cada prueba es un archivo de `casos/` con un `<script>` que, al cargar la página, hace sus acciones y escribe los resultados en `<pre id="TEST_RESULTS">`, una línea por revisión: `PASS ...` o `FAIL ...`.
 - La mayoría se abren como archivo (`file://`) con el **tiempo virtual** de Chrome, que es rápido.
-- `documentos` y `pwa` se sirven por **http y en tiempo real**: el tiempo virtual no espera a IndexedDB ni al service worker. La página incluye una imagen que el servidor no responde hasta que la prueba termina, así Chrome espera.
+- `documentos`, `pwa` y `rendimiento` se sirven por **http y en tiempo real**: el tiempo virtual no espera a IndexedDB ni al service worker. La página incluye una imagen que el servidor no responde hasta que la prueba termina, así Chrome espera.
 - Cada prueba usa un perfil de Chrome nuevo y temporal (con ruta corta: con rutas muy largas la caché de Chrome falla).
 
 ## Agregar una prueba

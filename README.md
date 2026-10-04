@@ -2,7 +2,7 @@
 
 > Herramienta web profesional para crear reportes académicos con vista previa en tiempo real
 
-![Versión](https://img.shields.io/badge/versión-2.5.1-blue)
+![Versión](https://img.shields.io/badge/versión-2.5.2-blue)
 ![Licencia](https://img.shields.io/badge/licencia-MIT-green)
 ![Estado](https://img.shields.io/badge/estado-activo-success)
 
@@ -317,7 +317,7 @@ Hay pruebas automáticas que abren la app en Chrome sin interfaz y revisan casi 
 python tests/ejecutar.py
 ```
 
-Más detalles en [tests/README.md](tests/README.md).
+En GitHub corren solas en cada cambio (pestaña **Actions**). Más detalles en [tests/README.md](tests/README.md).
 
 ---
 
@@ -465,6 +465,8 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 - [x] Código con colores y números de línea
 - [x] Pruebas automáticas en el repositorio (`tests/`)
 - [x] La lógica se dividió en 27 archivos por tema (antes era un solo `script.js`)
+- [x] Documentos largos más fluidos al escribir
+- [x] Las pruebas corren solas en GitHub (GitHub Actions)
 
 ### Versión 2.4.0
 - [x] Mis documentos: varios documentos guardados y comprimidos en el navegador

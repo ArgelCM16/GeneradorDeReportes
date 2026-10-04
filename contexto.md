@@ -15,6 +15,8 @@ La explicación técnica del código está en [CLAUDE.md](CLAUDE.md).
 |---|---|
 | Código con colores | Resaltado propio (sin librerías) para Python, JavaScript/TypeScript, Java, C, C++, C#, PHP, SQL, HTML/XML y CSS; el lenguaje se elige o se detecta solo; números de línea opcionales que siguen la cuenta entre hojas; los colores salen en el PDF y en el Word |
 | `script.js` dividido (2.5.1) | La lógica pasó de un solo archivo de ~7 900 líneas a 27 archivos en `JS/`, cortados en el mismo orden (no se movió ni cambió nada de código). El service worker lee la lista de archivos de `index.html`. Commit de respaldo justo antes: "Antes de división de script" |
+| Rendimiento (2.5.2) | La vista previa no se vuelve a paginar si nada cambió, y en documentos de 8 hojas o más espera a que se deje de escribir: con 24 hojas, paginar tarda ~260 ms y antes pasaba en cada tecla |
+| Pruebas en GitHub (2.5.2) | `.github/workflows/pruebas.yml` corre `tests/ejecutar.py` en Ubuntu con Chrome en cada push a `test`/`main` y en los Pull Requests |
 | Pruebas en el repositorio | `tests/ejecutar.py` (solo Python y Chrome) corre las 15 pruebas de `tests/casos/` (~450 revisiones en ~30 s) |
 
 ### Qué se hizo en la versión 2.4.0

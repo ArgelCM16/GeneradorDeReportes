@@ -182,12 +182,12 @@ function renderHeaderEditor(block, deleteBtn) {
                 <!-- Solo en modo portada -->
                 <div class="header-field header-field-wide" id="header-task-field" style="${d.coverMode ? '' : 'display: none;'}">
                     <label for="header-task-name">Nombre de la tarea</label>
-                    <input type="text" id="header-task-name" placeholder="Ej. Práctica 3: Redes Neuronales" value="${escapeAttr(d.taskName || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                    <input type="text" id="header-task-name" placeholder="Ej. Práctica 3: Redes Neuronales" value="${escapeAttr(d.taskName || '')}" oninput="renderPreviewSoon()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
                 <div class="header-field" data-field="group"${fieldStyle('group')}>
                     <label for="header-group">${fieldLabel('group')}</label>
-                    <input type="text" id="header-group" placeholder="Ej. IDY-7A" value="${escapeAttr(d.group || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                    <input type="text" id="header-group" placeholder="Ej. IDY-7A" value="${escapeAttr(d.group || '')}" oninput="renderPreviewSoon()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
                 <div class="header-field" data-field="subject"${fieldStyle('subject')}>
@@ -211,17 +211,17 @@ function renderHeaderEditor(block, deleteBtn) {
 
                 <div class="header-field header-field-wide" data-field="career"${fieldStyle('career')}>
                     <label for="header-career">${fieldLabel('career')}</label>
-                    <input type="text" id="header-career" placeholder="Ej. Ingeniería en Datos" value="${escapeAttr(d.career || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                    <input type="text" id="header-career" placeholder="Ej. Ingeniería en Datos" value="${escapeAttr(d.career || '')}" oninput="renderPreviewSoon()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
                 <div class="header-field" data-field="term"${fieldStyle('term')}>
                     <label for="header-term">${fieldLabel('term')}</label>
-                    <input type="text" id="header-term" placeholder="Ej. 7" value="${escapeAttr(d.term || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                    <input type="text" id="header-term" placeholder="Ej. 7" value="${escapeAttr(d.term || '')}" oninput="renderPreviewSoon()" style="width: 100%; box-sizing: border-box;">
                 </div>
 
                 <div class="header-field" data-field="date"${fieldStyle('date')}>
                     <label for="header-date">${fieldLabel('date')}</label>
-                    <input type="date" id="header-date" value="${escapeAttr(d.date || '')}" oninput="renderPreview()" style="width: 100%; box-sizing: border-box;">
+                    <input type="date" id="header-date" value="${escapeAttr(d.date || '')}" oninput="renderPreviewSoon()" style="width: 100%; box-sizing: border-box;">
                 </div>
             </div>
             
@@ -346,8 +346,8 @@ function buildMemberRowHTML(name, studentId, index, isTeam) {
             : '');
     return `
         <div class="input-with-action member-row" style="display: flex; width: 100%;">
-            <input type="text" class="student-name-input" placeholder="${placeholder}" value="${escapeAttr(name || '')}" oninput="renderPreview()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
-            <input type="text" class="student-id-input" placeholder="${escapeAttr(getHeaderFieldLabel('studentId', 'editor'))}" value="${escapeAttr(studentId || '')}" oninput="renderPreview()" title="${escapeAttr(getHeaderFieldLabel('studentId', 'editor'))}"${showId ? '' : ' style="display: none;"'}>
+            <input type="text" class="student-name-input" placeholder="${placeholder}" value="${escapeAttr(name || '')}" oninput="renderPreviewSoon()" style="flex: 1; min-width: 0; width: 100%; box-sizing: border-box;">
+            <input type="text" class="student-id-input" placeholder="${escapeAttr(getHeaderFieldLabel('studentId', 'editor'))}" value="${escapeAttr(studentId || '')}" oninput="renderPreviewSoon()" title="${escapeAttr(getHeaderFieldLabel('studentId', 'editor'))}"${showId ? '' : ' style="display: none;"'}>
             ${deleteBtn}
         </div>`;
 }

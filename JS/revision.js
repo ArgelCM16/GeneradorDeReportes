@@ -242,6 +242,7 @@ function goToBlock(blockId) {
  * Imprimir / PDF: si hay detalles pendientes, primero se muestran.
  */
 function printDocument(force = false) {
+    flushPreview();
     if (!force && getDocumentIssues().some(issue => issue.level !== 'info')) {
         openReviewModal(true);
         return;

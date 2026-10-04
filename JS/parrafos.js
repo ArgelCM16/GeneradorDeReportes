@@ -238,7 +238,7 @@ function updateRichText(editor) {
     block.content = sanitizeRichHtml(editor.innerHTML);
     block.format = 'html';
     updateRichEmptyState(editor);
-    renderPreview();
+    renderPreviewSoon();
 }
 
 // Última selección de cada editor, para que los botones y "Citar" actúen

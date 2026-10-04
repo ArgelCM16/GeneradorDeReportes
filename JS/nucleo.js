@@ -156,7 +156,7 @@ function updateContent(id, value) {
         block.content = value;
         // En un párrafo, updateContent recibe texto plano (no HTML)
         if (block.type === 'text') delete block.format;
-        renderPreview();
+        renderPreviewSoon();
     }
 }
 
@@ -170,7 +170,7 @@ function updateHeader(id, field, value) {
     const block = reportData.find(b => b.id === id);
     if (block && block.hData) {
         block.hData[field] = value;
-        renderPreview();
+        renderPreviewSoon();
     }
 }
 
@@ -200,7 +200,7 @@ function updateRef(id, field, value) {
             block.refData = { author: '', title: '', source: '', year: '', url: '' };
         }
         block.refData[field] = value;
-        renderPreview();
+        renderPreviewSoon();
     }
 }
 
@@ -213,7 +213,7 @@ function updateCaption(id, value) {
     const block = reportData.find(b => b.id === id);
     if (block) {
         block.caption = value;
-        renderPreview();
+        renderPreviewSoon();
     }
 }
 
@@ -273,7 +273,7 @@ function updateAI(id, field, value) {
             };
         }
         block.aiData[field] = value;
-        renderPreview();
+        renderPreviewSoon();
     }
 }
 
@@ -322,7 +322,7 @@ function updateTableCell(id, row, col, value) {
     
     if (block.tableData[row] && block.tableData[row][col] !== undefined) {
         block.tableData[row][col] = value;
-        renderPreview();
+        renderPreviewSoon();
     }
 }
 
@@ -367,6 +367,6 @@ function updateTableCaption(id, value) {
     const block = reportData.find(b => b.id === id);
     if (block && block.type === 'table') {
         block.caption = value;
-        renderPreview();
+        renderPreviewSoon();
     }
 }

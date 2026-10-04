@@ -320,7 +320,65 @@ function renderAIEditor(block, deleteBtn) {
 /**
  * Renderiza solo la vista previa (lado derecho)
  */
-function renderPreview() {
+// ==========================================
+// RENDIMIENTO DE LA VISTA PREVIA
+// Repartir el documento en hojas es lo más pesado (mide cada elemento). Por
+// eso: 1) si el HTML y el formato no cambiaron, no se vuelve a paginar; y
+// 2) mientras se escribe en un documento largo, se espera a que se deje de
+// escribir (renderPreviewSoon). Los documentos cortos se actualizan al momento.
+// ==========================================
+
+const PREVIEW_DEBOUNCE_MIN_PAGES = 8;   // desde cuántas hojas se espera al escribir
+const PREVIEW_DEBOUNCE_MS = 250;
+let previewSoonTimer = null;
+let lastPreviewLayoutKey = null;
+let lastPaginationMs = 0;
+
+/**
+ * Para lo que se escribe tecla por tecla.
+ */
+function renderPreviewSoon() {
+    const pages = document.querySelectorAll('#preview-container .preview-page').length;
+    if (pages < PREVIEW_DEBOUNCE_MIN_PAGES) {
+        renderPreview();
+        return;
+    }
+    clearTimeout(previewSoonTimer);
+    previewSoonTimer = setTimeout(() => {
+        previewSoonTimer = null;
+        renderPreview();
+    }, PREVIEW_DEBOUNCE_MS);
+}
+
+/**
+ * Si hay una actualización esperando, se hace ya (antes de imprimir, al cerrar...).
+ */
+function flushPreview() {
+    if (previewSoonTimer) renderPreview();
+}
+
+// Al cerrar o cambiar de pestaña no se pierde lo último que se escribió
+function flushPendingWork() {
+    flushPreview();
+    if (typeof autosaveTimer !== 'undefined' && autosaveTimer) {
+        clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+        saveToLocalStorage();
+    }
+}
+window.addEventListener('pagehide', flushPendingWork);
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') flushPendingWork();
+});
+
+/**
+ * @param {boolean} force - volver a paginar aunque nada haya cambiado (por
+ *   ejemplo, cuando termina de cargar una imagen y ya se conoce su tamaño)
+ */
+function renderPreview(force = false) {
+    clearTimeout(previewSoonTimer);
+    previewSoonTimer = null;
+
     // Autoguardado del encabezado: renderPreview se dispara con cada cambio
     // del formulario, así que aquí guardamos lo que haya en pantalla.
     persistHeaderFromDOM();
@@ -536,9 +594,15 @@ case 'header':
         }
     }).join('');
 
-    // Se arma en hojas tamaño carta, igual que como se imprimirá
-    paginatePreview(preview, previewHTML);
-    fillTocPageNumbers(preview);
+    // Se arma en hojas, igual que como se imprimirá (solo si algo cambió)
+    const layoutKey = previewHTML + '\u0000' + JSON.stringify(getDocumentFormat());
+    if (force === true || layoutKey !== lastPreviewLayoutKey || !preview.querySelector('.preview-page')) {
+        const started = performance.now();
+        paginatePreview(preview, previewHTML);
+        fillTocPageNumbers(preview);
+        lastPaginationMs = performance.now() - started;
+        lastPreviewLayoutKey = layoutKey;
+    }
     refreshCitationChips();
     refreshDetectedLanguages();
     scheduleDocumentStats();

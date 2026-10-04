@@ -14,8 +14,8 @@ window.addEventListener('load', () => setTimeout(async () => {
     applyTemplate('practica', 'replace');
     const W = window.innerWidth;
     const tb = $('.editor-toolbar');
-    out.push('INFO W=' + W + ' toolbar client=' + tb.clientWidth + ' scroll=' + tb.scrollWidth + ' doc=' + document.documentElement.scrollWidth);
-    Array.from(tb.children).forEach(c => { const r = c.getBoundingClientRect(); out.push('INFO ' + (c.id || c.className) + ' ' + Math.round(r.left) + '-' + Math.round(r.right) + ' w=' + Math.round(r.width) + ' disp=' + getComputedStyle(c).display); });
+    out.push('DETALLE W=' + W + ' toolbar client=' + tb.clientWidth + ' scroll=' + tb.scrollWidth + ' doc=' + document.documentElement.scrollWidth);
+    Array.from(tb.children).forEach(c => { const r = c.getBoundingClientRect(); out.push('DETALLE ' + (c.id || c.className) + ' ' + Math.round(r.left) + '-' + Math.round(r.right) + ' w=' + Math.round(r.width) + ' disp=' + getComputedStyle(c).display); });
     ok('toolbar fits', tb.scrollWidth <= tb.clientWidth + 1 && $('#color-scheme-btn').getBoundingClientRect().right <= W);
     ok('no horizontal scroll', document.documentElement.scrollWidth <= W + 1);
     const name = $('#document-name').getBoundingClientRect();

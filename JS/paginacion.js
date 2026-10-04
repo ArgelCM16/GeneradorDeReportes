@@ -338,7 +338,7 @@ function paginatePreview(container, html) {
             if (!img.naturalWidth || !img.naturalHeight) return;
             previewImageSizes.set(img.getAttribute('src'), { w: img.naturalWidth, h: img.naturalHeight });
             clearTimeout(repaginateTimer);
-            repaginateTimer = setTimeout(renderPreview, 30);
+            repaginateTimer = setTimeout(() => renderPreview(true), 30);
         };
         if (img.complete) remember();
         else img.addEventListener('load', remember, { once: true });
